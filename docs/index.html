@@ -160,6 +160,7 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
         <button class="go" id="goBtn">ストーリー</button>
         <button class="go2" id="go2" hidden>フリー対戦</button>
         <button class="go2" id="go3" hidden>オンライン対戦</button>
+        <button class="go2" id="go4" hidden></button>
       </div>
     </div>
   </div>
@@ -1210,7 +1211,7 @@ const STAGES = [
     win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
     lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
 ];
-let ovAction = null, ovAction2 = null, ovAction3 = null;
+let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
@@ -1256,6 +1257,8 @@ function overlay(o) {
   if (o.b2) { g2.textContent = o.b2[0]; ovAction2 = o.b2[1]; }
   const g3 = $('#go3'); g3.hidden = !o.b3;
   if (o.b3) { g3.textContent = o.b3[0]; ovAction3 = o.b3[1]; }
+  const g4 = $('#go4'); g4.hidden = !o.b4;
+  if (o.b4) { g4.textContent = o.b4[0]; ovAction4 = o.b4[1]; }
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -1280,7 +1283,7 @@ function showMenu() {
   overlay({
     title: 'どうぶつリーグ',
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree], b3: ['オンライン対戦', showOnlineMenu]
+    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
   });
 }
 function startFree() {
@@ -1641,7 +1644,7 @@ function leaveRoom() {
 function hostRoom() {
   onl.side = 'home';
   const code = String(1000 + Math.floor(Math.random() * 9000));
-  overlay({ title: '部屋番号 ' + code, text: 'この番号を相手に伝えてください。相手が入ると試合が始まります。', b1: ['やめる', showOnlineMenu] });
+  overlay({ title: '部屋番号 ' + code, text: 'この番号か招待リンクを相手に送ってください。相手が入ると試合が始まります。', b1: ['招待リンクを送る', () => shareRoom(code)], b2: ['やめる', showOnlineMenu] });
   openChannel(code);
 }
 function joinRoom(code) {
@@ -1746,6 +1749,25 @@ function showOnlineOver() {
   leaveRoom(); idle();
   overlay({ title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
     text: 'しばいぬズ ' + sc.home + ' - ' + sc.away + ' パンダーズ', b1: ['メニューへ', showMenu] });
+}
+
+/* ---- sharing: send the game link, or an invite link that opens straight into a room ---- */
+function inviteUrl(code) { return PAGES_URL + '?room=' + code; }
+async function shareLink(text, url) {
+  try { if (navigator.share) { await navigator.share({ title: 'ナイター対決', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  let copied = false;
+  try { await navigator.clipboard.writeText(text + '\n' + url); copied = true; } catch (e) {}
+  $('#od').textContent = copied ? 'リンクをコピーしました。LINE などに貼って送ってください。' : url;
+}
+function shareGame() { shareLink('どうぶつたちの野球ゲーム「ナイター対決」で遊ぼう！', PAGES_URL); }
+function shareRoom(code) { shareLink('ナイター対決で対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
+/* opened from an invite link (?room=1234): go straight into that room */
+function inviteBoot() {
+  let code = '';
+  try { code = new URLSearchParams(location.search).get('room') || ''; } catch (e) {}
+  if (!/^\d{4}$/.test(code)) return;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  if (window.supabase && window.supabase.createClient) joinRoom(code);
 }
 
 /* ---- 07-roster.js ---- */
@@ -2329,6 +2351,7 @@ function buildPitchButtons() {
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
+$('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', showMenu);
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
@@ -2364,7 +2387,7 @@ function frame() {
 }
 if (window.ResizeObserver) new ResizeObserver(resize).observe($('#stage'));
 window.addEventListener('resize', resize);
-buildPitchButtons(); setTeams(); resize(); newGame(); showMenu();
+buildPitchButtons(); setTeams(); resize(); newGame(); showMenu(); inviteBoot();
 requestAnimationFrame(frame);
 })();
 

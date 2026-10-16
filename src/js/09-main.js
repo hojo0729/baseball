@@ -350,6 +350,7 @@ function buildPitchButtons() {
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
+$('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', showMenu);
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
@@ -385,6 +386,6 @@ function frame() {
 }
 if (window.ResizeObserver) new ResizeObserver(resize).observe($('#stage'));
 window.addEventListener('resize', resize);
-buildPitchButtons(); setTeams(); resize(); newGame(); showMenu();
+buildPitchButtons(); setTeams(); resize(); newGame(); showMenu(); inviteBoot();
 requestAnimationFrame(frame);
 })();

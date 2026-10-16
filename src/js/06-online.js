@@ -82,7 +82,7 @@ function leaveRoom() {
 function hostRoom() {
   onl.side = 'home';
   const code = String(1000 + Math.floor(Math.random() * 9000));
-  overlay({ title: '部屋番号 ' + code, text: 'この番号を相手に伝えてください。相手が入ると試合が始まります。', b1: ['やめる', showOnlineMenu] });
+  overlay({ title: '部屋番号 ' + code, text: 'この番号か招待リンクを相手に送ってください。相手が入ると試合が始まります。', b1: ['招待リンクを送る', () => shareRoom(code)], b2: ['やめる', showOnlineMenu] });
   openChannel(code);
 }
 function joinRoom(code) {
@@ -187,4 +187,23 @@ function showOnlineOver() {
   leaveRoom(); idle();
   overlay({ title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
     text: 'しばいぬズ ' + sc.home + ' - ' + sc.away + ' パンダーズ', b1: ['メニューへ', showMenu] });
+}
+
+/* ---- sharing: send the game link, or an invite link that opens straight into a room ---- */
+function inviteUrl(code) { return PAGES_URL + '?room=' + code; }
+async function shareLink(text, url) {
+  try { if (navigator.share) { await navigator.share({ title: 'ナイター対決', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  let copied = false;
+  try { await navigator.clipboard.writeText(text + '\n' + url); copied = true; } catch (e) {}
+  $('#od').textContent = copied ? 'リンクをコピーしました。LINE などに貼って送ってください。' : url;
+}
+function shareGame() { shareLink('どうぶつたちの野球ゲーム「ナイター対決」で遊ぼう！', PAGES_URL); }
+function shareRoom(code) { shareLink('ナイター対決で対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
+/* opened from an invite link (?room=1234): go straight into that room */
+function inviteBoot() {
+  let code = '';
+  try { code = new URLSearchParams(location.search).get('room') || ''; } catch (e) {}
+  if (!/^\d{4}$/.test(code)) return;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  if (window.supabase && window.supabase.createClient) joinRoom(code);
 }

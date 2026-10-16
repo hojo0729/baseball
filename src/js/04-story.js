@@ -28,7 +28,7 @@ const STAGES = [
     win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
     lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
 ];
-let ovAction = null, ovAction2 = null, ovAction3 = null;
+let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
@@ -74,6 +74,8 @@ function overlay(o) {
   if (o.b2) { g2.textContent = o.b2[0]; ovAction2 = o.b2[1]; }
   const g3 = $('#go3'); g3.hidden = !o.b3;
   if (o.b3) { g3.textContent = o.b3[0]; ovAction3 = o.b3[1]; }
+  const g4 = $('#go4'); g4.hidden = !o.b4;
+  if (o.b4) { g4.textContent = o.b4[0]; ovAction4 = o.b4[1]; }
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -98,7 +100,7 @@ function showMenu() {
   overlay({
     title: 'どうぶつリーグ',
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree], b3: ['オンライン対戦', showOnlineMenu]
+    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
   });
 }
 function startFree() {
