@@ -57,19 +57,40 @@ function cmtVoice() {
     || vs.find(v => /^ja/i.test(v.lang)) || null;
   return cmt.voice;
 }
-/* prio 2: cut in and speak; prio 1: only if nothing is being said */
-function say(text, prio) {
-  if (!text || cmt.mode === 0) return;
+/* Android Chrome stays silent unless speak() was first called from a tap, and drops speak() right after cancel().
+   So: unlock on the first touch, wait a beat after cancel, and report errors in the ticker instead of failing quietly. */
+function cmtUnlock() {
+  if (cmt.unlocked || !window.speechSynthesis) return;
+  cmt.unlocked = true;
+  try { const u = new SpeechSynthesisUtterance('。'); u.lang = 'ja-JP'; u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+}
+function cmtSpeak(text) {
+  const u = new SpeechSynthesisUtterance(text.replace(/[！!]+/g, '！'));
+  u.lang = 'ja-JP'; u.rate = 1.15; u.pitch = 1.1; u.volume = 1;
+  const v = cmtVoice(); if (v) u.voice = v;
+  u.onerror = e => { if (e.error && e.error !== 'canceled' && e.error !== 'interrupted') showCmtText('音声エラー: ' + e.error + '（スマホの設定で日本語の読み上げ音声を確認）'); };
+  cmt.u = u;                                    // keep a reference: Chrome can garbage-collect a playing utterance and stop it
+  speechSynthesis.speak(u);
+}
+function showCmtText(text) {
   const el = $('#cmt');
   el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   clearTimeout(cmt.timer); cmt.timer = setTimeout(() => el.classList.remove('show'), 3800);
+}
+/* prio 2: cut in and speak; prio 1: only if nothing is being said */
+function say(text, prio) {
+  if (!text || cmt.mode === 0) return;
+  showCmtText(text);
   if (cmt.mode !== 2 || !window.speechSynthesis) return;
   try {
-    if (speechSynthesis.speaking) { if ((prio || 1) < 2) return; speechSynthesis.cancel(); }
-    const u = new SpeechSynthesisUtterance(text.replace(/[！!]+/g, '！'));
-    u.lang = 'ja-JP'; u.rate = 1.15; u.pitch = 1.1; u.volume = 1;
-    const v = cmtVoice(); if (v) u.voice = v;
-    speechSynthesis.speak(u);
+    const ss = speechSynthesis;
+    if (ss.speaking || ss.pending) {
+      if ((prio || 1) < 2 && Date.now() - (cmt.at || 0) < 6000) return;   // (a stuck "speaking" flag is ignored after 6 s)
+      ss.cancel();
+      clearTimeout(cmt.wait); cmt.wait = setTimeout(() => cmtSpeak(text), 80);
+    } else cmtSpeak(text);
+    cmt.at = Date.now();
+    if (ss.paused) ss.resume();
   } catch (e) {}
 }
 function setCmtMode(m) {
@@ -77,7 +98,7 @@ function setCmtMode(m) {
   $('#cmtBtn').textContent = CMT_LABEL[m];
   if (m !== 2 && window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
   if (m === 0) $('#cmt').classList.remove('show');
-  else say(m === 2 ? '実況、声でお伝えします！' : '実況、文字でお伝えします。', 2);
+  else { cmtUnlock(); say(m === 2 ? '実況、声でお伝えします！' : '実況、文字でお伝えします。', 2); }
 }
 
 /* ---- hooks ---- */
