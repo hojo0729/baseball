@@ -91,7 +91,7 @@ canvas { display: block; width: 100%; height: 100%; }
 #banner.b .t { color: var(--clay); }
 #banner.show { animation: pop 1.5s ease-out forwards; }
 @keyframes pop { 0% { opacity: 0; transform: scale(.7); } 12% { opacity: 1; transform: scale(1.08); } 24% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
-#spd { position: absolute; top: 10px; right: 12px; font: 500 13px var(--f-num); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; pointer-events: none; }
+#spd { position: absolute; top: 48px; right: 12px; font: 500 13px var(--f-num); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; pointer-events: none; }
 #spd:empty { display: none; }
 #hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 12px; color: var(--chalk); text-shadow: 0 1px 2px rgba(0,0,0,.8); pointer-events: none; padding: 0 12px; }
 
@@ -291,6 +291,7 @@ function dots(id, n, on) {
   [...el.children].forEach((c, i) => c.classList.toggle('on', i < on));
 }
 function hud() {
+  pitchIcons();
   $('#inn').textContent = Math.min(G.inning, 3) + '回';
   dots('#db', 3, G.b); dots('#ds', 2, G.s); dots('#do', 2, G.outs);
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
@@ -382,13 +383,14 @@ function advance(n, label) {
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
 function contact(dt, d, vy, speed, boost) {
-  const BT = curBatter(), bm = 0.7 + 0.1 * BT.m;
+  const BT = curBatter(), bm = (0.7 + 0.1 * BT.m) * (BT.side === pitcherHand() ? 0.94 : 1.04);   // platoon edge vs opposite-handed pitchers
   dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
   const qd = 1 - Math.min(1, d / 0.8);
   const q = Math.sqrt(Math.max(0, qt) * Math.max(0, qd));
   if (q < 0.18) return { kind: 'miss', q };
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
+  if (BT.side === 'L') dir = -dir;                         // a left-handed hitter pulls to right field
   const launch = 12 + vy * 40 + gauss() * 3;
   const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (BT.p - 3) * 9;
   if (q < 0.32 || Math.abs(dir) > 45) {
@@ -416,27 +418,30 @@ function contact(dt, d, vy, speed, boost) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
-  const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b;
+  const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
   commentPitch(o);
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
     key: o.key, speed: o.speed, T: [o.tx, o.ty], P0,
-    tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK, o.ty + T.brk[1] * BRK),
+    tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
-    axis: V(T.ax[0], T.ax[1], T.ax[2]).normalize(), rps: T.rps
+    axis: V(T.ax[0], T.ax[1] * hs, T.ax[2] * hs).normalize(), rps: T.rps
   };
   swing = null; play = null; batAnim = null; phase = 'fly';
+  if (online) onl.pn++;
   trailPts.length = 0;
   hideBanner();
   $('#spd').textContent = Math.round(o.speed) + ' km/h';
   const hot = o.key === 'gou', magic = magicActive();
   $('#spd').classList.toggle('hot', hot);
-  ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#000000');
+  ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#34342e');
+  ballGlow.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#ffffff');
+  pathMat.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#f4c95a');
   trail.forEach(m => m.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#eef0e4'));
-  const sm = startSigns(ball.start);
+  const sm = startSigns(ball.start, o.sg);
   if (mode === 'pit' && !online) cpuBat();
   setHint((mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
 }
@@ -530,6 +535,8 @@ function resolveCore(c, C) {
       if (st) { sub = t + '・' + info; t = st.label; tn = tone(st.safe); cheer = st.safe && mode === 'bat' ? 0.5 : 0; }
     }
     ghostOn = true; ghostRing.position.set(ball.tgt.x, ball.tgt.y, 0.005);
+    const path = []; for (let i = 0; i <= 24; i++) path.push(basePos(i / 24, V()));
+    showPitchPath(path);
     nextAt = now + 1.7;
     if (st) { delay = st.arrive - now + 0.05; nextAt = Math.max(nextAt, st.arrive + 1.5); }
   } else {
@@ -610,7 +617,7 @@ function stepFly(now) {
   }
 }
 function clearPlay() {
-  play = null; ball = null; batAnim = null; swing = null; ghostOn = false;
+  play = null; ball = null; batAnim = null; swing = null; ghostOn = false; hidePitchPath();
   steal = null; stealAnim = null; pickoff = null; curBunt = false; throwMesh.visible = false;
   hideBanner(); $('#spd').textContent = '';
 }
@@ -836,6 +843,10 @@ const crowdTex = canvasTex(1024, 256, (g, w, h) => {
 const stands = new THREE.Mesh(new THREE.CylinderGeometry(FR + 52, FR + 5, 30, 64, 1, true, 68 * D2R, 224 * D2R),
   mat('#ffffff', { map: crowdTex, side: THREE.DoubleSide, emissive: '#ffffff', emissiveMap: crowdTex, emissiveIntensity: 0.35 }));
 stands.position.set(FC.x, 3.2 + 15, FC.z); scene.add(stands);
+// batter's eye: a plain dark screen behind center field so the pitch stands out against it instead of the crowd
+const bEye = new THREE.Mesh(new THREE.CylinderGeometry(FR + 51.4, FR + 4.4, 30, 8, 1, true, 166 * D2R, 28 * D2R),
+  new THREE.MeshBasicMaterial({ color: '#0b1914', side: THREE.DoubleSide }));
+bEye.position.copy(stands.position); scene.add(bEye);
 
 /* ---- lights ---- */
 scene.add(new THREE.HemisphereLight('#a9bde0', '#1c2a20', 0.6));
@@ -883,11 +894,32 @@ const ballTex = canvasTex(256, 128, (g, w, h) => {
 const BALL_R = 0.037 * 1.35;
 const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 16, 12), mat('#ffffff', { map: ballTex, roughness: 0.5 }));
 ballMesh.castShadow = SHADOWS; scene.add(ballMesh);
+// soft halo so the ball reads against the field and the stands on a small screen
+const ballGlowTex = canvasTex(64, 64, (g, w, h) => {
+  const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  r.addColorStop(0, 'rgba(255,255,240,1)'); r.addColorStop(0.35, 'rgba(255,250,220,.45)'); r.addColorStop(1, 'rgba(255,250,220,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+const ballGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: ballGlowTex, color: '#ffffff', transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+ballGlow.scale.setScalar(BALL_R * 6); ballMesh.add(ballGlow);
 const trailPts = [];
 const trail = [];
-for (let i = 0; i < 6; i++) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 12, 8), new THREE.MeshBasicMaterial({ color: '#eef0e4', transparent: true, opacity: 0, depthWrite: false }));
+const trailGeo = new THREE.SphereGeometry(BALL_R, 10, 6);
+for (let i = 0; i < 14; i++) {
+  const m = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ color: '#eef0e4', transparent: true, opacity: 0, depthWrite: false }));
   m.visible = false; scene.add(m); trail.push(m);
+}
+// the path of the last pitch, shown after a take or a miss so the break of a fork or a slider can be seen
+let pathMesh = null;
+const pathMat = new THREE.MeshBasicMaterial({ color: '#f4c95a', transparent: true, opacity: 0.7, depthWrite: false, fog: false });
+function showPitchPath(pts) {
+  hidePitchPath();
+  pathMesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.013, 5, false), pathMat);
+  pathMesh.renderOrder = 4; scene.add(pathMesh);
+}
+function hidePitchPath() {
+  if (!pathMesh) return;
+  scene.remove(pathMesh); pathMesh.geometry.dispose(); pathMesh = null;
 }
 const HT_N = 64;
 const htGeo = new THREE.BufferGeometry(); htGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(HT_N * 3), 3));
@@ -1064,7 +1096,11 @@ function poseFig(f, J, yaw, headYaw) {
 }
 
 /* ---- right-handed batter ---- */
+/* left-handed hitters: everything is planned in right-handed space and mirrored (x -> -x) at the end */
+const mirX = v => V(-v.x, v.y, v.z);
+function mirrorJ(J) { const o = {}; for (const k in J) o[k] = mirX(J[k]); return o; }
 function makeSwingPlan(C) {
+  if (leftBat()) C = mirX(C);
   const hy = clamp(C.y + 0.12, 0.8, 1.3), dy = C.y - hy, hl = Math.sqrt(Math.max(0.05, 0.62 * 0.62 - dy * dy));
   const Gc = V(clamp(C.x - hl, X0 + 0.12, X0 + 0.62), hy, 0.02);
   const dc = C.clone().sub(Gc); dc.z = 0; dc.normalize();
@@ -1109,11 +1145,13 @@ function batterJ(now, k) {
   const head = N.clone().add(V(0.03, 0.15, -0.03));
   const hF = G.clone().addScaledVector(dir, 0.04), hB = G.clone().addScaledVector(dir, 0.12);
   const eF = sF.clone().lerp(hF, 0.5).add(V(0.02, -0.12, -0.04)), eB = sB.clone().lerp(hB, 0.5).add(V(0, -0.13, 0.06));
-  return { J: { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB }, G, dir };
+  const J = { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB };
+  return leftBat() ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
 }
 
-/* ---- right-handed pitcher. k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
-function pitcherJ(k) {
+/* ---- pitcher (built right-handed, mirrored for a lefty). k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
+function pitcherJ(k) { const J = pitcherJR(k); return lefty() ? mirrorJ(J) : J; }
+function pitcherJR(k) {
   const M = MOUND_Y, Z0 = RUBBER_Z;
   const lift = k < 0.35 ? ease(k / 0.35) : k < 0.55 ? 1 : 1 - ease(clamp((k - 0.55) / 0.25, 0, 1));
   const s = ease(clamp((k - 0.5) / 0.5, 0, 1));
@@ -1365,10 +1403,12 @@ function runnerOut(i) {
   return false;
 }
 /* at the release: apply the sign (user) or the CPU's plan; returns a short message for the hint line */
-function startSigns(now) {
+function startSigns(now, sg) {
   steal = null; curBunt = false;
   let s = null;
-  if (mode === 'bat') { s = sign; sign = null; }
+  // online: the sign travels inside the pitch message, so both devices start the same play
+  if (online) { s = sg || null; sign = null; onl.oppSign = null; }
+  else if (mode === 'bat') { s = sign; sign = null; }
   else { s = cpuStealPlan ? 'steal' : cpuBuntPlan ? 'bunt' : null; cpuStealPlan = cpuBuntPlan = false; }
   if (!s) return '';
   let msg = '';
@@ -1461,6 +1501,7 @@ function buntGrip() {
   let C = V(0, ZY0 + 0.05, 0.05);
   if (mode === 'bat' && swing && swing.bunt) C = swing.C.clone();
   else if (mode === 'pit' && ball && ball.cpu && ball.cpu.buntC) C = ball.cpu.buntC.clone();
+  if (leftBat()) C.x = -C.x;                                    // planned in right-handed space; batterJ mirrors it back
   const dir = V(1, 0.1, -0.08).normalize();
   const G0 = C.addScaledVector(dir, -0.42); G0.z = 0.05;
   return { G: G0, dir };
@@ -1536,7 +1577,6 @@ function reliefOption() {
 function actOptions() {
   if (!G) return [];
   const rl = reliefOption();
-  if (online) return rl ? [rl] : [];
   if (mode === 'bat' && phase === 'wait') {
     const o = [], st = stealers().length;
     if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
@@ -1545,14 +1585,13 @@ function actOptions() {
     return o;
   }
   const o = [];
-  if (mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
+  if (!online && mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
   if (rl) o.push(rl);
   return o;
 }
 function refreshAct() {
   // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
-  // Only the online batter has no options at all, so that side doesn't reserve the row.
-  const o = actOptions(), el = $('#acts'), none = !!(online && mode === 'bat');
+  const o = actOptions(), el = $('#acts'), none = false;
   const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + none;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
@@ -1569,7 +1608,7 @@ $('#acts').addEventListener('click', e => {
   const k = b.dataset.k;
   if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
-  else if (mode === 'bat' && phase === 'wait') sign = sign === k ? null : k;
+  else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });
 
 /* ---- 06-online.js ---- */
@@ -1583,7 +1622,8 @@ const SB_KEY = 'sb_publishable_4TJm2e-nlqVN-yFZ_LvZhw_BzoXYkyD';
 const PAGES_URL = 'https://saboten-apps.github.io/baseball/';
 let online = false;
 const onl = { sb: null, ch: null, code: '', side: 'home', me: Math.random().toString(36).slice(2, 10), started: false,
-  score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0 };
+  score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0, goneTimer: 0,
+  pn: 0, oppSign: null };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
 
 /* run fn with Math.random replaced by a seeded generator (mulberry32) */
 function withSeed(seed, fn) {
@@ -1646,7 +1686,7 @@ function send(type, data) {
   if (onl.ch) onl.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ type, from: onl.me }, data || {}) });
 }
 function leaveRoom() {
-  clearTimeout(onl.joinTimer);
+  clearTimeout(onl.joinTimer); clearTimeout(onl.goneTimer);
   if (onl.ch) {
     const ch = onl.ch; onl.ch = null;
     try { ch.send({ type: 'broadcast', event: 'msg', payload: { type: 'bye', from: onl.me } }); } catch (e) {}
@@ -1682,7 +1722,12 @@ function opponentLeft() {
 }
 function onPresence() {
   const n = others().length;
-  if (onl.started && n === 0) { opponentLeft(); return; }
+  // a phone that briefly switches apps drops out of presence; give it a moment to come back before calling the game
+  if (onl.started) {
+    clearTimeout(onl.goneTimer);
+    if (n === 0) onl.goneTimer = setTimeout(() => { if (online && others().length === 0) opponentLeft(); }, 15000);
+    return;
+  }
   if (!onl.started && onl.side === 'home' && n >= 1) { send('start'); beginOnline(); }
 }
 function onMsg(m) {
@@ -1693,12 +1738,13 @@ function onMsg(m) {
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
   else if (m.type === 'relief') relieve(teamsNow().fld);
+  else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
 }
 
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null;
-  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null;
+  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;
   $('.seg').hidden = true; $('#menuBtn').hidden = false;
@@ -1713,7 +1759,7 @@ function applyRole() {
   mode = battingSide() === onl.side ? 'bat' : 'pit';
   $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
   $('#pitches').hidden = mode !== 'pit';
-  onl.half = G.inning;
+  onl.half = G.inning; sign = null; onl.oppSign = null;
   setTeams(); resize();
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = Infinity;      // nothing automatic: the other player pitches
   hud(); setHint(roleHint());
@@ -1757,6 +1803,13 @@ function onlineAfterResult() {
   if (mode === 'bat') announceChance();
   takeQueuedPitch();
 }
+/* the menu button during an online game: the match keeps running underneath, and leaving takes a second tap */
+function onlinePause() {
+  overlay({ title: 'オンライン対戦中', text: '試合は続いています。部屋番号 ' + onl.code + '　' + inningLabel() + '　しばいぬズ ' + onlineScore().home + ' - ' + onlineScore().away + ' パンダーズ',
+    b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', () => overlay({
+      title: '試合をやめますか？', text: '相手との接続が切れて、試合は終わりになります。',
+      b1: ['続ける', () => { $('#overlay').hidden = true; }], b2: ['やめる', showMenu] })] });
+}
 function showOnlineOver() {
   const sc = onlineScore(), mine = sc[onl.side], theirs = sc[onl.side === 'home' ? 'away' : 'home'];
   leaveRoom(); idle();
@@ -1787,23 +1840,24 @@ function inviteBoot() {
 
 /* ===== rosters: batting orders and pitching staffs =====
    Ratings are 1-5 (shown as E-A). Batters: m = contact (ミート), p = power (パワー).
-   Pitchers: v = velocity, c = control, b = break, s = stamina (pitch budget, roughly 1.6 per pitch). */
+   Pitchers: v = velocity, c = control, b = break, s = stamina (pitch budget, roughly 1.6 per pitch).
+   Optional last field: 'L' = left-handed, 'S' = switch hitter (bats from the side opposite the pitcher). Default right. */
 const ROSTER = {
   home: { name: 'しばいぬズ',
-    bat: [['マメ', 5, 1], ['ハチ', 4, 2], ['コタロウ', 4, 4], ['ゴン', 3, 5], ['チャチャ', 3, 4], ['キナコ', 3, 3], ['ムギ', 2, 3], ['ポチ', 3, 2], ['ソラ', 2, 2]],
-    pit: [['シバタ', 3, 4, 3, 80], ['ハル', 4, 3, 3, 45], ['リキ', 5, 3, 4, 35]] },
+    bat: [['マメ', 5, 1, 'L'], ['ハチ', 4, 2, 'S'], ['コタロウ', 4, 4], ['ゴン', 3, 5, 'L'], ['チャチャ', 3, 4], ['キナコ', 3, 3], ['ムギ', 2, 3], ['ポチ', 3, 2], ['ソラ', 2, 2]],
+    pit: [['シバタ', 3, 4, 3, 80], ['ハル', 4, 3, 3, 45, 'L'], ['リキ', 5, 3, 4, 35]] },
   away: { name: 'パンダーズ',
-    bat: [['ササ', 3, 2], ['シャオ', 3, 2], ['リンリン', 2, 4], ['パン吉', 2, 5], ['ユウユウ', 2, 4], ['モモ', 3, 2], ['タンタン', 2, 3], ['ランラン', 2, 2], ['コウ', 1, 2]],
-    pit: [['パンパン', 2, 3, 2, 80], ['メイメイ', 3, 3, 3, 45], ['ホアホア', 3, 4, 3, 35]] },
+    bat: [['ササ', 3, 2, 'L'], ['シャオ', 3, 2], ['リンリン', 2, 4, 'S'], ['パン吉', 2, 5], ['ユウユウ', 2, 4], ['モモ', 3, 2, 'L'], ['タンタン', 2, 3], ['ランラン', 2, 2], ['コウ', 1, 2]],
+    pit: [['パンパン', 2, 3, 2, 80], ['メイメイ', 3, 3, 3, 45, 'L'], ['ホアホア', 3, 4, 3, 35]] },
   neko: { name: 'ニャンキーズ',
-    bat: [['タマ', 5, 2], ['シロ', 5, 1], ['ミケ', 5, 4], ['クロ', 4, 4], ['トラ', 4, 3], ['サバ', 4, 2], ['ハナ', 3, 3], ['チビ', 4, 1], ['ノラ', 3, 2]],
-    pit: [['ニャン太', 3, 3, 4, 80], ['キジ', 3, 4, 3, 45], ['ルナ', 4, 3, 4, 35]] },
+    bat: [['タマ', 5, 2, 'L'], ['シロ', 5, 1, 'L'], ['ミケ', 5, 4, 'S'], ['クロ', 4, 4], ['トラ', 4, 3], ['サバ', 4, 2, 'L'], ['ハナ', 3, 3], ['チビ', 4, 1], ['ノラ', 3, 2]],
+    pit: [['ニャン太', 3, 3, 4, 80, 'L'], ['キジ', 3, 4, 3, 45], ['ルナ', 4, 3, 4, 35]] },
   usagi: { name: 'ラビッツ',
-    bat: [['ピョン', 4, 2], ['モカ', 4, 2], ['ラビ', 3, 3], ['ミミ', 3, 4], ['ココア', 3, 3], ['ユキ', 3, 2], ['シロップ', 2, 3], ['ネザー', 3, 1], ['ホップ', 2, 2]],
-    pit: [['ウサミ', 3, 4, 5, 80], ['ムーン', 3, 3, 4, 45], ['ラパン', 3, 4, 5, 35]] },
+    bat: [['ピョン', 4, 2, 'S'], ['モカ', 4, 2], ['ラビ', 3, 3, 'L'], ['ミミ', 3, 4], ['ココア', 3, 3], ['ユキ', 3, 2], ['シロップ', 2, 3], ['ネザー', 3, 1], ['ホップ', 2, 2]],
+    pit: [['ウサミ', 3, 4, 5, 80], ['ムーン', 3, 3, 4, 45, 'L'], ['ラパン', 3, 4, 5, 35]] },
   kuma: { name: 'ヒグマーズ',
-    bat: [['コグマ', 3, 3], ['ツキノワ', 3, 4], ['グリズ', 3, 5], ['ベア', 3, 5], ['ヒグ太', 2, 5], ['クマ吉', 3, 4], ['マロン', 2, 4], ['ハニー', 3, 3], ['ドングリ', 2, 3]],
-    pit: [['ヒグマ', 5, 3, 3, 90], ['シロクマ', 4, 3, 3, 45], ['ポーラ', 4, 4, 4, 35]] }
+    bat: [['コグマ', 3, 3], ['ツキノワ', 3, 4, 'L'], ['グリズ', 3, 5, 'S'], ['ベア', 3, 5], ['ヒグ太', 2, 5], ['クマ吉', 3, 4], ['マロン', 2, 4], ['ハニー', 3, 3], ['ドングリ', 2, 3]],
+    pit: [['ヒグマ', 5, 3, 3, 90], ['シロクマ', 4, 3, 3, 45, 'L'], ['ポーラ', 4, 4, 4, 35]] }
 };
 const GRADE = ['', 'E', 'D', 'C', 'B', 'A'];
 
@@ -1820,14 +1874,20 @@ function teamState(t) {
 }
 function curBatter() {
   const t = teamsNow().bat, s = teamState(t), b = ROSTER[t].bat[s.order % 9];
-  return { slot: s.order % 9 + 1, name: b[0], m: b[1], p: b[2] };
+  const hand = b[3] || 'R', side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
+  return { slot: s.order % 9 + 1, name: b[0], m: b[1], p: b[2], hand, side };
 }
 function curPitcher() {
   const t = teamsNow().fld, s = teamState(t), p = ROSTER[t].pit[s.pit];
   // tired below 40% of stamina: up to -8 km/h and wilder
   const fatigue = clamp(1 - s.sta / (p[4] * 0.4), 0, 1);
-  return { team: t, name: p[0], v: p[1], c: p[2], b: p[3], max: p[4], sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
+  return { team: t, name: p[0], v: p[1], c: p[2], b: p[3], max: p[4], hand: p[5] || 'R', sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
 }
+/* handedness on the field right now (safe before a game exists) */
+function pitcherHand() { if (!G) return 'R'; const t = teamsNow().fld; return ROSTER[t].pit[teamState(t).pit][5] || 'R'; }
+const lefty = () => pitcherHand() === 'L';
+const leftBat = () => !!G && curBatter().side === 'L';
+const HAND_JA = { R: '右', L: '左', S: '両' };
 function nextBatter() { const s = teamState(teamsNow().bat); s.order++; }
 function spendStamina(speed, key) {
   const s = teamState(teamsNow().fld);
@@ -1838,7 +1898,8 @@ function relieve(t) {
   if (!ROSTER[t].pit[s.pit + 1]) return false;
   s.pit++; s.sta = ROSTER[t].pit[s.pit][4];
   const p = ROSTER[t].pit[s.pit];
-  showBanner('ピッチャー交代', p[0] + '（球速' + GRADE[p[1]] + ' 制球' + GRADE[p[2]] + ' 変化' + GRADE[p[3]] + '）', 'n');
+  showBanner('ピッチャー交代', p[0] + (p[5] === 'L' ? '（サウスポー）' : '') + '　球速' + GRADE[p[1]] + ' 制球' + GRADE[p[2]] + ' 変化' + GRADE[p[3]], 'n');
+  pitchIcons();
   sfx.cheer(0.3);
   updateGoal();
   return true;
@@ -1862,8 +1923,9 @@ function staminaBar(P) {
 function rosterLines() {
   if (!G) return '';
   const B = curBatter(), P = curPitcher();
-  return B.slot + '番 ' + B.name + '　ミート' + GRADE[B.m] + ' パワー' + GRADE[B.p] + '<br>'
-    + '投手 ' + P.name + '　<span class="' + (P.fatigue > 0 ? 'tired' : '') + '">' + staminaBar(P) + '</span>';
+  const bh = B.hand === 'S' ? '両打・' + HAND_JA[B.side] + '打席' : HAND_JA[B.side] + '打';
+  return B.slot + '番 ' + B.name + '（' + bh + '）　ミート' + GRADE[B.m] + ' パワー' + GRADE[B.p] + '<br>'
+    + '投手 ' + P.name + '（' + HAND_JA[P.hand] + '投）　<span class="' + (P.fatigue > 0 ? 'tired' : '') + '">' + staminaBar(P) + '</span>';
 }
 
 /* ---- 08-commentary.js ---- */
@@ -2163,8 +2225,8 @@ function updateBall(now, dt, pj) {
     if (!ball.done && t < 1) {
       trailPts.push(tmpV.clone()); if (trailPts.length > trail.length) trailPts.shift();
       trailPts.forEach((p, i) => {
-        const m = trail[i]; m.visible = true; m.position.copy(p);
-        m.material.opacity = (i + 1) / trailPts.length * 0.22;
+        const m = trail[i], u = (i + 1) / trailPts.length; m.visible = true; m.position.copy(p);
+        m.material.opacity = u * 0.42; m.scale.setScalar(0.45 + 0.55 * u);
       });
     }
     return;
@@ -2236,7 +2298,7 @@ function updateCamera(now, dt) {
 function update(now, dt) {
   const k = pitcherK(now);
   const pj = squashJ(pitcherJ(k), MOUND_Y); poseFig(pitcherF, pj, 0, 0);
-  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), Math.PI / 2, Math.PI);
+  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), leftBat() ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
@@ -2284,12 +2346,12 @@ cv.addEventListener('pointermove', e => {
   flick.pts.push([x, y, now_() * 1000]); setAim(x, y);
   if (flick.pts.length > 160) flick.pts.shift();
   const g = readGesture(flick.pts);
-  if (g) { setHint(TYPES[g].ico + '  ' + TYPES[g].name); markGuide(g); }
+  if (g) { setHint(icoOf(g) + '  ' + TYPES[g].name); markGuide(g); }
 });
 /* swipe direction -> pitch. angle 0 = right, 90 = up (screen). zigzag = knuckleball */
 const GESTURE = [[90, 'str'], [45, 'cut'], [0, 'sli'], [-45, 'cur'], [-90, 'frk'], [-135, 'snk'], [180, 'sht'], [135, 'two']];
 function readGesture(pts) {
-  const a = pts[0], b = pts[pts.length - 1], dx = b[0] - a[0], dy = b[1] - a[1];
+  const a = pts[0], b = pts[pts.length - 1], dx = (b[0] - a[0]) * (lefty() ? -1 : 1), dy = b[1] - a[1];   // a lefty's breaks are mirrored, so the swipe still shows where the ball goes
   let rev = 0, dir = 0, ext = a[0];
   for (const p of pts) {
     const x = p[0];
@@ -2329,8 +2391,8 @@ function endFlick(cancel) {
   const sig = (0.06 + f * 0.22) * (1 + (3 - P.c) * 0.15) + P.fatigue * 0.25;
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
   pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
-  phase = 'deliver'; deliverStart = now_(); setHint(T.ico + '  ' + T.name);
-  if (online) send('pitch', { p: pending });
+  phase = 'deliver'; deliverStart = now_(); setHint(icoOf(key) + '  ' + T.name);
+  if (online) { pending.sg = onl.oppSign; send('pitch', { p: pending }); }
 }
 cv.addEventListener('pointerup', () => endFlick(false));
 cv.addEventListener('pointercancel', () => endFlick(true));
@@ -2351,22 +2413,28 @@ function setMode(m) {
   $('#pitches').hidden = m !== 'pit';
   setTeams(); newGame(); showStart(); resize();
 }
+const ICO_MIRROR = { '↖': '↗', '↗': '↖', '→': '←', '←': '→', '↘': '↙', '↙': '↘' };
+const icoOf = k => lefty() ? TYPES[k].ico.replace(/[↖↗→←↘↙]/g, c => ICO_MIRROR[c]) : TYPES[k].ico;
+let iconsFor = '';
 function buildPitchButtons() {
   const pc = $('#pitches'); pc.innerHTML = '';
+  iconsFor = lefty() ? 'L' : 'R';
   ['gou', 'str', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'].forEach(k => {
     const b = document.createElement('div');
     b.className = 'pg';
     b.dataset.t = k;
-    b.innerHTML = '<i' + (TYPES[k].ico.length > 1 ? ' style="font-size:10px"' : '') + '>' + TYPES[k].ico + '</i><b>' + TYPES[k].short + '</b>';
+    b.innerHTML = '<i' + (TYPES[k].ico.length > 1 ? ' style="font-size:10px"' : '') + '>' + icoOf(k) + '</i><b>' + TYPES[k].short + '</b>';
     pc.appendChild(b);
   });
 }
+/* the swipe guide follows the pitcher's hand */
+function pitchIcons() { if (iconsFor !== (lefty() ? 'L' : 'R')) buildPitchButtons(); }
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
-$('#menuBtn').addEventListener('click', showMenu);
+$('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
 $('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
 ['pointerdown', 'touchend', 'click'].forEach(ev => document.addEventListener(ev, cmtUnlock, { once: false, passive: true }));

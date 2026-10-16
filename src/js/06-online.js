@@ -8,7 +8,8 @@ const SB_KEY = 'sb_publishable_4TJm2e-nlqVN-yFZ_LvZhw_BzoXYkyD';
 const PAGES_URL = 'https://saboten-apps.github.io/baseball/';
 let online = false;
 const onl = { sb: null, ch: null, code: '', side: 'home', me: Math.random().toString(36).slice(2, 10), started: false,
-  score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0 };
+  score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0, goneTimer: 0,
+  pn: 0, oppSign: null };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
 
 /* run fn with Math.random replaced by a seeded generator (mulberry32) */
 function withSeed(seed, fn) {
@@ -71,7 +72,7 @@ function send(type, data) {
   if (onl.ch) onl.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ type, from: onl.me }, data || {}) });
 }
 function leaveRoom() {
-  clearTimeout(onl.joinTimer);
+  clearTimeout(onl.joinTimer); clearTimeout(onl.goneTimer);
   if (onl.ch) {
     const ch = onl.ch; onl.ch = null;
     try { ch.send({ type: 'broadcast', event: 'msg', payload: { type: 'bye', from: onl.me } }); } catch (e) {}
@@ -107,7 +108,12 @@ function opponentLeft() {
 }
 function onPresence() {
   const n = others().length;
-  if (onl.started && n === 0) { opponentLeft(); return; }
+  // a phone that briefly switches apps drops out of presence; give it a moment to come back before calling the game
+  if (onl.started) {
+    clearTimeout(onl.goneTimer);
+    if (n === 0) onl.goneTimer = setTimeout(() => { if (online && others().length === 0) opponentLeft(); }, 15000);
+    return;
+  }
   if (!onl.started && onl.side === 'home' && n >= 1) { send('start'); beginOnline(); }
 }
 function onMsg(m) {
@@ -118,12 +124,13 @@ function onMsg(m) {
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
   else if (m.type === 'relief') relieve(teamsNow().fld);
+  else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
 }
 
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null;
-  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null;
+  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;
   $('.seg').hidden = true; $('#menuBtn').hidden = false;
@@ -138,7 +145,7 @@ function applyRole() {
   mode = battingSide() === onl.side ? 'bat' : 'pit';
   $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
   $('#pitches').hidden = mode !== 'pit';
-  onl.half = G.inning;
+  onl.half = G.inning; sign = null; onl.oppSign = null;
   setTeams(); resize();
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = Infinity;      // nothing automatic: the other player pitches
   hud(); setHint(roleHint());
@@ -181,6 +188,13 @@ function onlineAfterResult() {
   hud(); setHint(roleHint());
   if (mode === 'bat') announceChance();
   takeQueuedPitch();
+}
+/* the menu button during an online game: the match keeps running underneath, and leaving takes a second tap */
+function onlinePause() {
+  overlay({ title: 'オンライン対戦中', text: '試合は続いています。部屋番号 ' + onl.code + '　' + inningLabel() + '　しばいぬズ ' + onlineScore().home + ' - ' + onlineScore().away + ' パンダーズ',
+    b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', () => overlay({
+      title: '試合をやめますか？', text: '相手との接続が切れて、試合は終わりになります。',
+      b1: ['続ける', () => { $('#overlay').hidden = true; }], b2: ['やめる', showMenu] })] });
 }
 function showOnlineOver() {
   const sc = onlineScore(), mine = sc[onl.side], theirs = sc[onl.side === 'home' ? 'away' : 'home'];

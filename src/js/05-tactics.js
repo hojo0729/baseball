@@ -29,10 +29,12 @@ function runnerOut(i) {
   return false;
 }
 /* at the release: apply the sign (user) or the CPU's plan; returns a short message for the hint line */
-function startSigns(now) {
+function startSigns(now, sg) {
   steal = null; curBunt = false;
   let s = null;
-  if (mode === 'bat') { s = sign; sign = null; }
+  // online: the sign travels inside the pitch message, so both devices start the same play
+  if (online) { s = sg || null; sign = null; onl.oppSign = null; }
+  else if (mode === 'bat') { s = sign; sign = null; }
   else { s = cpuStealPlan ? 'steal' : cpuBuntPlan ? 'bunt' : null; cpuStealPlan = cpuBuntPlan = false; }
   if (!s) return '';
   let msg = '';
@@ -125,6 +127,7 @@ function buntGrip() {
   let C = V(0, ZY0 + 0.05, 0.05);
   if (mode === 'bat' && swing && swing.bunt) C = swing.C.clone();
   else if (mode === 'pit' && ball && ball.cpu && ball.cpu.buntC) C = ball.cpu.buntC.clone();
+  if (leftBat()) C.x = -C.x;                                    // planned in right-handed space; batterJ mirrors it back
   const dir = V(1, 0.1, -0.08).normalize();
   const G0 = C.addScaledVector(dir, -0.42); G0.z = 0.05;
   return { G: G0, dir };
@@ -200,7 +203,6 @@ function reliefOption() {
 function actOptions() {
   if (!G) return [];
   const rl = reliefOption();
-  if (online) return rl ? [rl] : [];
   if (mode === 'bat' && phase === 'wait') {
     const o = [], st = stealers().length;
     if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
@@ -209,14 +211,13 @@ function actOptions() {
     return o;
   }
   const o = [];
-  if (mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
+  if (!online && mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
   if (rl) o.push(rl);
   return o;
 }
 function refreshAct() {
   // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
-  // Only the online batter has no options at all, so that side doesn't reserve the row.
-  const o = actOptions(), el = $('#acts'), none = !!(online && mode === 'bat');
+  const o = actOptions(), el = $('#acts'), none = false;
   const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + none;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
@@ -233,5 +234,5 @@ $('#acts').addEventListener('click', e => {
   const k = b.dataset.k;
   if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
-  else if (mode === 'bat' && phase === 'wait') sign = sign === k ? null : k;
+  else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });

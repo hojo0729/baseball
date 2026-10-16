@@ -191,6 +191,10 @@ const crowdTex = canvasTex(1024, 256, (g, w, h) => {
 const stands = new THREE.Mesh(new THREE.CylinderGeometry(FR + 52, FR + 5, 30, 64, 1, true, 68 * D2R, 224 * D2R),
   mat('#ffffff', { map: crowdTex, side: THREE.DoubleSide, emissive: '#ffffff', emissiveMap: crowdTex, emissiveIntensity: 0.35 }));
 stands.position.set(FC.x, 3.2 + 15, FC.z); scene.add(stands);
+// batter's eye: a plain dark screen behind center field so the pitch stands out against it instead of the crowd
+const bEye = new THREE.Mesh(new THREE.CylinderGeometry(FR + 51.4, FR + 4.4, 30, 8, 1, true, 166 * D2R, 28 * D2R),
+  new THREE.MeshBasicMaterial({ color: '#0b1914', side: THREE.DoubleSide }));
+bEye.position.copy(stands.position); scene.add(bEye);
 
 /* ---- lights ---- */
 scene.add(new THREE.HemisphereLight('#a9bde0', '#1c2a20', 0.6));
@@ -238,11 +242,32 @@ const ballTex = canvasTex(256, 128, (g, w, h) => {
 const BALL_R = 0.037 * 1.35;
 const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 16, 12), mat('#ffffff', { map: ballTex, roughness: 0.5 }));
 ballMesh.castShadow = SHADOWS; scene.add(ballMesh);
+// soft halo so the ball reads against the field and the stands on a small screen
+const ballGlowTex = canvasTex(64, 64, (g, w, h) => {
+  const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  r.addColorStop(0, 'rgba(255,255,240,1)'); r.addColorStop(0.35, 'rgba(255,250,220,.45)'); r.addColorStop(1, 'rgba(255,250,220,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+const ballGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: ballGlowTex, color: '#ffffff', transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+ballGlow.scale.setScalar(BALL_R * 6); ballMesh.add(ballGlow);
 const trailPts = [];
 const trail = [];
-for (let i = 0; i < 6; i++) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 12, 8), new THREE.MeshBasicMaterial({ color: '#eef0e4', transparent: true, opacity: 0, depthWrite: false }));
+const trailGeo = new THREE.SphereGeometry(BALL_R, 10, 6);
+for (let i = 0; i < 14; i++) {
+  const m = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ color: '#eef0e4', transparent: true, opacity: 0, depthWrite: false }));
   m.visible = false; scene.add(m); trail.push(m);
+}
+// the path of the last pitch, shown after a take or a miss so the break of a fork or a slider can be seen
+let pathMesh = null;
+const pathMat = new THREE.MeshBasicMaterial({ color: '#f4c95a', transparent: true, opacity: 0.7, depthWrite: false, fog: false });
+function showPitchPath(pts) {
+  hidePitchPath();
+  pathMesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.013, 5, false), pathMat);
+  pathMesh.renderOrder = 4; scene.add(pathMesh);
+}
+function hidePitchPath() {
+  if (!pathMesh) return;
+  scene.remove(pathMesh); pathMesh.geometry.dispose(); pathMesh = null;
 }
 const HT_N = 64;
 const htGeo = new THREE.BufferGeometry(); htGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(HT_N * 3), 3));

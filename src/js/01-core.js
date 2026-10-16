@@ -97,6 +97,7 @@ function dots(id, n, on) {
   [...el.children].forEach((c, i) => c.classList.toggle('on', i < on));
 }
 function hud() {
+  pitchIcons();
   $('#inn').textContent = Math.min(G.inning, 3) + '回';
   dots('#db', 3, G.b); dots('#ds', 2, G.s); dots('#do', 2, G.outs);
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
@@ -188,13 +189,14 @@ function advance(n, label) {
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
 function contact(dt, d, vy, speed, boost) {
-  const BT = curBatter(), bm = 0.7 + 0.1 * BT.m;
+  const BT = curBatter(), bm = (0.7 + 0.1 * BT.m) * (BT.side === pitcherHand() ? 0.94 : 1.04);   // platoon edge vs opposite-handed pitchers
   dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
   const qd = 1 - Math.min(1, d / 0.8);
   const q = Math.sqrt(Math.max(0, qt) * Math.max(0, qd));
   if (q < 0.18) return { kind: 'miss', q };
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
+  if (BT.side === 'L') dir = -dir;                         // a left-handed hitter pulls to right field
   const launch = 12 + vy * 40 + gauss() * 3;
   const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (BT.p - 3) * 9;
   if (q < 0.32 || Math.abs(dir) > 45) {
@@ -222,27 +224,30 @@ function contact(dt, d, vy, speed, boost) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
-  const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b;
+  const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
   commentPitch(o);
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
     key: o.key, speed: o.speed, T: [o.tx, o.ty], P0,
-    tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK, o.ty + T.brk[1] * BRK),
+    tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
-    axis: V(T.ax[0], T.ax[1], T.ax[2]).normalize(), rps: T.rps
+    axis: V(T.ax[0], T.ax[1] * hs, T.ax[2] * hs).normalize(), rps: T.rps
   };
   swing = null; play = null; batAnim = null; phase = 'fly';
+  if (online) onl.pn++;
   trailPts.length = 0;
   hideBanner();
   $('#spd').textContent = Math.round(o.speed) + ' km/h';
   const hot = o.key === 'gou', magic = magicActive();
   $('#spd').classList.toggle('hot', hot);
-  ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#000000');
+  ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#34342e');
+  ballGlow.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#ffffff');
+  pathMat.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#f4c95a');
   trail.forEach(m => m.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#eef0e4'));
-  const sm = startSigns(ball.start);
+  const sm = startSigns(ball.start, o.sg);
   if (mode === 'pit' && !online) cpuBat();
   setHint((mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
 }
@@ -336,6 +341,8 @@ function resolveCore(c, C) {
       if (st) { sub = t + '・' + info; t = st.label; tn = tone(st.safe); cheer = st.safe && mode === 'bat' ? 0.5 : 0; }
     }
     ghostOn = true; ghostRing.position.set(ball.tgt.x, ball.tgt.y, 0.005);
+    const path = []; for (let i = 0; i <= 24; i++) path.push(basePos(i / 24, V()));
+    showPitchPath(path);
     nextAt = now + 1.7;
     if (st) { delay = st.arrive - now + 0.05; nextAt = Math.max(nextAt, st.arrive + 1.5); }
   } else {
@@ -416,7 +423,7 @@ function stepFly(now) {
   }
 }
 function clearPlay() {
-  play = null; ball = null; batAnim = null; swing = null; ghostOn = false;
+  play = null; ball = null; batAnim = null; swing = null; ghostOn = false; hidePitchPath();
   steal = null; stealAnim = null; pickoff = null; curBunt = false; throwMesh.visible = false;
   hideBanner(); $('#spd').textContent = '';
 }

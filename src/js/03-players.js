@@ -156,7 +156,11 @@ function poseFig(f, J, yaw, headYaw) {
 }
 
 /* ---- right-handed batter ---- */
+/* left-handed hitters: everything is planned in right-handed space and mirrored (x -> -x) at the end */
+const mirX = v => V(-v.x, v.y, v.z);
+function mirrorJ(J) { const o = {}; for (const k in J) o[k] = mirX(J[k]); return o; }
 function makeSwingPlan(C) {
+  if (leftBat()) C = mirX(C);
   const hy = clamp(C.y + 0.12, 0.8, 1.3), dy = C.y - hy, hl = Math.sqrt(Math.max(0.05, 0.62 * 0.62 - dy * dy));
   const Gc = V(clamp(C.x - hl, X0 + 0.12, X0 + 0.62), hy, 0.02);
   const dc = C.clone().sub(Gc); dc.z = 0; dc.normalize();
@@ -201,11 +205,13 @@ function batterJ(now, k) {
   const head = N.clone().add(V(0.03, 0.15, -0.03));
   const hF = G.clone().addScaledVector(dir, 0.04), hB = G.clone().addScaledVector(dir, 0.12);
   const eF = sF.clone().lerp(hF, 0.5).add(V(0.02, -0.12, -0.04)), eB = sB.clone().lerp(hB, 0.5).add(V(0, -0.13, 0.06));
-  return { J: { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB }, G, dir };
+  const J = { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB };
+  return leftBat() ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
 }
 
-/* ---- right-handed pitcher. k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
-function pitcherJ(k) {
+/* ---- pitcher (built right-handed, mirrored for a lefty). k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
+function pitcherJ(k) { const J = pitcherJR(k); return lefty() ? mirrorJ(J) : J; }
+function pitcherJR(k) {
   const M = MOUND_Y, Z0 = RUBBER_Z;
   const lift = k < 0.35 ? ease(k / 0.35) : k < 0.55 ? 1 : 1 - ease(clamp((k - 0.55) / 0.25, 0, 1));
   const s = ease(clamp((k - 0.5) / 0.5, 0, 1));

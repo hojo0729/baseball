@@ -149,8 +149,8 @@ function updateBall(now, dt, pj) {
     if (!ball.done && t < 1) {
       trailPts.push(tmpV.clone()); if (trailPts.length > trail.length) trailPts.shift();
       trailPts.forEach((p, i) => {
-        const m = trail[i]; m.visible = true; m.position.copy(p);
-        m.material.opacity = (i + 1) / trailPts.length * 0.22;
+        const m = trail[i], u = (i + 1) / trailPts.length; m.visible = true; m.position.copy(p);
+        m.material.opacity = u * 0.42; m.scale.setScalar(0.45 + 0.55 * u);
       });
     }
     return;
@@ -222,7 +222,7 @@ function updateCamera(now, dt) {
 function update(now, dt) {
   const k = pitcherK(now);
   const pj = squashJ(pitcherJ(k), MOUND_Y); poseFig(pitcherF, pj, 0, 0);
-  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), Math.PI / 2, Math.PI);
+  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), leftBat() ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
@@ -270,12 +270,12 @@ cv.addEventListener('pointermove', e => {
   flick.pts.push([x, y, now_() * 1000]); setAim(x, y);
   if (flick.pts.length > 160) flick.pts.shift();
   const g = readGesture(flick.pts);
-  if (g) { setHint(TYPES[g].ico + '  ' + TYPES[g].name); markGuide(g); }
+  if (g) { setHint(icoOf(g) + '  ' + TYPES[g].name); markGuide(g); }
 });
 /* swipe direction -> pitch. angle 0 = right, 90 = up (screen). zigzag = knuckleball */
 const GESTURE = [[90, 'str'], [45, 'cut'], [0, 'sli'], [-45, 'cur'], [-90, 'frk'], [-135, 'snk'], [180, 'sht'], [135, 'two']];
 function readGesture(pts) {
-  const a = pts[0], b = pts[pts.length - 1], dx = b[0] - a[0], dy = b[1] - a[1];
+  const a = pts[0], b = pts[pts.length - 1], dx = (b[0] - a[0]) * (lefty() ? -1 : 1), dy = b[1] - a[1];   // a lefty's breaks are mirrored, so the swipe still shows where the ball goes
   let rev = 0, dir = 0, ext = a[0];
   for (const p of pts) {
     const x = p[0];
@@ -315,8 +315,8 @@ function endFlick(cancel) {
   const sig = (0.06 + f * 0.22) * (1 + (3 - P.c) * 0.15) + P.fatigue * 0.25;
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
   pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
-  phase = 'deliver'; deliverStart = now_(); setHint(T.ico + '  ' + T.name);
-  if (online) send('pitch', { p: pending });
+  phase = 'deliver'; deliverStart = now_(); setHint(icoOf(key) + '  ' + T.name);
+  if (online) { pending.sg = onl.oppSign; send('pitch', { p: pending }); }
 }
 cv.addEventListener('pointerup', () => endFlick(false));
 cv.addEventListener('pointercancel', () => endFlick(true));
@@ -337,22 +337,28 @@ function setMode(m) {
   $('#pitches').hidden = m !== 'pit';
   setTeams(); newGame(); showStart(); resize();
 }
+const ICO_MIRROR = { '↖': '↗', '↗': '↖', '→': '←', '←': '→', '↘': '↙', '↙': '↘' };
+const icoOf = k => lefty() ? TYPES[k].ico.replace(/[↖↗→←↘↙]/g, c => ICO_MIRROR[c]) : TYPES[k].ico;
+let iconsFor = '';
 function buildPitchButtons() {
   const pc = $('#pitches'); pc.innerHTML = '';
+  iconsFor = lefty() ? 'L' : 'R';
   ['gou', 'str', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'].forEach(k => {
     const b = document.createElement('div');
     b.className = 'pg';
     b.dataset.t = k;
-    b.innerHTML = '<i' + (TYPES[k].ico.length > 1 ? ' style="font-size:10px"' : '') + '>' + TYPES[k].ico + '</i><b>' + TYPES[k].short + '</b>';
+    b.innerHTML = '<i' + (TYPES[k].ico.length > 1 ? ' style="font-size:10px"' : '') + '>' + icoOf(k) + '</i><b>' + TYPES[k].short + '</b>';
     pc.appendChild(b);
   });
 }
+/* the swipe guide follows the pitcher's hand */
+function pitchIcons() { if (iconsFor !== (lefty() ? 'L' : 'R')) buildPitchButtons(); }
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
-$('#menuBtn').addEventListener('click', showMenu);
+$('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
 $('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
 ['pointerdown', 'touchend', 'click'].forEach(ev => document.addEventListener(ev, cmtUnlock, { once: false, passive: true }));
