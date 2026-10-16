@@ -192,8 +192,15 @@ function updateRunning(now) {
   }
 }
 /* footer strategy buttons */
+function reliefOption() {
+  if (mode !== 'pit' || phase !== 'ready') return null;
+  const P = curPitcher();
+  return P.next && P.sta < P.max * 0.7 ? ['relief', '投手交代 → ' + P.next[0]] : null;
+}
 function actOptions() {
-  if (!G || online) return [];
+  if (!G) return [];
+  const rl = reliefOption();
+  if (online) return rl ? [rl] : [];
   if (mode === 'bat' && phase === 'wait') {
     const o = [], st = stealers().length;
     if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
@@ -201,11 +208,13 @@ function actOptions() {
     if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
     return o;
   }
-  if (mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) return [['pick', '牽制する']];
-  return [];
+  const o = [];
+  if (mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
+  if (rl) o.push(rl);
+  return o;
 }
 function refreshAct() {
-  const o = actOptions(), el = $('#acts'), key = o.map(x => x[0]).join() + '|' + sign;
+  const o = actOptions(), el = $('#acts'), key = o.map(x => x.join(':')).join() + '|' + sign;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = !o.length;
   o.forEach(([k, label]) => {
@@ -220,5 +229,6 @@ $('#acts').addEventListener('click', e => {
   audioInit();
   const k = b.dataset.k;
   if (k === 'pick') userPickoff();
+  else if (k === 'relief') userRelief();
   else if (mode === 'bat' && phase === 'wait') sign = sign === k ? null : k;
 });

@@ -14,6 +14,7 @@
   - `04-story.js` ストーリーモード（全4話）、メニューと会話オーバーレイ
   - `05-tactics.js` 作戦（盗塁・エンドラン・バント・スクイズ）、牽制
   - `06-online.js` オンライン対戦（Supabase Realtime）
+  - `07-roster.js` 各チームの打順・投手陣（ミート/パワー、球速/制球/変化/スタミナ）、疲労、継投
   - `09-main.js` 打球、毎フレーム更新、カメラ、入力、起動
 - `build.mjs` — `node build.mjs` で `docs/index.html`（GitHub Pages 公開用）と `dist/artifact.html`（Claude内プレビュー用）を作る
 - `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）

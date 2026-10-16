@@ -117,6 +117,7 @@ function onMsg(m) {
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
+  else if (m.type === 'relief') relieve(teamsNow().fld);
 }
 
 /* ---- game flow ---- */

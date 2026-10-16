@@ -128,7 +128,7 @@ function flushBanner() {
 }
 
 /* ---- count / base logic ---- */
-function endPA() { G.b = 0; G.s = 0; G.pa++; }
+function endPA() { G.b = 0; G.s = 0; G.pa++; nextBatter(); }
 function endInning(label) {
   if (online) { onl.score[battingSide()] += G.runs; G.runs = 0; }   // bank this half's runs for the batting team
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
@@ -187,13 +187,15 @@ function advance(n, label) {
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
 function contact(dt, d, vy, speed, boost) {
+  const BT = curBatter(), bm = 0.7 + 0.1 * BT.m;
+  dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
   const qd = 1 - Math.min(1, d / 0.8);
   const q = Math.sqrt(Math.max(0, qt) * Math.max(0, qd));
   if (q < 0.18) return { kind: 'miss', q };
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
   const launch = 12 + vy * 40 + gauss() * 3;
-  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0);
+  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (BT.p - 3) * 9;
   if (q < 0.32 || Math.abs(dir) > 45) {
     if (Math.abs(dir) <= 45) dir = (dir < 0 ? -1 : 1) * rnd(50, 80);
     return { kind: 'foul', q, dir, ev, launch, dist: rnd(25, 70) };
@@ -219,12 +221,13 @@ function contact(dt, d, vy, speed, boost) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
-  const T = TYPES[o.key];
+  const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b;
+  spendStamina(o.speed, o.key);
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
     key: o.key, speed: o.speed, T: [o.tx, o.ty], P0,
-    tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0], o.ty + T.brk[1]),
+    tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
     axis: V(T.ax[0], T.ax[1], T.ax[2]).normalize(), rps: T.rps
@@ -271,7 +274,9 @@ function cpuPitch() {
   if (Math.random() < 0.68) { tx = rnd(-0.9, 0.9); ty = rnd(-0.9, 0.9); }
   else { tx = rnd(-1.5, 1.5); ty = rnd(-1.4, 1.5); }
   const bonus = story && story.pitcher ? story.pitcher.speed : 0;
-  launchBall({ key, speed: clamp(rnd(T.min, T.max) + bonus, 70, 170), tx, ty });
+  const P = curPitcher(), wild = 0.06 + (3 - P.c) * 0.05 + P.fatigue * 0.3;
+  tx += gauss() * Math.max(0, wild); ty += gauss() * Math.max(0, wild);
+  launchBall({ key, speed: clamp(rnd(T.min, T.max) + bonus + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx, ty });
 }
 function cpuBat() {
   const T = ball.T, o = Math.max(Math.abs(T[0]), Math.abs(T[1])), inz = o <= 1.05;
@@ -280,9 +285,10 @@ function cpuBat() {
   if (G.s === 2) p = inz ? 0.97 : 0.5;
   if (o > 1.5) p = 0.05;
   const tsd = 0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03;
+  const BT = curBatter();
   const k = {
     swing: Math.random() < p, dt: gauss() * tsd,
-    d: (Math.abs(gauss()) * (0.30 + ty.hard * 0.18) + Math.max(0, o - 1) * 0.5) * (story && story.batSkill || 1) + (magicActive() ? 0.35 : 0),
+    d: (Math.abs(gauss()) * (0.30 + ty.hard * 0.18) + Math.max(0, o - 1) * 0.5) * (story && story.batSkill || 1) * (1.3 - 0.1 * BT.m) + (magicActive() ? 0.35 : 0),
     vy: 0.1 + gauss() * 0.35
   };
   ball.cpu = k;
@@ -422,6 +428,7 @@ function afterResult() {
   if (mode === 'bat' && stealers().length) nextAt += 1.2;      // time to give a steal sign
   cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < 0.25;
   cpuBuntPlan = mode === 'pit' && !cpuStealPlan && (G.bases[0] || G.bases[1]) && G.outs === 0 && Math.random() < 0.3;
+  cpuRelief();
   updateGoal(); announceChance();
   setHint(mode === 'bat' ? '投手が投げたら、ボールが通る位置をタップして打つ' : '弾く向きで球種が決まる。指を離した位置がコース、弾く速さが球速');
 }

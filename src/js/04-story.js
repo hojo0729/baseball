@@ -46,7 +46,7 @@ function updateGoal() {
   if (!G || phase === 'idle') { el.innerHTML = ''; return; }
   if (online) {
     el.innerHTML = 'オンライン 部屋' + onl.code + '<br>' + teamName(onl.side) + '・' + (mode === 'bat' ? '攻撃中' : '守備中')
-      + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '');
+      + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '') + '<br>' + rosterLines();
     return;
   }
   let s = '';
@@ -54,7 +54,7 @@ function updateGoal() {
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
   else s += n === 0 ? '<span class="hot">魔球モード発動中！</span>' : '魔球まで あと' + n + '人';
-  el.innerHTML = s;
+  el.innerHTML = s + '<br>' + rosterLines();
 }
 function announceChance() {
   if (!G || G.lastAnn === G.pa) return;

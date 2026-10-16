@@ -311,9 +311,10 @@ function endFlick(cancel) {
   else if (key === 'str' && f > 0.85) { key = 'gou'; f = (f - 0.85) / 0.15; }   // a very fast one throws the heater
   ptype = key; markGuide(key);
   const T = TYPES[key];
-  const sig = 0.06 + f * 0.22;
+  const P = curPitcher();
+  const sig = (0.06 + f * 0.22) * (1 + (3 - P.c) * 0.15) + P.fatigue * 0.25;
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
-  pending = { key, speed: T.min + (T.max - T.min) * f, tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
+  pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
   phase = 'deliver'; deliverStart = now_(); setHint(T.ico + '  ' + T.name);
   if (online) send('pitch', { p: pending });
 }

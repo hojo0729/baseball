@@ -270,9 +270,7 @@ function updateRunners() {
   });
 }
 function setTeams() {
-  const opp = story ? story.opp : 'away';
-  let bat = mode === 'bat' ? 'home' : opp, fld = mode === 'bat' ? opp : 'home';
-  if (online && G) { bat = battingSide() === 'home' ? 'home' : 'away'; fld = bat === 'home' ? 'away' : 'home'; }
+  const { bat, fld } = teamsNow();
   setTeam(batterF, bat); runnerF.forEach(f => setTeam(f, bat));
   setTeam(pitcherF, fld); fielderF.forEach(f => setTeam(f, fld));
 }
