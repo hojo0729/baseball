@@ -290,3 +290,18 @@ const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.02, 14), m
 const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.0158, 0.0142, 0.26, 14).translate(0, 0.15, 0), mat('#23242a', { roughness: 0.9 }));
 [batBody, batCap, grip].forEach(m => { m.castShadow = SHADOWS; });
 batG.add(batBody, batCap, knob, grip);
+/* superstar glow: a gold halo behind the star batter (and the star pitcher), and a gold bat */
+const auraMat = () => new THREE.SpriteMaterial({ map: ballGlowTex, color: '#ffc845', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+const batAura = new THREE.Sprite(auraMat()), pitAura = new THREE.Sprite(auraMat());
+scene.add(batAura, pitAura);
+let starBatOn = null;
+function updateStars(now, bj, pj) {
+  const on = !!G && phase !== 'idle', bs = on && curBatter().star, ps = on && curPitcher().star, pulse = 0.5 + 0.2 * Math.sin(now * 4);
+  batAura.visible = bs; pitAura.visible = ps;
+  if (bs) { batAura.position.copy(bj.J.pelvis); batAura.position.y += 0.15; batAura.position.z -= 0.3; batAura.scale.setScalar(2.6); batAura.material.opacity = pulse; }
+  if (ps) { pitAura.position.copy(pj.pelvis); pitAura.position.z -= 0.4; pitAura.scale.setScalar(2.4); pitAura.material.opacity = pulse * 0.9; }
+  if (starBatOn !== bs) {
+    starBatOn = bs;
+    WOOD.color.set(bs ? '#f2c14e' : '#c99a5c'); WOOD.emissive.set(bs ? '#5a3c00' : '#000000');
+  }
+}

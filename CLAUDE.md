@@ -14,8 +14,8 @@
   - `04-story.js` ストーリーモード（全4話）、メニューと会話オーバーレイ
   - `05-tactics.js` 作戦（盗塁・エンドラン・バント・スクイズ）、牽制
   - `06-online.js` オンライン対戦（Supabase Realtime）
-  - `07-roster.js` 各チームの打順・投手陣（ミート/パワー、球速/制球/変化/スタミナ）、疲労、継投
-  - `08-commentary.js` 実況（画面下のテロップ + スマホの読み上げ。セリフ表は LINES）。乱数は専用生成器を使うこと（withSeed中に呼ばれてもずれない）
+  - `07-roster.js` 各チームの打順・投手陣（ミート/パワー、球速/制球/変化/スタミナ、左右・両打ち、★スター）、疲労、継投。左投手・左打者は右用の動きを x 反転して描く
+  - `08-commentary.js` 実況（画面下のテロップ + 録音音声 docs/audio。セリフ表は LINES）。乱数は専用生成器を使うこと（withSeed中に呼ばれてもずれない）
   - `09-main.js` 打球、毎フレーム更新、カメラ、入力、起動
 - `build.mjs` — `node build.mjs` で `docs/index.html`（GitHub Pages 公開用）と `dist/artifact.html`（Claude内プレビュー用）を作る
 - `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）。アプリ化（PWA）用の `manifest.webmanifest` と `sw.js` もビルドで作られる。`docs/icons/` のアイコンは `python3 tools/make-icons.py` で作る。`docs/audio/<id>.mp3` を置いてビルドすると、実況の声として自動で使われる（スマホの機械音声は使わない）

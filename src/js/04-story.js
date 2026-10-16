@@ -57,7 +57,7 @@ function updateGoal() {
   el.innerHTML = s + '<br>' + rosterLines();
 }
 function announceChance() {
-  if (!G || G.lastAnn === G.pa) return;
+  if (!G || G.lastAnn === G.pa || starCheck()) return;
   if (giantActive()) { G.lastAnn = G.pa; showBanner('巨大バット！', '当たる範囲が大きくなる', 'g'); }
   else if (magicActive()) { G.lastAnn = G.pa; showBanner('魔球モード！', 'この打者には打たれにくい', 'g'); }
 }

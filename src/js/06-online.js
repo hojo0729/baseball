@@ -183,10 +183,15 @@ function onlineAfterResult() {
   const sc = onlineScore();
   if (G.inning === 6 && sc.home > sc.away) G.over = true;            // walk-off in the bottom of the 3rd
   if (G.over) { showOnlineOver(); return; }
-  if (G.inning !== onl.half) { applyRole(); showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備'), 'n'); return; }
+  if (G.inning !== onl.half) {
+    applyRole();
+    const B = curBatter(), lead = B.star ? '　先頭はスーパースター ' + B.name : '';
+    if (B.star) G.lastAnn = G.pa;
+    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備') + lead, 'n'); return;
+  }
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = Infinity;
   hud(); setHint(roleHint());
-  if (mode === 'bat') announceChance();
+  announceChance();
   takeQueuedPitch();
 }
 /* the menu button during an online game: the match keeps running underneath, and leaving takes a second tap */
