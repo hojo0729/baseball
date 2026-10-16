@@ -146,8 +146,45 @@ let G = null;
 let phase = 'idle';            // idle | wait | deliver | fly | result
 let ball = null, swing = null, play = null, batAnim = null, pending = null, flick = null, aim = null;
 let nextAt = 0, deliverStart = 0, shakeUntil = 0, shakeAmp = 0, pendBanner = null;
+let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
-function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1 }; hud(); }
+function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: { crit: 2, vn: 2 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
+
+/* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
+const DICE_FX = {
+  1: () => 'はずれ…',
+  2: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 1, p: 0 }; return '次の打者　ミート+1'; },
+  3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 0, p: 1 }; return '次の打者　パワー+1'; },
+  4: () => { if (G.bases[0]) { G.runs += 1; return '1点ボーナス'; } G.bases[0] = 1; return 'ランナーが1塁に！'; },
+  5: () => { G.runs += 1; return '1点ボーナス！'; },
+  6: () => { G.runs += 2; return '2点ボーナス！！'; }
+};
+function rollDie() {
+  if (!online) return Math.floor(Math.random() * 6) + 1;
+  return withSeed(((onl.seed || 0) + G.inning * 7919) >>> 0, () => Math.floor(Math.random() * 6) + 1);
+}
+/* applies this inning's dice once (odd innings only). returns { v, text } or null */
+function applyInningDice() {
+  if (!G || G.diceInn === G.inning) return null;
+  G.diceInn = G.inning;
+  if (G.inning % 2 !== 1) return null;
+  const v = rollDie(), text = DICE_FX[v]();
+  hud();
+  return { v, text };
+}
+let diceTimer = 0;
+function showDiceBanner(d) {
+  clearInterval(diceTimer);
+  showBanner('サイコロ！', '', 'g');
+  let n = 0;
+  diceTimer = setInterval(() => {
+    n++;
+    if (n < 7) { $('#bt').textContent = 'サイコロ… ' + (1 + Math.floor(Math.random() * 6)); return; }   // display only
+    clearInterval(diceTimer);
+    $('#bt').textContent = '出た目 ' + d.v + '！';
+    $('#bs').textContent = d.text;
+  }, 90);
+}
 
 function dots(id, n, on) {
   const el = $(id);
@@ -192,8 +229,8 @@ function endPA() { G.b = 0; G.s = 0; G.pa++; nextBatter(); }
 function endInning(label) {
   if (online) { onl.score[battingSide()] += G.runs; G.runs = 0; }   // bank this half's runs for the batting team
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
-  if (G.inning > (G.maxHalf || 3)) G.over = true;
-  if (online && G.inning === 6 && onl.score.home > onl.score.away) G.over = true;   // home leads after the top of the 3rd
+  if (G.inning > (G.maxHalf || 3)) G.over = !online || onl.score.home !== onl.score.away;   // online: extra innings until one side pulls ahead
+  if (online && G.inning >= 6 && G.inning % 2 === 0 && onl.score.home > onl.score.away) G.over = true;   // home leads going into a bottom half
   return label + ' / チェンジ';
 }
 function out(label) {
@@ -246,7 +283,8 @@ function advance(n, label) {
 }
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
-function contact(dt, d, vy, speed, boost) {
+function contact(dt, d, vy, speed, boost, crit) {
+  if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
   const BT = curBatter(), bm = (0.7 + 0.1 * BT.m) * (BT.side === pitcherHand() ? 0.94 : 1.04);   // platoon edge vs opposite-handed pitchers
   dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
@@ -256,7 +294,7 @@ function contact(dt, d, vy, speed, boost) {
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
   if (BT.side === 'L') dir = -dir;                         // a left-handed hitter pulls to right field
   const launch = 12 + vy * 40 + gauss() * 3;
-  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (BT.p - 3) * 9;
+  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (crit ? 30 : 0) + (BT.p - 3) * 9;
   if (q < 0.32 || Math.abs(dir) > 45) {
     if (Math.abs(dir) <= 45) dir = (dir < 0 ? -1 : 1) * rnd(50, 80);
     return { kind: 'foul', q, dir, ev, launch, dist: rnd(25, 70) };
@@ -288,7 +326,7 @@ function launchBall(o) {
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
-    key: o.key, speed: o.speed, T: [o.tx, o.ty], P0,
+    key: o.key, speed: o.speed, vn: !!o.vn, T: [o.tx, o.ty], P0,
     tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
@@ -307,7 +345,7 @@ function launchBall(o) {
   trail.forEach(m => m.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#eef0e4'));
   const sm = startSigns(ball.start, o.sg);
   if (mode === 'pit' && !online) cpuBat();
-  setHint((mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
+  setHint((ball.vn ? '消える魔球！ ' : '') + (mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
 }
 function basePos(t, out) {
   const b = ball, s = t + 0.08 * t * (1 - t), q = Math.pow(Math.max(0, t), b.n);
@@ -330,7 +368,7 @@ function ballPosAt(t, out) {
   return out.set(out.x + (out.x - _bp.x) * k, out.y + (out.y - _bp.y) * k, out.z + (out.z - _bp.z) * k);
 }
 function cpuPitch() {
-  const mix = story && story.pitcher ? story.pitcher.mix : null, wOf = k => mix ? (mix[k] || 0) : TYPES[k].w;
+  const P0 = curPitcher(), mix = story && story.pitcher ? story.pitcher.mix : null, wOf = k => (mix ? (mix[k] || 0) : TYPES[k].w) * (P0.pt.includes(k) ? 1 : 0);   // only the pitcher's own pitches
   let tot = 0; for (const k in TYPES) tot += wOf(k);
   let r = Math.random() * tot, key = 'str';
   for (const k in TYPES) { r -= wOf(k); if (r <= 0 && wOf(k) > 0) { key = k; break; } }
@@ -349,7 +387,7 @@ function cpuBat() {
   let p = inz ? 0.85 : 0.22;
   if (G.s === 2) p = inz ? 0.97 : 0.5;
   if (o > 1.5) p = 0.05;
-  const tsd = 0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03;
+  const tsd = (0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03) * (ball.vn ? 1.6 : 1);   // 消える魔球：見えない間は合わせにくい
   const BT = curBatter();
   const k = {
     swing: Math.random() < p, dt: gauss() * tsd,
@@ -444,6 +482,7 @@ function resolveCore(c, C) {
         tn = tone(!!play.err);
       }
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
+      if (c.crit) sub = '会心の一振り！ ' + sub;
       delay = play.throws ? play.T + play.throwEnd : Math.min(play.T, 2.4) * 0.9;
     }
     playShot(play, now);
@@ -468,7 +507,8 @@ function stepFly(now) {
       const dt = swing.time + SWING_LEAD - arr;
       const big = giantActive();   // giant bat: much wider sweet spot and a more forgiving timing window
       const d = Math.hypot((swing.x - ball.T[0]) * 0.6, swing.y - ball.T[1]) * (big ? 0.45 : 1);
-      const c = contact(big ? dt * 0.7 : dt, d, swing.y - ball.T[1], ball.speed, big);
+      const c = contact((big ? dt * 0.7 : dt) * (ball.vn ? 1.6 : 1), d, swing.y - ball.T[1], ball.speed, big, swing.crit);
+      c.crit = !!swing.crit;
       resolve(c, swing.C);
     } else if (!swing && now >= arr + 0.2) resolve({ kind: 'take' });
   } else if (online) stepFlyOnline(now);
@@ -490,7 +530,9 @@ function afterResult() {
   if (online) { onlineAfterResult(); return; }
   if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }
   if (G.over) { showOver(); return; }
+  const dd = applyInningDice();
   clearPlay();
+  if (dd) showDiceBanner(dd);
   phase = mode === 'bat' ? 'wait' : 'ready';
   nextAt = now_() + rnd(1.6, 2.2);
   if (mode === 'bat' && stealers().length) nextAt += 1.2;      // time to give a steal sign

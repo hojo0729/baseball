@@ -344,8 +344,45 @@ let G = null;
 let phase = 'idle';            // idle | wait | deliver | fly | result
 let ball = null, swing = null, play = null, batAnim = null, pending = null, flick = null, aim = null;
 let nextAt = 0, deliverStart = 0, shakeUntil = 0, shakeAmp = 0, pendBanner = null;
+let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
-function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1 }; hud(); }
+function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: { crit: 2, vn: 2 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
+
+/* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
+const DICE_FX = {
+  1: () => 'はずれ…',
+  2: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 1, p: 0 }; return '次の打者　ミート+1'; },
+  3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 0, p: 1 }; return '次の打者　パワー+1'; },
+  4: () => { if (G.bases[0]) { G.runs += 1; return '1点ボーナス'; } G.bases[0] = 1; return 'ランナーが1塁に！'; },
+  5: () => { G.runs += 1; return '1点ボーナス！'; },
+  6: () => { G.runs += 2; return '2点ボーナス！！'; }
+};
+function rollDie() {
+  if (!online) return Math.floor(Math.random() * 6) + 1;
+  return withSeed(((onl.seed || 0) + G.inning * 7919) >>> 0, () => Math.floor(Math.random() * 6) + 1);
+}
+/* applies this inning's dice once (odd innings only). returns { v, text } or null */
+function applyInningDice() {
+  if (!G || G.diceInn === G.inning) return null;
+  G.diceInn = G.inning;
+  if (G.inning % 2 !== 1) return null;
+  const v = rollDie(), text = DICE_FX[v]();
+  hud();
+  return { v, text };
+}
+let diceTimer = 0;
+function showDiceBanner(d) {
+  clearInterval(diceTimer);
+  showBanner('サイコロ！', '', 'g');
+  let n = 0;
+  diceTimer = setInterval(() => {
+    n++;
+    if (n < 7) { $('#bt').textContent = 'サイコロ… ' + (1 + Math.floor(Math.random() * 6)); return; }   // display only
+    clearInterval(diceTimer);
+    $('#bt').textContent = '出た目 ' + d.v + '！';
+    $('#bs').textContent = d.text;
+  }, 90);
+}
 
 function dots(id, n, on) {
   const el = $(id);
@@ -390,8 +427,8 @@ function endPA() { G.b = 0; G.s = 0; G.pa++; nextBatter(); }
 function endInning(label) {
   if (online) { onl.score[battingSide()] += G.runs; G.runs = 0; }   // bank this half's runs for the batting team
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
-  if (G.inning > (G.maxHalf || 3)) G.over = true;
-  if (online && G.inning === 6 && onl.score.home > onl.score.away) G.over = true;   // home leads after the top of the 3rd
+  if (G.inning > (G.maxHalf || 3)) G.over = !online || onl.score.home !== onl.score.away;   // online: extra innings until one side pulls ahead
+  if (online && G.inning >= 6 && G.inning % 2 === 0 && onl.score.home > onl.score.away) G.over = true;   // home leads going into a bottom half
   return label + ' / チェンジ';
 }
 function out(label) {
@@ -444,7 +481,8 @@ function advance(n, label) {
 }
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
-function contact(dt, d, vy, speed, boost) {
+function contact(dt, d, vy, speed, boost, crit) {
+  if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
   const BT = curBatter(), bm = (0.7 + 0.1 * BT.m) * (BT.side === pitcherHand() ? 0.94 : 1.04);   // platoon edge vs opposite-handed pitchers
   dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
@@ -454,7 +492,7 @@ function contact(dt, d, vy, speed, boost) {
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
   if (BT.side === 'L') dir = -dir;                         // a left-handed hitter pulls to right field
   const launch = 12 + vy * 40 + gauss() * 3;
-  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (BT.p - 3) * 9;
+  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (crit ? 30 : 0) + (BT.p - 3) * 9;
   if (q < 0.32 || Math.abs(dir) > 45) {
     if (Math.abs(dir) <= 45) dir = (dir < 0 ? -1 : 1) * rnd(50, 80);
     return { kind: 'foul', q, dir, ev, launch, dist: rnd(25, 70) };
@@ -486,7 +524,7 @@ function launchBall(o) {
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
-    key: o.key, speed: o.speed, T: [o.tx, o.ty], P0,
+    key: o.key, speed: o.speed, vn: !!o.vn, T: [o.tx, o.ty], P0,
     tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
@@ -505,7 +543,7 @@ function launchBall(o) {
   trail.forEach(m => m.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#eef0e4'));
   const sm = startSigns(ball.start, o.sg);
   if (mode === 'pit' && !online) cpuBat();
-  setHint((mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
+  setHint((ball.vn ? '消える魔球！ ' : '') + (mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
 }
 function basePos(t, out) {
   const b = ball, s = t + 0.08 * t * (1 - t), q = Math.pow(Math.max(0, t), b.n);
@@ -528,7 +566,7 @@ function ballPosAt(t, out) {
   return out.set(out.x + (out.x - _bp.x) * k, out.y + (out.y - _bp.y) * k, out.z + (out.z - _bp.z) * k);
 }
 function cpuPitch() {
-  const mix = story && story.pitcher ? story.pitcher.mix : null, wOf = k => mix ? (mix[k] || 0) : TYPES[k].w;
+  const P0 = curPitcher(), mix = story && story.pitcher ? story.pitcher.mix : null, wOf = k => (mix ? (mix[k] || 0) : TYPES[k].w) * (P0.pt.includes(k) ? 1 : 0);   // only the pitcher's own pitches
   let tot = 0; for (const k in TYPES) tot += wOf(k);
   let r = Math.random() * tot, key = 'str';
   for (const k in TYPES) { r -= wOf(k); if (r <= 0 && wOf(k) > 0) { key = k; break; } }
@@ -547,7 +585,7 @@ function cpuBat() {
   let p = inz ? 0.85 : 0.22;
   if (G.s === 2) p = inz ? 0.97 : 0.5;
   if (o > 1.5) p = 0.05;
-  const tsd = 0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03;
+  const tsd = (0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03) * (ball.vn ? 1.6 : 1);   // 消える魔球：見えない間は合わせにくい
   const BT = curBatter();
   const k = {
     swing: Math.random() < p, dt: gauss() * tsd,
@@ -642,6 +680,7 @@ function resolveCore(c, C) {
         tn = tone(!!play.err);
       }
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
+      if (c.crit) sub = '会心の一振り！ ' + sub;
       delay = play.throws ? play.T + play.throwEnd : Math.min(play.T, 2.4) * 0.9;
     }
     playShot(play, now);
@@ -666,7 +705,8 @@ function stepFly(now) {
       const dt = swing.time + SWING_LEAD - arr;
       const big = giantActive();   // giant bat: much wider sweet spot and a more forgiving timing window
       const d = Math.hypot((swing.x - ball.T[0]) * 0.6, swing.y - ball.T[1]) * (big ? 0.45 : 1);
-      const c = contact(big ? dt * 0.7 : dt, d, swing.y - ball.T[1], ball.speed, big);
+      const c = contact((big ? dt * 0.7 : dt) * (ball.vn ? 1.6 : 1), d, swing.y - ball.T[1], ball.speed, big, swing.crit);
+      c.crit = !!swing.crit;
       resolve(c, swing.C);
     } else if (!swing && now >= arr + 0.2) resolve({ kind: 'take' });
   } else if (online) stepFlyOnline(now);
@@ -688,7 +728,9 @@ function afterResult() {
   if (online) { onlineAfterResult(); return; }
   if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }
   if (G.over) { showOver(); return; }
+  const dd = applyInningDice();
   clearPlay();
+  if (dd) showDiceBanner(dd);
   phase = mode === 'bat' ? 'wait' : 'ready';
   nextAt = now_() + rnd(1.6, 2.2);
   if (mode === 'bat' && stealers().length) nextAt += 1.2;      // time to give a steal sign
@@ -1601,6 +1643,10 @@ function tryCpuPickoff(now) {
 }
 function userPickoff() {
   if (mode !== 'pit' || phase !== 'ready' || !(G.bases[0] || G.bases[1])) return;
+  if (online) {   // the pitcher's device decides and tells the batter's device
+    const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = Math.random() < (planned ? 0.4 : 0.07);
+    startPickoff(now_(), out); send('pick', { out }); return;
+  }
   const planned = cpuStealPlan;
   startPickoff(now_(), Math.random() < (planned ? 0.4 : 0.07));
   if (planned && Math.random() < 0.5) cpuStealPlan = false;     // the runner gets scared off
@@ -1651,30 +1697,36 @@ function reliefOption() {
   const P = curPitcher();
   return P.next && P.sta < P.max * 0.7 ? ['relief', '投手交代 → ' + P.next[0]] : null;
 }
+function armed(k) { return sign === k || (k === 'crit' && critArm) || (k === 'vn' && vanishArm); }
 function actOptions() {
   if (!G) return [];
-  const rl = reliefOption();
-  if (mode === 'bat' && phase === 'wait') {
-    const o = [], st = stealers().length;
-    if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
-    o.push(['bunt', 'バント']);
-    if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
+  const o = [];
+  if (mode === 'bat') {
+    if (phase === 'wait') {
+      const st = stealers().length;
+      if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
+      o.push(['bunt', 'バント']);
+      if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
+    }
+    if ((phase === 'wait' || (phase === 'fly' && ball && !ball.done && !swing)) && G.skill.crit > 0) o.push(['crit', '会心の一振り ' + G.skill.crit]);
     return o;
   }
-  const o = [];
-  if (!online && mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
-  if (rl) o.push(rl);
+  if (phase === 'ready') {
+    if (G.bases[0] || G.bases[1]) o.push(['pick', '牽制する']);
+    if (G.skill.vn > 0) o.push(['vn', '消える魔球 ' + G.skill.vn]);
+    const rl = reliefOption(); if (rl) o.push(rl);
+  }
   return o;
 }
 function refreshAct() {
   // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
   const o = actOptions(), el = $('#acts'), none = false;
-  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + none;
+  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + critArm + vanishArm;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (sign === k ? ' on' : ''); b.dataset.k = k; b.textContent = label;
+    b.className = 'chip' + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
   if (mode === 'bat' && phase === 'wait') setHint(sign ? 'サイン：' + SIGN_HINT[sign] : '投手が投げたら、ボールが通る位置をタップして打つ');
@@ -1685,6 +1737,8 @@ $('#acts').addEventListener('click', e => {
   const k = b.dataset.k;
   if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
+  else if (k === 'crit') critArm = !critArm;
+  else if (k === 'vn') vanishArm = !vanishArm;
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });
 
@@ -1700,7 +1754,7 @@ const PAGES_URL = 'https://saboten-apps.github.io/baseball/';
 let online = false;
 const onl = { sb: null, ch: null, code: '', side: 'home', me: Math.random().toString(36).slice(2, 10), started: false,
   score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0, goneTimer: 0,
-  pn: 0, oppSign: null };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
+  pn: 0, oppSign: null, seed: 0, queuedPick: null };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
 
 /* run fn with Math.random replaced by a seeded generator (mulberry32) */
 function withSeed(seed, fn) {
@@ -1721,7 +1775,7 @@ function onlineScore() {
   if (G) s[battingSide()] += G.runs;                                // runs of the half in progress (banked at each change)
   return s;
 }
-function inningLabel() { const h = Math.min(G.inning, 6); return Math.ceil(h / 2) + '回' + (h % 2 ? '表' : '裏'); }
+function inningLabel() { const h = G.inning; return (h > 6 ? '延長' : '') + Math.ceil(h / 2) + '回' + (h % 2 ? '表' : '裏'); }
 function teamName(side) { return side === 'home' ? 'しばいぬズ' : 'パンダーズ'; }
 
 /* ---- lobby ---- */
@@ -1769,7 +1823,7 @@ function leaveRoom() {
     try { ch.send({ type: 'broadcast', event: 'msg', payload: { type: 'bye', from: onl.me } }); } catch (e) {}
     try { onl.sb.removeChannel(ch); } catch (e) {}
   }
-  online = false; onl.started = false; onl.queued = null; onl.waitRes = null;
+  online = false; onl.started = false; onl.queued = null; onl.waitRes = null; onl.queuedPick = null;
 }
 function hostRoom() {
   onl.side = 'home';
@@ -1805,29 +1859,40 @@ function onPresence() {
     if (n === 0) onl.goneTimer = setTimeout(() => { if (online && others().length === 0) opponentLeft(); }, 15000);
     return;
   }
-  if (!onl.started && onl.side === 'home' && n >= 1) { send('start'); beginOnline(); }
+  if (!onl.started && onl.side === 'home' && n >= 1) hostStart();
 }
 function onMsg(m) {
   if (!m || m.from === onl.me) return;
-  if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) { send('start'); beginOnline(); } }
-  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); beginOnline(); } }
+  if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
+  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; beginOnline(); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
   else if (m.type === 'relief') relieve(teamsNow().fld);
+  else if (m.type === 'pick') onPickMsg(m);
   else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
+}
+
+/* the host picks the shared seed (used for the inning dice) and starts */
+function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; send('start', { seed: onl.seed }); beginOnline(); }
+/* a pickoff thrown by the pitcher: the batter's device runs the same play */
+function onPickMsg(m) {
+  if (!online) return;
+  if (mode === 'bat' && phase === 'wait') { if (m.out) sign = null; startPickoff(now_(), m.out); }
+  else onl.queuedPick = m;
 }
 
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null;
-  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null;
+  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;
   $('.seg').hidden = true; $('#menuBtn').hidden = false;
   $('#overlay').hidden = true;
   applyRole();
   showBanner('プレイボール', 'あなたは ' + teamName(onl.side) + (onl.side === 'home' ? '（後攻）' : '（先攻）'), 'g');
+  const dd = applyInningDice(); if (dd) setTimeout(() => showDiceBanner(dd), 1900);
 }
 function roleHint() {
   return mode === 'bat' ? '相手の投球を待っています。来たら、ボールが通る位置をタップ' : 'あなたの投球。弾く向きで球種、離した位置でコース';
@@ -1843,6 +1908,7 @@ function applyRole() {
   takeQueuedPitch();
 }
 function takeQueuedPitch() {
+  if (mode === 'bat' && phase === 'wait' && onl.queuedPick) { const q = onl.queuedPick; onl.queuedPick = null; onPickMsg(q); return; }
   if (mode === 'bat' && phase === 'wait' && onl.queued) { const q = onl.queued; onl.queued = null; onPitchMsg(q); }
 }
 /* batter: a pitch arrived from the other device */
@@ -1872,13 +1938,16 @@ function stepFlyOnline(now) {
 function onlineAfterResult() {
   clearPlay();
   const sc = onlineScore();
-  if (G.inning === 6 && sc.home > sc.away) G.over = true;            // walk-off in the bottom of the 3rd
+  if (G.inning >= 6 && G.inning % 2 === 0 && sc.home > sc.away) G.over = true;   // walk-off in any bottom half from the 3rd on
   if (G.over) { showOnlineOver(); return; }
   if (G.inning !== onl.half) {
     applyRole();
+    const dd = applyInningDice();
     const B = curBatter(), lead = B.star ? '　先頭はスーパースター ' + B.name : '';
     if (B.star) G.lastAnn = G.pa;
-    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備') + lead, 'n'); return;
+    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備') + lead, 'n');
+    if (dd) setTimeout(() => showDiceBanner(dd), 1600);
+    return;
   }
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = Infinity;
   hud(); setHint(roleHint());
@@ -1925,22 +1994,24 @@ function inviteBoot() {
    Pitchers: v = velocity, c = control, b = break, s = stamina (pitch budget, roughly 1.6 per pitch).
    Optional last field: 'L' = left-handed, 'S' = switch hitter (bats from the side opposite the pitcher). Default right.
    A '*' in it marks a superstar (ratings can go past A to 6-7 = S); stars are two-way and also sit at the end of the bullpen. */
+/* every pitcher's pitch repertoire (pt). Stars throw everything. */
+const ALL_PITCHES = ['str', 'gou', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'];
 const ROSTER = {
   home: { name: 'しばいぬズ',
     bat: [['マメ', 5, 1, 'L'], ['ハチ', 4, 2, 'S'], ['ソウタ', 5, 7, 'L*'], ['ゴン', 3, 5, 'L'], ['チャチャ', 3, 4], ['キナコ', 3, 3], ['ムギ', 2, 3], ['ポチ', 3, 2], ['ソラ', 2, 2]],
-    pit: [['シバタ', 3, 4, 3, 80], ['ハル', 4, 3, 3, 45, 'L'], ['リキ', 5, 3, 4, 35], ['ソウタ', 6, 3, 4, 40, '*']] },
+    pit: [['シバタ', 3, 4, 3, 80, '', ['str','two','cur','chg']], ['ハル', 4, 3, 3, 45, 'L', ['str','cut','sli','frk']], ['リキ', 5, 3, 4, 35, '', ['str','gou','frk','snk']], ['ソウタ', 6, 3, 4, 40, '*', ALL_PITCHES]] },
   away: { name: 'パンダーズ',
     bat: [['ササ', 3, 2, 'L'], ['シャオ', 3, 2], ['リンリン', 2, 4, 'S'], ['ダイパン', 4, 7, 'R*'], ['ユウユウ', 2, 4], ['モモ', 3, 2, 'L'], ['タンタン', 2, 3], ['ランラン', 2, 2], ['コウ', 1, 2]],
-    pit: [['パンパン', 2, 3, 2, 80], ['メイメイ', 3, 3, 3, 45, 'L'], ['ホアホア', 3, 4, 3, 35], ['ダイパン', 6, 2, 3, 40, '*']] },
+    pit: [['パンパン', 2, 3, 2, 80, '', ['str','cur','sli','chg']], ['メイメイ', 3, 3, 3, 45, 'L', ['str','cut','sht','snk']], ['ホアホア', 3, 4, 3, 35, '', ['str','frk','two','knk']], ['ダイパン', 6, 2, 3, 40, '*', ALL_PITCHES]] },
   neko: { name: 'ニャンキーズ',
     bat: [['タマ', 5, 2, 'L'], ['シロ', 5, 1, 'L'], ['ミケ', 5, 6, 'S*'], ['クロ', 4, 4], ['トラ', 4, 3], ['サバ', 4, 2, 'L'], ['ハナ', 3, 3], ['チビ', 4, 1], ['ノラ', 3, 2]],
-    pit: [['ニャン太', 3, 3, 4, 80, 'L'], ['キジ', 3, 4, 3, 45], ['ルナ', 4, 3, 4, 35]] },
+    pit: [['ニャン太', 3, 3, 4, 80, 'L', ['str','cut','sli','cur']], ['キジ', 3, 4, 3, 45, '', ['str','chg','sht','two']], ['ルナ', 4, 3, 4, 35, '', ['str','sli','snk','frk','knk']]] },
   usagi: { name: 'ラビッツ',
     bat: [['ピョン', 4, 2, 'S'], ['モカ', 4, 2], ['ラビ', 3, 3, 'L'], ['ミミ', 3, 4], ['ココア', 3, 3], ['ユキ', 3, 2], ['シロップ', 2, 3], ['ネザー', 3, 1], ['ホップ', 2, 2]],
-    pit: [['ウサミ', 3, 4, 5, 80], ['ムーン', 3, 3, 4, 45, 'L'], ['ラパン', 3, 4, 5, 35]] },
+    pit: [['ウサミ', 3, 4, 5, 80, '', ['str','chg','two','cur']], ['ムーン', 3, 3, 4, 45, 'L', ['str','cut','sht']], ['ラパン', 3, 4, 5, 35, '', ['str','frk','sli','chg','snk']]] },
   kuma: { name: 'ヒグマーズ',
     bat: [['コグマ', 3, 3], ['ツキノワ', 3, 4, 'L'], ['グリズ', 4, 7, 'S*'], ['ベア', 3, 5], ['ヒグ太', 2, 5], ['クマ吉', 3, 4], ['マロン', 2, 4], ['ハニー', 3, 3], ['ドングリ', 2, 3]],
-    pit: [['ヒグマ', 5, 3, 3, 90], ['シロクマ', 4, 3, 3, 45, 'L'], ['ポーラ', 4, 4, 4, 35]] }
+    pit: [['ヒグマ', 5, 3, 3, 90, '', ['str','gou','sht','snk']], ['シロクマ', 4, 3, 3, 45, 'L', ['str','cut','sli','cur']], ['ポーラ', 4, 4, 4, 35, '', ['str','frk','knk','chg']]] }
 };
 const GRADE = ['', 'E', 'D', 'C', 'B', 'A', 'S', 'S'];
 const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(x || '');
@@ -1959,13 +2030,14 @@ function teamState(t) {
 function curBatter() {
   const t = teamsNow().bat, s = teamState(t), b = ROSTER[t].bat[s.order % 9];
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
-  return { slot: s.order % 9 + 1, name: b[0], m: b[1], p: b[2], hand, side, star: isStar(b[3]) };
+  const bn = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
+  return { slot: s.order % 9 + 1, name: b[0], m: clamp(b[1] + bn.m, 1, 6), p: clamp(b[2] + bn.p, 1, 6), hand, side, star: isStar(b[3]) };
 }
 function curPitcher() {
   const t = teamsNow().fld, s = teamState(t), p = ROSTER[t].pit[s.pit];
   // tired below 40% of stamina: up to -8 km/h and wilder
   const fatigue = clamp(1 - s.sta / (p[4] * 0.4), 0, 1);
-  return { team: t, name: p[0], v: p[1], c: p[2], b: p[3], max: p[4], hand: handOf(p[5]), star: isStar(p[5]), sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
+  return { team: t, name: p[0], v: p[1], c: p[2], b: p[3], max: p[4], pt: p[6] || ['str'], hand: handOf(p[5]), star: isStar(p[5]), sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
 }
 /* handedness on the field right now (safe before a game exists) */
 function pitcherHand() { if (!G) return 'R'; const t = teamsNow().fld; return handOf(ROSTER[t].pit[teamState(t).pit][5]); }
@@ -2315,10 +2387,11 @@ function updateBall(now, dt, pj) {
   if (ball) {
     const t = (now - ball.start) / ball.dur;
     ballPosAt(t, tmpV);
+    const hid = ball.vn && t > 0.45 && t < 0.85;   // 消える魔球：途中で見えなくなる
     ballMesh.position.copy(tmpV); ballMesh.scale.setScalar(1);
-    ballMesh.visible = tmpV.z < 1.0;
+    ballMesh.visible = tmpV.z < 1.0 && !hid;
     ballMesh.rotateOnAxis(ball.axis, ball.rps * dt);
-    if (!ball.done && t < 1) {
+    if (!ball.done && t < 1 && !hid) {
       trailPts.push(tmpV.clone()); if (trailPts.length > trail.length) trailPts.shift();
       trailPts.forEach((p, i) => {
         const m = trail[i], u = (i + 1) / trailPts.length; m.visible = true; m.position.copy(p);
@@ -2428,7 +2501,8 @@ cv.addEventListener('pointerdown', e => {
   if (mode === 'bat') {
     if (phase === 'fly' && !swing && ball && !ball.done) {
       const p = screenToZone(x, y); if (!p) return;
-      swing = { time: now, x: p.x / ZW, y: (ZY0 - p.y) / ZH, C: p, bunt: curBunt };
+      swing = { time: now, x: p.x / ZW, y: (ZY0 - p.y) / ZH, C: p, bunt: curBunt, crit: critArm && !curBunt };
+      if (swing.crit) { critArm = false; G.skill.crit--; }
       if (!curBunt) { batAnim = { t0: now, plan: makeSwingPlan(p) }; sfx.swish(); }
       fxTap = now; tapRing.position.set(p.x, p.y, 0.01);
     }
@@ -2443,7 +2517,7 @@ cv.addEventListener('pointermove', e => {
   flick.pts.push([x, y, now_() * 1000]); setAim(x, y);
   if (flick.pts.length > 160) flick.pts.shift();
   const g = readGesture(flick.pts);
-  if (g) { setHint(icoOf(g) + '  ' + TYPES[g].name); markGuide(g); }
+  if (g) { const gk = fitPitch(g); setHint(icoOf(gk) + '  ' + TYPES[gk].name); markGuide(gk); }
 });
 /* swipe direction -> pitch. angle 0 = right, 90 = up (screen). zigzag = knuckleball */
 const GESTURE = [[90, 'str'], [45, 'cut'], [0, 'sli'], [-45, 'cur'], [-90, 'frk'], [-135, 'snk'], [180, 'sht'], [135, 'two']];
@@ -2482,12 +2556,14 @@ function endFlick(cancel) {
   let f = clamp(v * 28 / 65, 0, 1);
   if (key === 'str' && f < 0.3) { key = 'chg'; f = f / 0.3; }   // a slow fastball swipe throws a changeup
   else if (key === 'str' && f > 0.85) { key = 'gou'; f = (f - 0.85) / 0.15; }   // a very fast one throws the heater
+  key = fitPitch(key);
   ptype = key; markGuide(key);
   const T = TYPES[key];
   const P = curPitcher();
   const sig = (0.06 + f * 0.22) * (1 + (3 - P.c) * 0.15) + P.fatigue * 0.25;
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
-  pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
+  pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2), vn: vanishArm };
+  if (vanishArm) { vanishArm = false; G.skill.vn--; }
   phase = 'deliver'; deliverStart = now_(); setHint(icoOf(key) + '  ' + T.name);
   if (online) { pending.sg = onl.oppSign; send('pitch', { p: pending }); }
 }
@@ -2497,6 +2573,7 @@ cv.addEventListener('pointercancel', () => endFlick(true));
 /* ===== flow ===== */
 function startGame() {
   audioInit(); newGame();
+  const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);
   $('#overlay').hidden = true;
   phase = mode === 'bat' ? 'wait' : 'ready';
   nextAt = now_() + 1.8;
@@ -2512,11 +2589,14 @@ function setMode(m) {
 }
 const ICO_MIRROR = { '↖': '↗', '↗': '↖', '→': '←', '←': '→', '↘': '↙', '↙': '↘' };
 const icoOf = k => lefty() ? TYPES[k].ico.replace(/[↖↗→←↘↙]/g, c => ICO_MIRROR[c]) : TYPES[k].ico;
+const PITCH_ORDER = ['gou', 'str', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'];
 let iconsFor = '';
+/* the pitches this pitcher owns (all of them before a game exists) */
+function pitchSet() { return G ? curPitcher().pt : PITCH_ORDER; }
 function buildPitchButtons() {
-  const pc = $('#pitches'); pc.innerHTML = '';
-  iconsFor = lefty() ? 'L' : 'R';
-  ['gou', 'str', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'].forEach(k => {
+  const pc = $('#pitches'), set = pitchSet(); pc.innerHTML = '';
+  iconsFor = (lefty() ? 'L' : 'R') + set.join();
+  PITCH_ORDER.filter(k => set.includes(k)).forEach(k => {
     const b = document.createElement('div');
     b.className = 'pg';
     b.dataset.t = k;
@@ -2524,8 +2604,19 @@ function buildPitchButtons() {
     pc.appendChild(b);
   });
 }
-/* the swipe guide follows the pitcher's hand */
-function pitchIcons() { if (iconsFor !== (lefty() ? 'L' : 'R')) buildPitchButtons(); }
+/* the swipe guide follows the pitcher: his hand and his pitches */
+function pitchIcons() { if (iconsFor !== (lefty() ? 'L' : 'R') + pitchSet().join()) buildPitchButtons(); }
+/* a swipe for a pitch this pitcher doesn't have becomes the closest one he does */
+const GANG = Object.fromEntries(GESTURE.map(([c, k]) => [k, c]));
+function fitPitch(key) {
+  if (!G) return key;
+  const set = curPitcher().pt;
+  if (set.includes(key)) return key;
+  if (!(key in GANG)) return 'str';
+  let best = 'str', bd = 999;
+  set.forEach(k => { if (!(k in GANG)) return; let d = Math.abs(GANG[k] - GANG[key]); if (d > 180) d = 360 - d; if (d < bd) { bd = d; best = k; } });
+  return best;
+}
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });

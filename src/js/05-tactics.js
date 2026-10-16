@@ -150,6 +150,10 @@ function tryCpuPickoff(now) {
 }
 function userPickoff() {
   if (mode !== 'pit' || phase !== 'ready' || !(G.bases[0] || G.bases[1])) return;
+  if (online) {   // the pitcher's device decides and tells the batter's device
+    const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = Math.random() < (planned ? 0.4 : 0.07);
+    startPickoff(now_(), out); send('pick', { out }); return;
+  }
   const planned = cpuStealPlan;
   startPickoff(now_(), Math.random() < (planned ? 0.4 : 0.07));
   if (planned && Math.random() < 0.5) cpuStealPlan = false;     // the runner gets scared off
@@ -200,30 +204,36 @@ function reliefOption() {
   const P = curPitcher();
   return P.next && P.sta < P.max * 0.7 ? ['relief', '投手交代 → ' + P.next[0]] : null;
 }
+function armed(k) { return sign === k || (k === 'crit' && critArm) || (k === 'vn' && vanishArm); }
 function actOptions() {
   if (!G) return [];
-  const rl = reliefOption();
-  if (mode === 'bat' && phase === 'wait') {
-    const o = [], st = stealers().length;
-    if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
-    o.push(['bunt', 'バント']);
-    if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
+  const o = [];
+  if (mode === 'bat') {
+    if (phase === 'wait') {
+      const st = stealers().length;
+      if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
+      o.push(['bunt', 'バント']);
+      if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
+    }
+    if ((phase === 'wait' || (phase === 'fly' && ball && !ball.done && !swing)) && G.skill.crit > 0) o.push(['crit', '会心の一振り ' + G.skill.crit]);
     return o;
   }
-  const o = [];
-  if (!online && mode === 'pit' && phase === 'ready' && (G.bases[0] || G.bases[1])) o.push(['pick', '牽制する']);
-  if (rl) o.push(rl);
+  if (phase === 'ready') {
+    if (G.bases[0] || G.bases[1]) o.push(['pick', '牽制する']);
+    if (G.skill.vn > 0) o.push(['vn', '消える魔球 ' + G.skill.vn]);
+    const rl = reliefOption(); if (rl) o.push(rl);
+  }
   return o;
 }
 function refreshAct() {
   // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
   const o = actOptions(), el = $('#acts'), none = false;
-  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + none;
+  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + critArm + vanishArm;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (sign === k ? ' on' : ''); b.dataset.k = k; b.textContent = label;
+    b.className = 'chip' + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
   if (mode === 'bat' && phase === 'wait') setHint(sign ? 'サイン：' + SIGN_HINT[sign] : '投手が投げたら、ボールが通る位置をタップして打つ');
@@ -234,5 +244,7 @@ $('#acts').addEventListener('click', e => {
   const k = b.dataset.k;
   if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
+  else if (k === 'crit') critArm = !critArm;
+  else if (k === 'vn') vanishArm = !vanishArm;
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });

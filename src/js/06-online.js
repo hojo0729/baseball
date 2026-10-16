@@ -9,7 +9,7 @@ const PAGES_URL = 'https://saboten-apps.github.io/baseball/';
 let online = false;
 const onl = { sb: null, ch: null, code: '', side: 'home', me: Math.random().toString(36).slice(2, 10), started: false,
   score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0, goneTimer: 0,
-  pn: 0, oppSign: null };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
+  pn: 0, oppSign: null, seed: 0, queuedPick: null };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
 
 /* run fn with Math.random replaced by a seeded generator (mulberry32) */
 function withSeed(seed, fn) {
@@ -30,7 +30,7 @@ function onlineScore() {
   if (G) s[battingSide()] += G.runs;                                // runs of the half in progress (banked at each change)
   return s;
 }
-function inningLabel() { const h = Math.min(G.inning, 6); return Math.ceil(h / 2) + '回' + (h % 2 ? '表' : '裏'); }
+function inningLabel() { const h = G.inning; return (h > 6 ? '延長' : '') + Math.ceil(h / 2) + '回' + (h % 2 ? '表' : '裏'); }
 function teamName(side) { return side === 'home' ? 'しばいぬズ' : 'パンダーズ'; }
 
 /* ---- lobby ---- */
@@ -78,7 +78,7 @@ function leaveRoom() {
     try { ch.send({ type: 'broadcast', event: 'msg', payload: { type: 'bye', from: onl.me } }); } catch (e) {}
     try { onl.sb.removeChannel(ch); } catch (e) {}
   }
-  online = false; onl.started = false; onl.queued = null; onl.waitRes = null;
+  online = false; onl.started = false; onl.queued = null; onl.waitRes = null; onl.queuedPick = null;
 }
 function hostRoom() {
   onl.side = 'home';
@@ -114,29 +114,40 @@ function onPresence() {
     if (n === 0) onl.goneTimer = setTimeout(() => { if (online && others().length === 0) opponentLeft(); }, 15000);
     return;
   }
-  if (!onl.started && onl.side === 'home' && n >= 1) { send('start'); beginOnline(); }
+  if (!onl.started && onl.side === 'home' && n >= 1) hostStart();
 }
 function onMsg(m) {
   if (!m || m.from === onl.me) return;
-  if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) { send('start'); beginOnline(); } }
-  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); beginOnline(); } }
+  if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
+  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; beginOnline(); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
   else if (m.type === 'relief') relieve(teamsNow().fld);
+  else if (m.type === 'pick') onPickMsg(m);
   else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
+}
+
+/* the host picks the shared seed (used for the inning dice) and starts */
+function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; send('start', { seed: onl.seed }); beginOnline(); }
+/* a pickoff thrown by the pitcher: the batter's device runs the same play */
+function onPickMsg(m) {
+  if (!online) return;
+  if (mode === 'bat' && phase === 'wait') { if (m.out) sign = null; startPickoff(now_(), m.out); }
+  else onl.queuedPick = m;
 }
 
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null;
-  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null;
+  onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;
   $('.seg').hidden = true; $('#menuBtn').hidden = false;
   $('#overlay').hidden = true;
   applyRole();
   showBanner('プレイボール', 'あなたは ' + teamName(onl.side) + (onl.side === 'home' ? '（後攻）' : '（先攻）'), 'g');
+  const dd = applyInningDice(); if (dd) setTimeout(() => showDiceBanner(dd), 1900);
 }
 function roleHint() {
   return mode === 'bat' ? '相手の投球を待っています。来たら、ボールが通る位置をタップ' : 'あなたの投球。弾く向きで球種、離した位置でコース';
@@ -152,6 +163,7 @@ function applyRole() {
   takeQueuedPitch();
 }
 function takeQueuedPitch() {
+  if (mode === 'bat' && phase === 'wait' && onl.queuedPick) { const q = onl.queuedPick; onl.queuedPick = null; onPickMsg(q); return; }
   if (mode === 'bat' && phase === 'wait' && onl.queued) { const q = onl.queued; onl.queued = null; onPitchMsg(q); }
 }
 /* batter: a pitch arrived from the other device */
@@ -181,13 +193,16 @@ function stepFlyOnline(now) {
 function onlineAfterResult() {
   clearPlay();
   const sc = onlineScore();
-  if (G.inning === 6 && sc.home > sc.away) G.over = true;            // walk-off in the bottom of the 3rd
+  if (G.inning >= 6 && G.inning % 2 === 0 && sc.home > sc.away) G.over = true;   // walk-off in any bottom half from the 3rd on
   if (G.over) { showOnlineOver(); return; }
   if (G.inning !== onl.half) {
     applyRole();
+    const dd = applyInningDice();
     const B = curBatter(), lead = B.star ? '　先頭はスーパースター ' + B.name : '';
     if (B.star) G.lastAnn = G.pa;
-    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備') + lead, 'n'); return;
+    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備') + lead, 'n');
+    if (dd) setTimeout(() => showDiceBanner(dd), 1600);
+    return;
   }
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = Infinity;
   hud(); setHint(roleHint());

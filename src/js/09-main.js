@@ -143,10 +143,11 @@ function updateBall(now, dt, pj) {
   if (ball) {
     const t = (now - ball.start) / ball.dur;
     ballPosAt(t, tmpV);
+    const hid = ball.vn && t > 0.45 && t < 0.85;   // 消える魔球：途中で見えなくなる
     ballMesh.position.copy(tmpV); ballMesh.scale.setScalar(1);
-    ballMesh.visible = tmpV.z < 1.0;
+    ballMesh.visible = tmpV.z < 1.0 && !hid;
     ballMesh.rotateOnAxis(ball.axis, ball.rps * dt);
-    if (!ball.done && t < 1) {
+    if (!ball.done && t < 1 && !hid) {
       trailPts.push(tmpV.clone()); if (trailPts.length > trail.length) trailPts.shift();
       trailPts.forEach((p, i) => {
         const m = trail[i], u = (i + 1) / trailPts.length; m.visible = true; m.position.copy(p);
@@ -256,7 +257,8 @@ cv.addEventListener('pointerdown', e => {
   if (mode === 'bat') {
     if (phase === 'fly' && !swing && ball && !ball.done) {
       const p = screenToZone(x, y); if (!p) return;
-      swing = { time: now, x: p.x / ZW, y: (ZY0 - p.y) / ZH, C: p, bunt: curBunt };
+      swing = { time: now, x: p.x / ZW, y: (ZY0 - p.y) / ZH, C: p, bunt: curBunt, crit: critArm && !curBunt };
+      if (swing.crit) { critArm = false; G.skill.crit--; }
       if (!curBunt) { batAnim = { t0: now, plan: makeSwingPlan(p) }; sfx.swish(); }
       fxTap = now; tapRing.position.set(p.x, p.y, 0.01);
     }
@@ -271,7 +273,7 @@ cv.addEventListener('pointermove', e => {
   flick.pts.push([x, y, now_() * 1000]); setAim(x, y);
   if (flick.pts.length > 160) flick.pts.shift();
   const g = readGesture(flick.pts);
-  if (g) { setHint(icoOf(g) + '  ' + TYPES[g].name); markGuide(g); }
+  if (g) { const gk = fitPitch(g); setHint(icoOf(gk) + '  ' + TYPES[gk].name); markGuide(gk); }
 });
 /* swipe direction -> pitch. angle 0 = right, 90 = up (screen). zigzag = knuckleball */
 const GESTURE = [[90, 'str'], [45, 'cut'], [0, 'sli'], [-45, 'cur'], [-90, 'frk'], [-135, 'snk'], [180, 'sht'], [135, 'two']];
@@ -310,12 +312,14 @@ function endFlick(cancel) {
   let f = clamp(v * 28 / 65, 0, 1);
   if (key === 'str' && f < 0.3) { key = 'chg'; f = f / 0.3; }   // a slow fastball swipe throws a changeup
   else if (key === 'str' && f > 0.85) { key = 'gou'; f = (f - 0.85) / 0.15; }   // a very fast one throws the heater
+  key = fitPitch(key);
   ptype = key; markGuide(key);
   const T = TYPES[key];
   const P = curPitcher();
   const sig = (0.06 + f * 0.22) * (1 + (3 - P.c) * 0.15) + P.fatigue * 0.25;
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
-  pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
+  pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2), vn: vanishArm };
+  if (vanishArm) { vanishArm = false; G.skill.vn--; }
   phase = 'deliver'; deliverStart = now_(); setHint(icoOf(key) + '  ' + T.name);
   if (online) { pending.sg = onl.oppSign; send('pitch', { p: pending }); }
 }
@@ -325,6 +329,7 @@ cv.addEventListener('pointercancel', () => endFlick(true));
 /* ===== flow ===== */
 function startGame() {
   audioInit(); newGame();
+  const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);
   $('#overlay').hidden = true;
   phase = mode === 'bat' ? 'wait' : 'ready';
   nextAt = now_() + 1.8;
@@ -340,11 +345,14 @@ function setMode(m) {
 }
 const ICO_MIRROR = { '↖': '↗', '↗': '↖', '→': '←', '←': '→', '↘': '↙', '↙': '↘' };
 const icoOf = k => lefty() ? TYPES[k].ico.replace(/[↖↗→←↘↙]/g, c => ICO_MIRROR[c]) : TYPES[k].ico;
+const PITCH_ORDER = ['gou', 'str', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'];
 let iconsFor = '';
+/* the pitches this pitcher owns (all of them before a game exists) */
+function pitchSet() { return G ? curPitcher().pt : PITCH_ORDER; }
 function buildPitchButtons() {
-  const pc = $('#pitches'); pc.innerHTML = '';
-  iconsFor = lefty() ? 'L' : 'R';
-  ['gou', 'str', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'].forEach(k => {
+  const pc = $('#pitches'), set = pitchSet(); pc.innerHTML = '';
+  iconsFor = (lefty() ? 'L' : 'R') + set.join();
+  PITCH_ORDER.filter(k => set.includes(k)).forEach(k => {
     const b = document.createElement('div');
     b.className = 'pg';
     b.dataset.t = k;
@@ -352,8 +360,19 @@ function buildPitchButtons() {
     pc.appendChild(b);
   });
 }
-/* the swipe guide follows the pitcher's hand */
-function pitchIcons() { if (iconsFor !== (lefty() ? 'L' : 'R')) buildPitchButtons(); }
+/* the swipe guide follows the pitcher: his hand and his pitches */
+function pitchIcons() { if (iconsFor !== (lefty() ? 'L' : 'R') + pitchSet().join()) buildPitchButtons(); }
+/* a swipe for a pitch this pitcher doesn't have becomes the closest one he does */
+const GANG = Object.fromEntries(GESTURE.map(([c, k]) => [k, c]));
+function fitPitch(key) {
+  if (!G) return key;
+  const set = curPitcher().pt;
+  if (set.includes(key)) return key;
+  if (!(key in GANG)) return 'str';
+  let best = 'str', bd = 999;
+  set.forEach(k => { if (!(k in GANG)) return; let d = Math.abs(GANG[k] - GANG[key]); if (d > 180) d = 360 - d; if (d < bd) { bd = d; best = k; } });
+  return best;
+}
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
