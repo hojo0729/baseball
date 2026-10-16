@@ -102,3 +102,6 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #codeIn { font: 500 30px var(--f-num); letter-spacing: .2em; width: 6.5ch; text-align: center; color: var(--chalk); background: var(--panel); border: 1px solid var(--lamp); border-radius: 10px; padding: 8px 4px; -webkit-user-select: text; user-select: text; touch-action: auto; }
 #codeIn:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #goal .tired { color: var(--clay); }
+#cmt { position: absolute; left: 12px; right: 12px; bottom: 34px; text-align: center; font: 700 14px/1.4 var(--f-body); color: #fff; background: rgba(6, 14, 12, .72); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; pointer-events: none; opacity: 0; transition: opacity .25s; }
+#cmt.show { opacity: 1; }
+#cmtBtn { position: absolute; top: 10px; right: 12px; z-index: 5; font: 700 11px var(--f-body); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; min-height: 30px; }

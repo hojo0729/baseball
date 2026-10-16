@@ -116,6 +116,7 @@ function showBanner(t, s, tone) {
   $('#bt').textContent = t; $('#bs').textContent = s || '';
   void b.offsetWidth;
   b.classList.add('show');
+  commentBanner(t, s);
 }
 function hideBanner() { $('#banner').className = ''; }
 function queueBanner(at, t, sub, tn, cheer) { pendBanner = { at, t, sub, tn, cheer }; }
@@ -223,6 +224,7 @@ function contact(dt, d, vy, speed, boost) {
 function launchBall(o) {
   const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b;
   spendStamina(o.speed, o.key);
+  commentPitch(o);
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
@@ -338,6 +340,7 @@ function resolveCore(c, C) {
     if (st) { delay = st.arrive - now + 0.05; nextAt = Math.max(nextAt, st.arrive + 1.5); }
   } else {
     sfx.crack();
+    commentContact(c);
     const sg = steal, hr = sg && sg.hitRun ? sg : null;
     settleSteal(c, now);
     play = makePlay(c, ball.tgt.clone(), now);

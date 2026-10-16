@@ -352,6 +352,9 @@ $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', showMenu);
+$('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
+$('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
+if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { cmt.voice = null; };
 $('#mBat').addEventListener('click', () => setMode('bat'));
 $('#mPit').addEventListener('click', () => setMode('pit'));
 $('#pitches').addEventListener('click', e => {
