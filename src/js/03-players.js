@@ -271,7 +271,8 @@ function updateRunners() {
 }
 function setTeams() {
   const opp = story ? story.opp : 'away';
-  const bat = mode === 'bat' ? 'home' : opp, fld = mode === 'bat' ? opp : 'home';
+  let bat = mode === 'bat' ? 'home' : opp, fld = mode === 'bat' ? opp : 'home';
+  if (online && G) { bat = battingSide() === 'home' ? 'home' : 'away'; fld = bat === 'home' ? 'away' : 'home'; }
   setTeam(batterF, bat); runnerF.forEach(f => setTeam(f, bat));
   setTeam(pitcherF, fld); fielderF.forEach(f => setTeam(f, fld));
 }

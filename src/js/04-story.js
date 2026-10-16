@@ -28,7 +28,7 @@ const STAGES = [
     win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
     lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
 ];
-let ovAction = null, ovAction2 = null;
+let ovAction = null, ovAction2 = null, ovAction3 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
@@ -44,6 +44,11 @@ function goalLong(st) {
 function updateGoal() {
   const el = $('#goal');
   if (!G || phase === 'idle') { el.innerHTML = ''; return; }
+  if (online) {
+    el.innerHTML = 'オンライン 部屋' + onl.code + '<br>' + teamName(onl.side) + '・' + (mode === 'bat' ? '攻撃中' : '守備中')
+      + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '');
+    return;
+  }
   let s = '';
   if (story) s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
   const n = 2 - G.pa % 3;
@@ -67,6 +72,10 @@ function overlay(o) {
   g1.hidden = !o.b1; g2.hidden = !o.b2;
   if (o.b1) { g1.textContent = o.b1[0]; ovAction = o.b1[1]; }
   if (o.b2) { g2.textContent = o.b2[0]; ovAction2 = o.b2[1]; }
+  const g3 = $('#go3'); g3.hidden = !o.b3;
+  if (o.b3) { g3.textContent = o.b3[0]; ovAction3 = o.b3[1]; }
+  const ci = $('#codeIn'); ci.hidden = !o.input;
+  if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
 }
 function dialog(lines, done) {
@@ -82,13 +91,14 @@ function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; c
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
+  if (onl.ch || online) leaveRoom();
   story = null; idle();
   $('.seg').hidden = true; $('#menuBtn').hidden = true;
   const done = loadProgress();
   overlay({
     title: 'どうぶつリーグ',
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree]
+    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree], b3: ['オンライン対戦', showOnlineMenu]
   });
 }
 function startFree() {

@@ -315,6 +315,7 @@ function endFlick(cancel) {
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
   pending = { key, speed: T.min + (T.max - T.min) * f, tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2) };
   phase = 'deliver'; deliverStart = now_(); setHint(T.ico + '  ' + T.name);
+  if (online) send('pitch', { p: pending });
 }
 cv.addEventListener('pointerup', () => endFlick(false));
 cv.addEventListener('pointercancel', () => endFlick(true));
@@ -347,6 +348,8 @@ function buildPitchButtons() {
 }
 $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovAction(); });
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
+$('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
+$('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', showMenu);
 $('#mBat').addEventListener('click', () => setMode('bat'));
 $('#mPit').addEventListener('click', () => setMode('pit'));

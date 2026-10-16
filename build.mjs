@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
+const SUPABASE_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap';
 
 const css = readFileSync('src/style.css', 'utf8');
@@ -13,7 +14,7 @@ const parts = readdirSync('src/js').filter(f => f.endsWith('.js')).sort();
 // The files share one scope: they are concatenated inside a single IIFE, which 01-core.js opens and 09-main.js closes.
 const js = parts.map(f => `/* ---- ${f} ---- */\n` + readFileSync('src/js/' + f, 'utf8')).join('\n');
 
-const scripts = `<script src="${THREE_URL}"></script>\n<script>\n${js}\n</script>\n`;
+const scripts = `<script src="${THREE_URL}"></script>\n<script src="${SUPABASE_URL}"></script>\n<script>\n${js}\n</script>\n`;
 
 const standalone = `<!doctype html>
 <html lang="ja">

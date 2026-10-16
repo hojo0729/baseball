@@ -138,7 +138,7 @@ function startPickoff(now, isOut) {
   phase = 'pick'; setHint('牽制！');
 }
 function tryCpuPickoff(now) {
-  if (mode !== 'bat' || !(G.bases[0] || G.bases[1])) return false;
+  if (online || mode !== 'bat' || !(G.bases[0] || G.bases[1])) return false;
   if (G.pickPa !== G.pa) { G.pickPa = G.pa; G.pickN = 0; }
   if (G.pickN >= 2 || Math.random() > (runSign() ? 0.3 : 0.15)) return false;
   G.pickN++;
@@ -193,7 +193,7 @@ function updateRunning(now) {
 }
 /* footer strategy buttons */
 function actOptions() {
-  if (!G) return [];
+  if (!G || online) return [];
   if (mode === 'bat' && phase === 'wait') {
     const o = [], st = stealers().length;
     if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);

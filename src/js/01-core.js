@@ -102,6 +102,10 @@ function hud() {
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
   $('#runs').textContent = G.runs;
   $('#slab').textContent = mode === 'bat' ? '得点' : '失点';
+  if (online) {
+    const sc = onlineScore();
+    $('#inn').textContent = inningLabel(); $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away;
+  }
   updateRunners();
   updateGoal();
 }
@@ -126,8 +130,10 @@ function flushBanner() {
 /* ---- count / base logic ---- */
 function endPA() { G.b = 0; G.s = 0; G.pa++; }
 function endInning(label) {
+  if (online) { onl.score[battingSide()] += G.runs; G.runs = 0; }   // bank this half's runs for the batting team
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
-  if (G.inning > 3) G.over = true;
+  if (G.inning > (G.maxHalf || 3)) G.over = true;
+  if (online && G.inning === 6 && onl.score.home > onl.score.away) G.over = true;   // home leads after the top of the 3rd
   return label + ' / チェンジ';
 }
 function out(label) {
@@ -232,7 +238,7 @@ function launchBall(o) {
   ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#000000');
   trail.forEach(m => m.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#eef0e4'));
   const sm = startSigns(ball.start);
-  if (mode === 'pit') cpuBat();
+  if (mode === 'pit' && !online) cpuBat();
   setHint((mode === 'bat' ? (curBunt ? 'バント：ボールが通る位置をタップしてバットを合わせる' : 'ボールが通る位置をタップ') : '') + sm);
 }
 function basePos(t, out) {
@@ -293,7 +299,16 @@ function cpuBat() {
 }
 
 /* ---- resolve one pitch ---- */
+/* online: the batter's device judges, sends the verdict with a seed, and both devices resolve it identically */
 function resolve(c, C) {
+  if (online && mode === 'bat') {
+    const seed = (Math.random() * 4294967296) >>> 0;
+    send('result', { c, C: C ? [C.x, C.y, C.z] : null, seed, swung: !!(swing && !swing.bunt) });
+    return withSeed(seed, () => resolveCore(c, C));
+  }
+  return resolveCore(c, C);
+}
+function resolveCore(c, C) {
   const now = now_();
   phase = 'result'; ball.done = true;
   const inZone = Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) <= 1;
@@ -382,7 +397,8 @@ function stepFly(now) {
       const c = contact(big ? dt * 0.7 : dt, d, swing.y - ball.T[1], ball.speed, big);
       resolve(c, swing.C);
     } else if (!swing && now >= arr + 0.2) resolve({ kind: 'take' });
-  } else {
+  } else if (online) stepFlyOnline(now);
+  else {
     const k = ball.cpu;
     if (now >= arr + 0.02 + (k.swing ? Math.max(0, k.dt) : 0)) {
       if (k.swing) resolve(curBunt ? buntContact(k.d * 0.8, k.vy * 0.3) : contact(k.dt, k.d, k.vy, ball.speed), ball.tgt);
@@ -397,6 +413,7 @@ function clearPlay() {
 }
 function afterResult() {
   flushBanner();
+  if (online) { onlineAfterResult(); return; }
   if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }
   if (G.over) { showOver(); return; }
   clearPlay();
