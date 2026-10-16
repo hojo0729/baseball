@@ -362,6 +362,14 @@ $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovActio
 $('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
 $('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
+function bgmLabel() { const on = bgmWanted(), b = $('#bgmBtn'); b.textContent = '♪ 応援 ' + (on ? 'オン' : 'オフ'); b.classList.toggle('off', !on); }
+$('#bgmBtn').addEventListener('click', () => {
+  audioInit();
+  const on = !bgmWanted(); try { localStorage.setItem('yakyu-bgm', on ? '1' : '0'); } catch (e) {}
+  if (on) bgmStartIfOn(); else bgmOn = false;
+  bgmLabel();
+});
+bgmLabel();
 ['pointerdown', 'touchend', 'click'].forEach(ev => document.addEventListener(ev, cmtUnlock, { once: false, passive: true }));
 $('#mBat').addEventListener('click', () => setMode('bat'));
 $('#mPit').addEventListener('click', () => setMode('pit'));

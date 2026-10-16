@@ -32,7 +32,65 @@ let ac = null;
 function audioInit() {
   if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
   if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
+  bgmStartIfOn();
 }
+
+/* ---- 応援のリズム：録音ではなく、その場で鳴らす（外部ファイルなし） ----
+   4つ打ちのドラム、手拍子、ブラス風の応援フレーズ（2小節のループ）。音量は効果音より低い。 */
+const BGM_BPM = 122, BGM_BEAT = 60 / BGM_BPM, BGM_VOL = 0.09;
+const BGM_MEL = [[0, 72, 0.5], [0.5, 72, 0.5], [1, 72, 1], [2, 76, 1], [3, 79, 1], [4, 79, 0.5], [4.5, 77, 0.5], [5, 76, 1], [6, 74, 1], [7, 72, 1]];
+const BGM_BASS = [36, 36, 36, 36, 43, 43, 43, 43];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+let bgmOn = false, bgmBuf = null, bgmGain = null, bgmNext = 0, bgmBeat = 0;
+function bgmWanted() { try { return localStorage.getItem('yakyu-bgm') !== '0'; } catch (e) { return true; } }
+function bgmInit() {
+  if (bgmGain || !ac) return;
+  bgmGain = ac.createGain(); bgmGain.gain.value = BGM_VOL; bgmGain.connect(ac.destination);
+  // a fixed noise buffer from a small generator, so nothing here touches Math.random (which the online seed uses)
+  const n = ac.sampleRate, b = ac.createBuffer(1, n, ac.sampleRate), ch = b.getChannelData(0);
+  let s = 12345; for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; ch[i] = s / 0x7fffffff * 2 - 1; }
+  bgmBuf = b;
+}
+function bgmNoiseAt(t, d, vol, fc) {
+  const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  src.buffer = bgmBuf; f.type = 'bandpass'; f.frequency.value = fc; f.Q.value = 1.2;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  src.connect(f); f.connect(g); g.connect(bgmGain); src.start(t, Math.random() * 0.5); src.stop(t + d + 0.02);
+}
+function bgmKick(t) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+  g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  o.connect(g); g.connect(bgmGain); o.start(t); o.stop(t + 0.2);
+}
+function bgmBrass(f, t, d, vol) {
+  const o = ac.createOscillator(), o2 = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain();
+  o.type = 'sawtooth'; o2.type = 'square'; o.frequency.value = f; o2.frequency.value = f * 1.004;
+  fl.type = 'lowpass'; fl.frequency.setValueAtTime(900, t); fl.frequency.exponentialRampToValueAtTime(2200, t + 0.05);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(vol * 0.7, t + d * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.05);
+  o.connect(fl); o2.connect(fl); fl.connect(g); g.connect(bgmGain);
+  o.start(t); o2.start(t); o.stop(t + d + 0.1); o2.stop(t + d + 0.1);
+}
+function bgmBeatAt(n, t) {
+  const k = n % 8, q = n % 4;
+  if (q === 0 || q === 2) bgmKick(t);
+  if (q === 1 || q === 3) { bgmNoiseAt(t, 0.16, 0.55, 1500); bgmNoiseAt(t + 0.012, 0.1, 0.3, 2600); }   // 手拍子
+  bgmNoiseAt(t + BGM_BEAT / 2, 0.04, 0.12, 7000);                                                     // ハイハット（裏拍）
+  bgmBrass(mtof(BGM_BASS[k]), t, BGM_BEAT * 0.9, 0.12);
+  BGM_MEL.forEach(([s, m, len]) => { if (Math.floor(s) === k) bgmBrass(mtof(m), t + (s - k) * BGM_BEAT, len * BGM_BEAT * 0.9, 0.2); });
+}
+function bgmTick() {
+  if (!bgmOn || !ac || !bgmGain) return;
+  if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
+  while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
+}
+function bgmStartIfOn() {
+  if (!ac || !bgmWanted()) return;
+  bgmInit();
+  if (!bgmOn) { bgmOn = true; bgmNext = 0; }
+}
+setInterval(bgmTick, 90);
 function burst(f, d, vol, type) {
   if (!ac) return;
   try {
