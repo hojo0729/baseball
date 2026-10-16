@@ -1,0 +1,43 @@
+<div id="app">
+  <header class="board">
+    <div class="inn" id="inn">1回</div>
+    <div class="cnt" aria-label="カウント">
+      <div><em>B</em><span id="db" class="dots"></span></div>
+      <div><em>S</em><span id="ds" class="dots"></span></div>
+      <div><em>O</em><span id="do" class="dots"></span></div>
+    </div>
+    <svg id="dia" viewBox="0 0 40 34" width="44" height="38" aria-label="走者">
+      <rect id="b2" x="15.5" y="2.5" width="9" height="9" transform="rotate(45 20 7)"></rect>
+      <rect id="b1" x="27.5" y="14.5" width="9" height="9" transform="rotate(45 32 19)"></rect>
+      <rect id="b3" x="3.5" y="14.5" width="9" height="9" transform="rotate(45 8 19)"></rect>
+    </svg>
+    <div class="score"><small id="slab">得点</small><b id="runs">0</b></div>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="banner"><div class="t" id="bt"></div><div class="s" id="bs"></div></div>
+    <div id="hint"></div>
+    <div id="spd"></div>
+    <div id="goal"></div>
+    <div id="overlay">
+      <div id="ospk"></div>
+      <h1 id="ot">どうぶつリーグ</h1>
+      <p id="od"></p>
+      <div id="obtns">
+        <button class="go" id="goBtn">ストーリー</button>
+        <button class="go2" id="go2" hidden>フリー対戦</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ctl">
+    <div class="pitches" id="pitches" hidden></div>
+    <div class="seg" role="group" aria-label="モード">
+      <button id="mBat" class="on">打つ</button>
+      <button id="mPit">投げる</button>
+    </div>
+    <div class="acts" id="acts" hidden></div>
+    <button class="go2 menu" id="menuBtn" hidden>メニュー</button>
+  </footer>
+</div>
