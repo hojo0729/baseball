@@ -214,9 +214,12 @@ function actOptions() {
   return o;
 }
 function refreshAct() {
-  const o = actOptions(), el = $('#acts'), key = o.map(x => x.join(':')).join() + '|' + sign;
+  // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
+  // Only the online batter has no options at all, so that side doesn't reserve the row.
+  const o = actOptions(), el = $('#acts'), none = !!(online && mode === 'bat');
+  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + none;
   if (el.dataset.k === key) return;
-  el.dataset.k = key; el.innerHTML = ''; el.hidden = !o.length;
+  el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
     b.className = 'chip' + (sign === k ? ' on' : ''); b.dataset.k = k; b.textContent = label;

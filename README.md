@@ -19,3 +19,9 @@ node build.mjs     # src/ から docs/index.html を作る
 ```
 
 公開は GitHub Pages（main ブランチの `/docs`）。構成と約束ごとは `CLAUDE.md` を参照。
+
+## 実況の音声ファイル
+
+実況は、`docs/audio/<id>.mp3` があればそのファイルを再生し、無ければスマホの読み上げで代用する。
+セリフの一覧は `node tools/export-voice-script.mjs` で `voice-script.csv`（id・セリフ・読み方）に出る。
+AI音声などで作ったファイルを id の名前（例 `hr_1.mp3`）で `docs/audio/` に置いてコミットすればよい。

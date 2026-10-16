@@ -86,7 +86,8 @@ canvas { display: block; width: 100%; height: 100%; }
 #obtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .go2 { font: 700 15px var(--f-body); background: rgba(6, 14, 12, .5); border: 1px solid var(--line); border-radius: 10px; padding: 12px 20px; min-height: 48px; color: var(--chalk); }
 .go2.menu { width: 100%; min-height: 44px; padding: 8px; }
-.acts { display: flex; gap: 6px; }
+.acts { display: flex; gap: 6px; min-height: 44px; }
+.acts.idle { visibility: hidden; }
 .acts[hidden] { display: none; }
 .chip { flex: 1 1 0; min-width: 0; font: 700 14px var(--f-body); color: var(--lamp); background: var(--panel); border: 1px solid var(--lamp); border-radius: 10px; min-height: 44px; padding: 6px 4px; }
 .chip.on { background: var(--lamp); color: #1a1406; }
@@ -1526,9 +1527,12 @@ function actOptions() {
   return o;
 }
 function refreshAct() {
-  const o = actOptions(), el = $('#acts'), key = o.map(x => x.join(':')).join() + '|' + sign;
+  // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
+  // Only the online batter has no options at all, so that side doesn't reserve the row.
+  const o = actOptions(), el = $('#acts'), none = !!(online && mode === 'bat');
+  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + none;
   if (el.dataset.k === key) return;
-  el.dataset.k = key; el.innerHTML = ''; el.hidden = !o.length;
+  el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
     b.className = 'chip' + (sign === k ? ' on' : ''); b.dataset.k = k; b.textContent = label;
@@ -1831,25 +1835,28 @@ const CMT_LABEL = ['実況 切', '実況 字', '実況 声'];
 
 const LINES = {
   play: ['プレイボール！', 'さあ、試合開始です！', 'ナイターの幕が上がりました！'],
-  first: ['{p}、振りかぶって…第一球！', '{b}を迎えます。{p}、投げた！', '{p}、サインにうなずいて…投げました！'],
-  pitch: ['{p}、第{n}球！', '{k}です！', '{p}、投げた！', '{b}、見ています！'],
-  gou: ['出た！剛速球！{v}キロ！', 'うなりをあげるストレート！', '速い！{v}キロ！'],
-  chg: ['ゆるい球！タイミングを外した！', '{k}！ふわっと来た！'],
+  first: ['ピッチャー、振りかぶって…第一球、投げた！', 'バッターを迎えます。投げた！', 'サインにうなずいて…投げました！'],
+  pitch: ['投げた！', 'さあ、どうだ！', 'バッター、見ています！'],
+  gou: ['出た！剛速球！', 'うなりをあげるストレート！', '速い！これは速い！'],
+  chg: ['ゆるい球！タイミングを外した！', 'ふわっと来た！'],
   strike: ['ストライク！', '見逃しストライク！', 'いいコース！', 'ズバッと決まった！'],
   ball: ['ボール。', 'ボール！見極めました。', 'わずかに外れました。'],
   miss: ['空振り！', 'バットが空を切る！', '振った！当たらない！'],
-  K: ['三振！{b}、バットが止まりません！', '空振り三振！{p}、気持ちよく仕留めた！', '三振！見事なピッチング！'],
+  K: ['三振！バットが止まりません！', '空振り三振！気持ちよく仕留めた！', '三振！見事なピッチング！'],
   KL: ['見逃し三振！手が出ません！', '見逃し三振！際どいところに決まった！'],
-  walk: ['フォアボール。{b}、粘って出塁です。', '四球。{p}、制球が乱れました。'],
+  walk: ['フォアボール。粘って出塁です。', '四球。制球が乱れました。'],
   foul: ['ファウル！', '打った、ファウル！', 'ファウルボール！粘ります！'],
   hit: ['打った！', 'カキーン！', '捉えた！'],
   hitBig: ['完璧な当たり！', 'いい打球だ！ぐんぐん伸びる！', 'これは大きい！'],
-  single: ['ヒット！{b}、きれいに運びました！', 'ヒットです！', '外野の間を抜けた！'],
+  single: ['ヒット！きれいに運びました！', 'ヒットです！', '外野の間を抜けた！'],
   double: ['ツーベース！ぐんぐん伸びてフェンス際！', '長打！二塁へ到達！'],
-  hr: ['入った！ホームラン！', 'ホームラン！{b}、豪快な一発！', '行ったー！特大のホームランです！'],
+  hr: ['入った！ホームラン！', 'ホームラン！豪快な一発！', '行ったー！特大のホームランです！'],
+  hr2: ['入ったー！2ランホームラン！'],
+  hr3: ['入ったー！3ランホームラン！'],
+  hr4: ['満塁ホームラン！グランドスラム！'],
   gout: ['ゴロです。一塁へ送ってアウト。', '内野ゴロ、アウト。', 'しっかり処理しました。'],
   fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。', 'ライナー！捕られました！'],
-  dp: ['ゲッツー！{p}、助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
+  dp: ['ゲッツー！助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
   err: ['エラー！ボールがこぼれた！', 'ああっと、エラーです！'],
   steal: ['スタートを切った！盗塁成功！', '盗塁セーフ！いい走りです！'],
   stealX: ['盗塁失敗！タッチアウト！', '刺した！ナイスなスローイング！'],
@@ -1858,20 +1865,19 @@ const LINES = {
   squeeze: ['スクイズ成功！1点をもぎ取った！', '三塁走者が突っ込んだ！スクイズ決まった！'],
   sac: ['犠牲フライ！三塁走者がタッチアップ！', 'タッチアップ！1点追加！'],
   change: ['スリーアウト、チェンジです。', 'ここでチェンジ。', '攻守交代です。'],
-  relief: ['ピッチャー交代です。', 'ここでマウンドを譲ります。{p}が上がります。'],
+  relief: ['ピッチャー交代です。', 'ここでマウンドを譲ります。'],
   big: ['巨大バット登場！当たる範囲が大きいぞ！', '来ました、巨大バット！'],
   magic: ['魔球モード発動！打てるのか！', '魔球です！']
 };
 
 function cmtRand() { cmt.s = (cmt.s * 1664525 + 1013904223) >>> 0; return cmt.s / 4294967296; }
-function cmtLine(key, vars) {
-  const a = LINES[key]; if (!a) return '';
+function cmtLine(key) {
+  const a = LINES[key]; if (!a) return null;
   let i = Math.floor(cmtRand() * a.length);
   if (a.length > 1 && cmt.last[key] === i) i = (i + 1) % a.length;     // don't repeat the same line twice in a row
   cmt.last[key] = i;
-  return a[i].replace(/\{(\w)\}/g, (m, k) => (vars && vars[k] != null ? vars[k] : ''));
+  return { text: a[i], id: key + '_' + (i + 1) };                        // id = voice file name: audio/<id>.mp3
 }
-function cmtVars(extra) { return Object.assign({ b: cmt.bat, p: cmt.pit }, extra || {}); }
 
 function cmtVoice() {
   if (cmt.voice || !window.speechSynthesis) return cmt.voice;
@@ -1884,7 +1890,7 @@ function cmtVoice() {
    So: unlock on the first touch, wait a beat after cancel, and report errors in the ticker instead of failing quietly. */
 function cmtUnlock() {
   if (cmt.unlocked || !window.speechSynthesis) return;
-  cmt.unlocked = true;
+  cmt.unlocked = true; if (cmt.mode === 2) cmtPreload();
   try { const u = new SpeechSynthesisUtterance('。'); u.lang = 'ja-JP'; u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
 }
 function cmtSpeak(text) {
@@ -1900,51 +1906,74 @@ function showCmtText(text) {
   el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   clearTimeout(cmt.timer); cmt.timer = setTimeout(() => el.classList.remove('show'), 3800);
 }
-/* prio 2: cut in and speak; prio 1: only if nothing is being said */
-function say(text, prio) {
-  if (!text || cmt.mode === 0) return;
+/* 録音ファイル docs/audio/<id>.mp3 があればそれを再生し、無ければスマホの読み上げにする。
+   id は LINES の key_番号（例 hr_2）。ファイル一覧は tools/export-voice-script.mjs で出せる。 */
+function cmtAllIds() { const r = []; for (const k in LINES) LINES[k].forEach((t, i) => r.push(k + '_' + (i + 1))); return r; }
+function cmtPreload() {
+  if (cmt.pre) return; cmt.pre = {};
+  cmtAllIds().forEach(id => {
+    const a = new Audio('audio/' + id + '.mp3'); a.preload = 'auto';
+    a.addEventListener('error', () => { cmt.pre[id] = null; });
+    cmt.pre[id] = a;
+  });
+}
+function cmtPlayFile(id) {                       // true if a recording is being played
+  const a = cmt.pre && cmt.pre[id]; if (!a || a.error) return false;
+  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { cmt.pre[id] = null; cmtSpeak(cmt.fallback); }); cmt.cur = a; return true; }
+  catch (e) { return false; }
+}
+function cmtBusy() {
+  const a = cmt.cur; if (a && !a.paused && !a.ended) return true;
+  return !!(window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending) && Date.now() - (cmt.at || 0) < 6000);
+}
+function cmtStop() {
+  if (cmt.cur) { try { cmt.cur.pause(); } catch (e) {} cmt.cur = null; }
+  if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+}
+/* L: {text, id} from cmtLine(). extra: count / score text shown on the ticker (and read out by the fallback voice).
+   prio 2: cut in and speak; prio 1: only if nothing is being said */
+function say(L, prio, extra) {
+  if (!L || cmt.mode === 0) return;
+  const text = L.text + (extra || '');
   showCmtText(text);
-  if (cmt.mode !== 2 || !window.speechSynthesis) return;
+  if (cmt.mode !== 2) return;
   try {
-    const ss = speechSynthesis;
-    if (ss.speaking || ss.pending) {
-      if ((prio || 1) < 2 && Date.now() - (cmt.at || 0) < 6000) return;   // (a stuck "speaking" flag is ignored after 6 s)
-      ss.cancel();
-      clearTimeout(cmt.wait); cmt.wait = setTimeout(() => cmtSpeak(text), 80);
-    } else cmtSpeak(text);
-    cmt.at = Date.now();
-    if (ss.paused) ss.resume();
+    const busy = cmtBusy();
+    if (busy && (prio || 1) < 2) return;
+    if (busy) cmtStop();
+    cmt.at = Date.now(); cmt.fallback = text;
+    const go = () => { if (!cmtPlayFile(L.id)) cmtSpeak(text); };
+    if (busy) { clearTimeout(cmt.wait); cmt.wait = setTimeout(go, 80); } else go();
+    if (window.speechSynthesis && speechSynthesis.paused) speechSynthesis.resume();
   } catch (e) {}
 }
 function setCmtMode(m) {
   cmt.mode = m; try { localStorage.setItem('yakyu-cmt', String(m)); } catch (e) {}
   $('#cmtBtn').textContent = CMT_LABEL[m];
-  if (m !== 2 && window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+  if (m !== 2) cmtStop();
   if (m === 0) $('#cmt').classList.remove('show');
-  else { cmtUnlock(); say(m === 2 ? '実況、声でお伝えします！' : '実況、文字でお伝えします。', 2); }
+  else { cmtUnlock(); if (m === 2) cmtPreload(); say({ text: m === 2 ? '実況、声でお伝えします！' : '実況、文字でお伝えします。', id: 'x' }, 2); }
 }
 
 /* ---- hooks ---- */
 function commentPitch(o) {                       // called from launchBall
-  const B = curBatter(), P = curPitcher(); cmt.bat = B.name; cmt.pit = P.name; cmt.n++;
+  const B = curBatter(), P = curPitcher(); cmt.bat = B.name; cmt.pit = P.name;
   if (cmt.mode === 0) return;
-  const v = cmtVars({ k: TYPES[o.key].name, v: Math.round(o.speed), n: G.b + G.s + 1 });
-  if (o.key === 'gou') say(cmtLine('gou', v), 2);
-  else if (o.key === 'chg' && cmtRand() < 0.6) say(cmtLine('chg', v), 1);
-  else if (G.b + G.s === 0) say(cmtLine('first', v), 1);
-  else if (cmtRand() < 0.3) say(cmtLine('pitch', v), 1);
+  if (o.key === 'gou') say(cmtLine('gou'), 2);
+  else if (o.key === 'chg' && cmtRand() < 0.6) say(cmtLine('chg'), 1);
+  else if (G.b + G.s === 0) say(cmtLine('first'), 1);
+  else if (cmtRand() < 0.3) say(cmtLine('pitch'), 1);
 }
 function commentContact(c) {                     // called at the moment of contact in resolveCore
   if (cmt.mode === 0 || c.kind === 'foul') return;
-  if (c.bases === 4) say(cmtLine('hit', cmtVars()) , 2);
-  else say(cmtLine(c.q > 0.8 ? 'hitBig' : 'hit', cmtVars()), 2);
+  say(cmtLine(c.bases === 4 || c.q <= 0.8 ? 'hit' : 'hitBig'), 2);
 }
 function commentBanner(t, s) {                   // called from showBanner (the result text on screen)
   if (cmt.mode === 0) return;
-  const v = cmtVars(), pts = (t.match(/(\d)点/) || [])[1];
-  let key = null, tail = '';
+  const pts = Number((t.match(/(\d)点/) || [])[1] || 0);
+  let key = null, extra = '';
   if (/プレイボール/.test(t)) key = 'play';
-  else if (/ホームラン/.test(t)) key = 'hr';
+  else if (/ホームラン/.test(t)) key = pts >= 2 ? 'hr' + pts : 'hr';
   else if (/見逃し三振/.test(t)) key = 'KL';
   else if (/三振/.test(t)) key = 'K';
   else if (/ゲッツー/.test(t)) key = 'dp';
@@ -1967,15 +1996,12 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/ピッチャー交代/.test(t)) key = 'relief';
   else if (/巨大バット/.test(t)) key = 'big';
   else if (/魔球/.test(t)) key = 'magic';
-  if (!key) return;
-  if (pts && key !== 'hr') tail = pts + '点が入りました！';
-  if (pts && key === 'hr' && pts !== '1') tail = pts + 'ランホームラン！';
-  if (key === 'relief') v.p = (/^ピッチャー交代/.test(t) && s ? s.split('（')[0] : cmt.pit);
-  // add the count after balls and strikes, and a note when the third out ends the half-inning
-  let line = cmtLine(key, v) + tail;
-  if (/チェンジ/.test(t) && key !== 'change') line += ' ' + cmtLine('change', v);
-  if (key === 'strike' || key === 'ball' || key === 'miss' || key === 'foul') line += ' ' + G.b + 'ボール' + G.s + 'ストライク';
-  say(line, key === 'ball' || key === 'strike' || key === 'miss' || key === 'foul' ? 1 : 2);
+  if (!key || !LINES[key]) return;
+  if (pts && !/^hr/.test(key)) extra = ' ' + pts + '点が入りました！';
+  if (/ピッチャー交代/.test(t) && s) extra = ' ' + s.split('（')[0];
+  if (/チェンジ/.test(t) && key !== 'change') extra += ' ' + cmtLine('change').text;
+  if (key === 'strike' || key === 'ball' || key === 'miss' || key === 'foul') extra = ' ' + G.b + 'ボール' + G.s + 'ストライク';
+  say(cmtLine(key), key === 'ball' || key === 'strike' || key === 'miss' || key === 'foul' ? 1 : 2, extra);
 }
 
 /* ---- 09-main.js ---- */
