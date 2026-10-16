@@ -5,6 +5,7 @@
 const cmt = { mode: Number((() => { try { return localStorage.getItem('yakyu-cmt'); } catch (e) { return null; } })() ?? 2),
   s: 12345, last: {}, bat: '', pit: '', timer: 0, voice: null, n: 0 };   // mode 0:切 1:字だけ 2:字+声
 const CMT_LABEL = ['実況 切', '実況 字', '実況 声'];
+function cmtUnlock() { if (cmt.mode === 2) cmtPreload(); }   // first tap: start loading the recordings
 
 const LINES = {
   play: ['プレイボール！', 'さあ、試合開始です！', 'ナイターの幕が上がりました！'],
@@ -52,39 +53,17 @@ function cmtLine(key) {
   return { text: a[i], id: key + '_' + (i + 1) };                        // id = voice file name: audio/<id>.mp3
 }
 
-function cmtVoice() {
-  if (cmt.voice || !window.speechSynthesis) return cmt.voice;
-  const vs = speechSynthesis.getVoices();
-  cmt.voice = vs.find(v => /^ja/i.test(v.lang) && /google|neural|natural|premium|enhanced/i.test(v.name))
-    || vs.find(v => /^ja/i.test(v.lang)) || null;
-  return cmt.voice;
-}
-/* Android Chrome stays silent unless speak() was first called from a tap, and drops speak() right after cancel().
-   So: unlock on the first touch, wait a beat after cancel, and report errors in the ticker instead of failing quietly. */
-function cmtUnlock() {
-  if (cmt.unlocked || !window.speechSynthesis) return;
-  cmt.unlocked = true; if (cmt.mode === 2) cmtPreload();
-  try { const u = new SpeechSynthesisUtterance('。'); u.lang = 'ja-JP'; u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
-}
-function cmtSpeak(text) {
-  const u = new SpeechSynthesisUtterance(text.replace(/[！!]+/g, '！'));
-  u.lang = 'ja-JP'; u.rate = 1.15; u.pitch = 1.1; u.volume = 1;
-  const v = cmtVoice(); if (v) u.voice = v;
-  u.onerror = e => { if (e.error && e.error !== 'canceled' && e.error !== 'interrupted') showCmtText('音声エラー: ' + e.error + '（スマホの設定で日本語の読み上げ音声を確認）'); };
-  cmt.u = u;                                    // keep a reference: Chrome can garbage-collect a playing utterance and stop it
-  speechSynthesis.speak(u);
-}
 function showCmtText(text) {
   const el = $('#cmt');
   el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   clearTimeout(cmt.timer); cmt.timer = setTimeout(() => el.classList.remove('show'), 3800);
 }
-/* 録音ファイル docs/audio/<id>.mp3 があればそれを再生し、無ければスマホの読み上げにする。
+/* 録音ファイル docs/audio/<id>.mp3 があればそれを再生する（無ければ字幕だけ）。
    id は LINES の key_番号（例 hr_2）。ファイル一覧は tools/export-voice-script.mjs で出せる。 */
-function cmtAllIds() { const r = []; for (const k in LINES) LINES[k].forEach((t, i) => r.push(k + '_' + (i + 1))); return r; }
+const VOICE_IDS = /*VOICE_IDS*/[];   // filled in by build.mjs from the files in docs/audio
 function cmtPreload() {
   if (cmt.pre) return; cmt.pre = {};
-  cmtAllIds().forEach(id => {
+  VOICE_IDS.forEach(id => {
     const a = new Audio('audio/' + id + '.mp3'); a.preload = 'auto';
     a.addEventListener('error', () => { cmt.pre[id] = null; });
     cmt.pre[id] = a;
@@ -92,40 +71,26 @@ function cmtPreload() {
 }
 function cmtPlayFile(id) {                       // true if a recording is being played
   const a = cmt.pre && cmt.pre[id]; if (!a || a.error) return false;
-  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { cmt.pre[id] = null; cmtSpeak(cmt.fallback); }); cmt.cur = a; return true; }
+  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { cmt.pre[id] = null; }); cmt.cur = a; return true; }
   catch (e) { return false; }
 }
-function cmtBusy() {
-  const a = cmt.cur; if (a && !a.paused && !a.ended) return true;
-  return !!(window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending) && Date.now() - (cmt.at || 0) < 6000);
-}
-function cmtStop() {
-  if (cmt.cur) { try { cmt.cur.pause(); } catch (e) {} cmt.cur = null; }
-  if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
-}
-/* L: {text, id} from cmtLine(). extra: count / score text shown on the ticker (and read out by the fallback voice).
-   prio 2: cut in and speak; prio 1: only if nothing is being said */
+function cmtBusy() { const a = cmt.cur; return !!(a && !a.paused && !a.ended); }
+function cmtStop() { if (cmt.cur) { try { cmt.cur.pause(); } catch (e) {} cmt.cur = null; } }
+/* L: {text, id} from cmtLine(). extra: count / score text shown on the ticker only.
+   prio 2: cut in; prio 1: only if nothing is being said. Lines with no recording stay silent (ticker only). */
 function say(L, prio, extra) {
   if (!L || cmt.mode === 0) return;
-  const text = L.text + (extra || '');
-  showCmtText(text);
+  showCmtText(L.text + (extra || ''));
   if (cmt.mode !== 2) return;
-  try {
-    const busy = cmtBusy();
-    if (busy && (prio || 1) < 2) return;
-    if (busy) cmtStop();
-    cmt.at = Date.now(); cmt.fallback = text;
-    const go = () => { if (!cmtPlayFile(L.id)) cmtSpeak(text); };
-    if (busy) { clearTimeout(cmt.wait); cmt.wait = setTimeout(go, 80); } else go();
-    if (window.speechSynthesis && speechSynthesis.paused) speechSynthesis.resume();
-  } catch (e) {}
+  if (cmtBusy()) { if ((prio || 1) < 2) return; cmtStop(); }
+  cmtPlayFile(L.id);
 }
 function setCmtMode(m) {
   cmt.mode = m; try { localStorage.setItem('yakyu-cmt', String(m)); } catch (e) {}
   $('#cmtBtn').textContent = CMT_LABEL[m];
   if (m !== 2) cmtStop();
   if (m === 0) $('#cmt').classList.remove('show');
-  else { cmtUnlock(); if (m === 2) cmtPreload(); say({ text: m === 2 ? '実況、声でお伝えします！' : '実況、文字でお伝えします。', id: 'x' }, 2); }
+  else { if (m === 2) cmtPreload(); say({ text: m === 2 ? '実況、声でお伝えします！' : '実況、文字でお伝えします。', id: 'x' }, 2); }
 }
 
 /* ---- hooks ---- */

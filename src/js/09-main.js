@@ -355,7 +355,6 @@ $('#menuBtn').addEventListener('click', showMenu);
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
 $('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
 ['pointerdown', 'touchend', 'click'].forEach(ev => document.addEventListener(ev, cmtUnlock, { once: false, passive: true }));
-if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { cmt.voice = null; };
 $('#mBat').addEventListener('click', () => setMode('bat'));
 $('#mPit').addEventListener('click', () => setMode('pit'));
 $('#pitches').addEventListener('click', e => {

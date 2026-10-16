@@ -2,7 +2,8 @@
 //   docs/index.html  -> standalone page served by GitHub Pages
 //   dist/artifact.html -> body-only variant for previewing inside Claude (its viewer adds <html>/<head>)
 // Usage: node build.mjs
-import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
 const SUPABASE_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
@@ -12,9 +13,13 @@ const css = readFileSync('src/style.css', 'utf8');
 const body = readFileSync('src/body.html', 'utf8');
 const parts = readdirSync('src/js').filter(f => f.endsWith('.js')).sort();
 // The files share one scope: they are concatenated inside a single IIFE, which 01-core.js opens and 09-main.js closes.
-const js = parts.map(f => `/* ---- ${f} ---- */\n` + readFileSync('src/js/' + f, 'utf8')).join('\n');
+// Voice clips present in docs/audio are listed in the commentary module, so the page only fetches files that exist.
+const voiceIds = existsSync('docs/audio') ? readdirSync('docs/audio').filter(f => f.endsWith('.mp3')).map(f => f.slice(0, -4)).sort() : [];
+const jsFor = ids => parts.map(f => `/* ---- ${f} ---- */\n` + readFileSync('src/js/' + f, 'utf8')).join('\n').replace('/*VOICE_IDS*/[]', JSON.stringify(ids));
+const js = jsFor(voiceIds);
 
-const scripts = `<script src="${THREE_URL}"></script>\n<script src="${SUPABASE_URL}"></script>\n<script>\n${js}\n</script>\n`;
+const scriptsFor = code => `<script src="${THREE_URL}"></script>\n<script src="${SUPABASE_URL}"></script>\n<script>\n${code}\n</script>\n`;
+const scripts = scriptsFor(js);
 
 const standalone = `<!doctype html>
 <html lang="ja">
@@ -22,6 +27,13 @@ const standalone = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a1815">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ナイター対決">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>ナイター対決</title>
 <link rel="stylesheet" href="${FONTS}">
 <style>
@@ -30,7 +42,8 @@ html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 ${css}</style>
 </head>
 <body>
-${body}${scripts}</body>
+${body}${scripts}<script>if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+</body>
 </html>
 `;
 
@@ -39,10 +52,40 @@ const artifact = `<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="${FONTS}">
 <style>
 ${css}</style>
-${body}${scripts}`;
+${body}${scriptsFor(jsFor([]))}`;
+
+const manifest = {
+  name: 'ナイター対決', short_name: 'ナイター対決', description: 'どうぶつたちの3D野球アクション', lang: 'ja',
+  start_url: './', scope: './', display: 'standalone', orientation: 'portrait', background_color: '#0a1815', theme_color: '#0a1815',
+  icons: [
+    { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+  ]
+};
+// Service worker: page = network first (so updates arrive), everything else = cache first, filled as it is used.
+// The version changes whenever the page or the voice list changes, which makes browsers replace the old cache.
+const version = createHash('sha1').update(standalone).update(voiceIds.join()).digest('hex').slice(0, 10);
+const sw = `const CACHE = 'yakyu-${version}';
+const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', '${THREE_URL}', '${SUPABASE_URL}'];
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(new Request(u, { mode: u.startsWith('http') ? 'no-cors' : 'same-origin' })).catch(() => {})))).then(() => self.skipWaiting())); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener('fetch', e => {
+  const r = e.request, u = new URL(r.url);
+  if (r.method !== 'GET' || u.protocol.startsWith('ws') || u.hostname.endsWith('supabase.co')) return;
+  if (r.mode === 'navigate') {
+    e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(k => k.put('index.html', c)); return res; }).catch(() => caches.match('index.html')));
+    return;
+  }
+  e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => { if (res.ok || res.type === 'opaque') { const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); } return res; })));
+});
+`;
 
 mkdirSync('docs', { recursive: true });
 mkdirSync('dist', { recursive: true });
 writeFileSync('docs/index.html', standalone);
 writeFileSync('dist/artifact.html', artifact);
+writeFileSync('docs/manifest.webmanifest', JSON.stringify(manifest, null, 2));
+writeFileSync('docs/sw.js', sw);
+console.log(`voice clips: ${voiceIds.length}, sw cache: yakyu-${version}`);
 console.log(`built ${parts.length} script parts -> docs/index.html (${standalone.length} chars), dist/artifact.html`);

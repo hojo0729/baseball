@@ -22,6 +22,10 @@ node build.mjs     # src/ から docs/index.html を作る
 
 ## 実況の音声ファイル
 
-実況は、`docs/audio/<id>.mp3` があればそのファイルを再生し、無ければスマホの読み上げで代用する。
+実況は、`docs/audio/<id>.mp3` があればそのファイルを再生する（無いセリフは字幕だけ）。ファイルを足したら `node build.mjs` で一覧が更新される。
 セリフの一覧は `node tools/export-voice-script.mjs` で `voice-script.csv`（id・セリフ・読み方）に出る。
 AI音声などで作ったファイルを id の名前（例 `hr_1.mp3`）で `docs/audio/` に置いてコミットすればよい。
+
+## スマホにアプリとして入れる
+
+https://saboten-apps.github.io/baseball/ をスマホのブラウザで開き、Chrome なら メニュー → 「アプリをインストール」（または「ホーム画面に追加」）。iPhone の Safari は 共有 → 「ホーム画面に追加」。全画面で開き、一度開いたあとは電波が弱くても起動する（オンライン対戦は通信が必要）。

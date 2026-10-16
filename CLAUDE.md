@@ -18,7 +18,7 @@
   - `08-commentary.js` 実況（画面下のテロップ + スマホの読み上げ。セリフ表は LINES）。乱数は専用生成器を使うこと（withSeed中に呼ばれてもずれない）
   - `09-main.js` 打球、毎フレーム更新、カメラ、入力、起動
 - `build.mjs` — `node build.mjs` で `docs/index.html`（GitHub Pages 公開用）と `dist/artifact.html`（Claude内プレビュー用）を作る
-- `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）
+- `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）。アプリ化（PWA）用の `manifest.webmanifest` と `sw.js` もビルドで作られる。`docs/icons/` のアイコンは `python3 tools/make-icons.py` で作る。`docs/audio/<id>.mp3` を置いてビルドすると、実況の声として自動で使われる（スマホの機械音声は使わない）
 
 ## 約束ごと
 
