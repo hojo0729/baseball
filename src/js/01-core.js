@@ -366,7 +366,7 @@ function advance(n, label) {
 }
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
-function contact(dt, d, vy, speed, boost, crit) {
+function contact(dt, d, vy, speed, boost, crit, evAdd) {
   if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
   const BT = curBatter(), bm = (0.7 + 0.1 * BT.m) * (BT.side === pitcherHand() ? 0.94 : 1.04);   // platoon edge vs opposite-handed pitchers
   dt /= bm; d /= bm;
@@ -377,7 +377,7 @@ function contact(dt, d, vy, speed, boost, crit) {
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
   if (BT.side === 'L') dir = -dir;                         // a left-handed hitter pulls to right field
   const launch = 12 + vy * 40 + gauss() * 3;
-  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (crit ? 30 : 0) + (BT.p - 3) * 9;
+  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (crit ? 30 : 0) + (evAdd || 0) + (BT.p - 3) * 9;
   if (q < 0.32 || Math.abs(dir) > 45) {
     if (Math.abs(dir) <= 45) dir = (dir < 0 ? -1 : 1) * rnd(50, 80);
     return { kind: 'foul', q, dir, ev, launch, dist: rnd(25, 70) };
@@ -450,31 +450,48 @@ function ballPosAt(t, out) {
   const k = (t - 1) / 0.02;
   return out.set(out.x + (out.x - _bp.x) * k, out.y + (out.y - _bp.y) * k, out.z + (out.z - _bp.z) * k);
 }
+/* CPUの強さ（CPU対戦と練習）。ストーリーは各話の調整をそのまま使う
+   bat: CPU打者のバットの芯のずれ / pow: CPU打者の打球の速さ(km/h) / tsd: タイミングのぶれ / chase: ボール球に手を出す率 / spd: CPU投手の球速 / wild: 制球の乱れ / zone: ストライクを投げる率 / edge: 際どいコースを狙う率 */
+const DIFF = [
+  { name: 'よわい', bat: 1.9, tsd: 1.7, chase: 1.6, pow: -10, spd: -8, wild: 0.1, zone: 0.82, edge: 0, center: 0.55 },
+  { name: 'ふつう', bat: 1, tsd: 1, chase: 1, pow: 0, spd: 0, wild: 0, zone: 0.68, edge: 0, center: 0.9 },
+  { name: 'つよい', bat: 0.78, tsd: 0.75, chase: 0.6, pow: 3, spd: 5, wild: -0.03, zone: 0.62, edge: 0.5, center: 0.9 },
+  { name: '鬼', bat: 0.6, tsd: 0.55, chase: 0.4, pow: 6, spd: 9, wild: -0.05, zone: 0.58, edge: 0.75, center: 0.9 }
+];
+let diffLv = 1;
+try { const v = Number(localStorage.getItem('yakyu-diff')); if (v >= 0 && v < DIFF.length) diffLv = v; } catch (e) {}
+function setDiff(i) { diffLv = i; try { localStorage.setItem('yakyu-diff', String(i)); } catch (e) {} }
+const cpuLv = () => story ? DIFF[1] : DIFF[diffLv];
 function cpuPitch() {
+  const LV = cpuLv();
   const P0 = curPitcher(), mix = story && story.pitcher ? story.pitcher.mix : null, wOf = k => (mix ? (mix[k] || 0) : TYPES[k].w) * (P0.pt.includes(k) ? 1 : 0);   // only the pitcher's own pitches
   let tot = 0; for (const k in TYPES) tot += wOf(k);
   let r = Math.random() * tot, key = 'str';
   for (const k in TYPES) { r -= wOf(k); if (r <= 0 && wOf(k) > 0) { key = k; break; } }
   const T = TYPES[key];
   let tx, ty;
-  if (Math.random() < 0.68) { tx = rnd(-0.9, 0.9); ty = rnd(-0.9, 0.9); }
+  if (Math.random() < LV.zone) {
+    if (Math.random() < LV.edge) { tx = (Math.random() < 0.5 ? -1 : 1) * rnd(0.5, 0.95); ty = rnd(-0.95, 0.95); }   // 際どいコース
+    else { tx = rnd(-LV.center, LV.center); ty = rnd(-LV.center, LV.center); }
+  }
   else { tx = rnd(-1.5, 1.5); ty = rnd(-1.4, 1.5); }
   const bonus = story && story.pitcher ? story.pitcher.speed : 0;
-  const P = curPitcher(), wild = 0.06 + (3 - P.c) * 0.05 + P.fatigue * 0.3;
+  const P = curPitcher(), wild = Math.max(0.02, 0.06 + (3 - P.c) * 0.05 + P.fatigue * 0.3 + LV.wild);
   tx += gauss() * Math.max(0, wild); ty += gauss() * Math.max(0, wild);
-  launchBall({ key, speed: clamp(rnd(T.min, T.max) + bonus + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx, ty });
+  launchBall({ key, speed: clamp(rnd(T.min, T.max) + bonus + LV.spd + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx, ty });
 }
 function cpuBat() {
   const T = ball.T, o = Math.max(Math.abs(T[0]), Math.abs(T[1])), inz = o <= 1.05;
   const ty = TYPES[ball.key];
-  let p = inz ? 0.85 : 0.22;
-  if (G.s === 2) p = inz ? 0.97 : 0.5;
+  const LV = cpuLv();
+  let p = inz ? 0.85 : 0.22 * LV.chase;
+  if (G.s === 2) p = inz ? 0.97 : Math.min(0.85, 0.5 * LV.chase);
   if (o > 1.5) p = 0.05;
-  const tsd = (0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03) * (ball.vn ? 1.6 : 1);   // 消える魔球：見えない間は合わせにくい
+  const tsd = (0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03) * (ball.vn ? 1.6 : 1) * LV.tsd;   // 消える魔球：見えない間は合わせにくい
   const BT = curBatter();
   const k = {
     swing: Math.random() < p, dt: gauss() * tsd,
-    d: (Math.abs(gauss()) * (0.30 + ty.hard * 0.18) + Math.max(0, o - 1) * 0.5) * (story && story.batSkill || 1) * (1.3 - 0.1 * BT.m) + (magicActive() ? 0.35 : 0),
+    d: (Math.abs(gauss()) * (0.30 + ty.hard * 0.18) + Math.max(0, o - 1) * 0.5) * (story && story.batSkill || 1) * LV.bat * (1.3 - 0.1 * BT.m) + (magicActive() ? 0.35 : 0),
     vy: 0.1 + gauss() * 0.35
   };
   ball.cpu = k;
@@ -599,7 +616,7 @@ function stepFly(now) {
   else {
     const k = ball.cpu;
     if (now >= arr + 0.02 + (k.swing ? Math.max(0, k.dt) : 0)) {
-      if (k.swing) resolve(curBunt ? buntContact(k.d * 0.8, k.vy * 0.3) : contact(k.dt, k.d, k.vy, ball.speed), ball.tgt);
+      if (k.swing) resolve(curBunt ? buntContact(k.d * 0.8, k.vy * 0.3) : contact(k.dt, k.d, k.vy, ball.speed, false, false, cpuLv().pow), ball.tgt);
       else resolve({ kind: 'take' });
     }
   }

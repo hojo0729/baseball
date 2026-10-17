@@ -51,7 +51,7 @@ function updateGoal() {
       + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '') + '<br>' + rosterLines();
     return;
   }
-  if (match) { el.innerHTML = 'CPU対戦 vs ' + ROSTER[match.opp].name + '・' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>' + rosterLines(); return; }
+  if (match) { el.innerHTML = 'CPU対戦 vs ' + ROSTER[match.opp].name + '（' + DIFF[diffLv].name + '）・' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>' + rosterLines(); return; }
   let s = '';
   if (story) s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
   const n = 2 - G.pa % 3;
@@ -114,9 +114,15 @@ function startFree() {
 /* ---- CPU対戦：9回の試合（先攻・後攻を交代しながら）。相手チームはランダム ---- */
 let match = null;   // { side: 'home'|'away'（しばいぬズが後攻か先攻か）, opp: 相手のロスター, score, half }
 function showCpuMenu() {
-  overlay({ title: 'CPU対戦', text: '9回までの試合。表と裏で、打つのと投げるのを交代します。同点なら12回まで延長。',
-    b1: ['先攻で試合', () => startMatch('away')], b2: ['後攻で試合', () => startMatch('home')],
+  overlay({ title: 'CPU対戦', text: '9回までの試合。表と裏で、打つのと投げるのを交代します。同点なら12回まで延長。（いまのCPU：' + DIFF[diffLv].name + '）',
+    b1: ['先攻で試合', () => chooseDiff(() => startMatch('away'))], b2: ['後攻で試合', () => chooseDiff(() => startMatch('home'))],
     b3: ['練習（打つだけ／投げるだけ）', startFree], b4: ['もどる', showMenu] });
+}
+/* CPUの強さを選んでから始める（選んだ強さは次回も使う。練習モードにも効く） */
+function chooseDiff(go) {
+  const pick = i => () => { setDiff(i); go(); };
+  overlay({ title: 'CPUの強さ', text: 'よわい：初めての人や子ども向け　ふつう：これまでと同じ　つよい：際どい球と鋭いスイング　鬼：ほぼプロ',
+    b1: ['よわい', pick(0)], b2: ['ふつう', pick(1)], b3: ['つよい', pick(2)], b4: ['鬼', pick(3)] });
 }
 function matchRole() {
   match.half = G.inning;
