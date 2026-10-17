@@ -9,12 +9,11 @@ const GRAD = (() => {
 // the stadium key light is strong; darken toon base colors so fur keeps its saturation after tone mapping
 const toon = c => new THREE.MeshToonMaterial({ color: new THREE.Color(c).multiplyScalar(0.55), gradientMap: GRAD });
 const SPECIES = {
-  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', ear: 'cone', earS: [0.075, 0.16], tail: 'curl', hl: 0.011 },
-  panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', ear: 'round', tail: 'ball', hl: 0.014 }
-,
-  neko: { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', ear: 'cone', earS: [0.07, 0.12], tail: 'ball', hl: 0.012 },
-  usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', ear: 'long', tail: 'ball', hl: 0.013 },
-  kuma: { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', ear: 'round', tail: 'ball', hl: 0.011 }
+  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011 },
+  panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014 },
+  neko:  { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', NOSE: '#d96b78', CHEST: '#fff6ea', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'ball', hl: 0.012 },
+  usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'ball', hl: 0.013 },
+  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011 }
 };
 const UNIFORM = {
   home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f' },
@@ -26,13 +25,14 @@ const UNIFORM = {
 const MATS = {};
 for (const team in UNIFORM) {
   const U = UNIFORM[team], S = SPECIES[U.species], m = {};
-  ['HEAD', 'MUZ', 'EARC', 'EARIN', 'LIMB', 'PAW', 'TAIL', 'PATCH'].forEach(r => { m[r] = toon(S[r]); });
+  ['HEAD', 'MUZ', 'EARC', 'EARIN', 'LIMB', 'PAW', 'TAIL', 'PATCH', 'NOSE', 'CHEST'].forEach(r => { m[r] = toon(S[r]); });
   ['JERSEY', 'PANTS', 'CAP', 'SOCK'].forEach(r => { m[r] = toon(U[r]); });
   MATS[team] = m;
 }
 const COMMON = {
   EYE: toon('#1b1a1f'), NOSE: toon('#2a1d19'), SHOE: toon('#1e2026'), GLOVE: toon('#8a5428'),
   HL: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+  TOOTH: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
   BLUSH: new THREE.MeshBasicMaterial({ color: '#ff7f8f', transparent: true, opacity: 0.62, depthWrite: false }),
   LINE: new THREE.MeshBasicMaterial({ color: '#3a2a24', side: THREE.BackSide }),      // 輪郭線（裏面を少し大きく描く）
   MOUTH: new THREE.MeshBasicMaterial({ color: '#3a2420' })
@@ -46,20 +46,40 @@ const BRIM = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false, -Math.PI / 2, Mat
 const EARG = new THREE.ConeGeometry(1, 1, 8);
 const CURL = new THREE.TorusGeometry(0.055, 0.03, 6, 10, Math.PI * 1.6);
 const MOUTHG = new THREE.TorusGeometry(0.022, 0.0055, 4, 8, Math.PI);   // ω の片側
-/* ===== 顔：目・まゆ・ほっぺを頭の球面に貼る絵にして、表情ごとに絵を切り替える =====
-   絵は 横=頭の正面±0.75rad、縦=上から1.05〜2.15rad の範囲。light=パンダ（目の周りが黒いので線を白くする） */
+/* ===== 顔：目・まゆ・ほっぺ・どうぶつ別の特徴を頭の球面に貼る絵にして、表情ごとに絵を切り替える =====
+   絵は 横=頭の正面±0.75rad、縦=上から1.05〜2.15rad の範囲。pandaは目の周りが黒いので線を白くする */
 const FACE_EX = ['normal', 'blink', 'focus', 'joy', 'shout', 'wow', 'sad', 'smile'];
 const FACE_MOUTH = { joy: [0.03, 0.026], shout: [0.04, 0.034], wow: [0.017, 0.022] };   // 口を開ける表情（それ以外は閉じた口）
 const FACEG = new THREE.SphereGeometry(1, 12, 8, Math.PI / 2 - 0.75, 1.5, 1.05, 1.1);
-function drawFace(ex, light) {
+function drawFace(ex, sp) {
+  const light = sp === 'panda';
   const w = 256, h = 192, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const c = cv.getContext('2d'), X = a => w * (0.5 + a / 1.5), Y = t => h * (t - 1.05) / 1.1;
   const ink = light ? '#0c0c10' : '#1c1620', line = light ? '#f6f3ea' : '#2a1d22';
-  const EA = 0.38, EY = 1.6;
+  const EA = 0.38, EY = 1.6, sides = [-1, 1];
   c.lineCap = c.lineJoin = 'round';
   const dot = (x, y, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); };
+  // どうぶつ別のベース模様（麻呂眉・額のトラ縞・猫ひげ・柴の裏白）
+  if (sp === 'shiba') {
+    sides.forEach(s => {
+      dot(X(s * 0.62), Y(2.03), 28, 14, 'rgba(255,246,232,0.88)');
+      c.save(); c.translate(X(s * 0.27), Y(1.29)); c.rotate(s * 0.18); dot(0, 0, 13, 8, '#fff6e8'); c.restore();
+    });
+  } else if (sp === 'neko') {
+    c.strokeStyle = '#9a5822'; c.lineWidth = 6.5;
+    [-0.09, 0, 0.09].forEach((a, i) => { c.beginPath(); c.moveTo(X(a), Y(1.08)); c.lineTo(X(a * 0.85), Y(i === 1 ? 1.29 : 1.25)); c.stroke(); });
+    sides.forEach(s => {
+      c.strokeStyle = '#3a241c'; c.lineWidth = 4.2;
+      [0, 1].forEach(j => { c.beginPath(); c.moveTo(X(s * 0.48), Y(1.87 + j * 0.09)); c.lineTo(X(s * 0.72), Y(1.84 + j * 0.12)); c.stroke(); });
+    });
+  }
   const eye = (s, rx, ry, sparkle) => {
     const x = X(s * EA), y = Y(EY);
+    if (sp === 'usagi') {
+      ry += 2;
+      c.strokeStyle = line; c.lineWidth = 4.5; c.beginPath();
+      c.moveTo(x + s * (rx - 2), y - ry * 0.45); c.lineTo(x + s * (rx + 7), y - ry * 0.68); c.stroke();
+    }
     dot(x, y, rx, ry, ink);
     dot(x + rx * 0.3, y - ry * 0.36, rx * 0.36, rx * 0.36, '#fff');
     dot(x - rx * 0.36, y + ry * 0.4, rx * 0.15, rx * 0.15, '#fff');
@@ -71,16 +91,15 @@ function drawFace(ex, light) {
     if (up) c.arc(x, y + 8, 24, Math.PI * 1.12, Math.PI * 1.88); else c.arc(x, y - 12, 24, Math.PI * 0.12, Math.PI * 0.88);
     c.stroke();
   };
-  const brow = (s, inner, outer) => {            // inner/outer = まゆの内側・外側の高さ（上が小さい）
+  const brow = (s, inner, outer, w0) => {        // inner/outer = まゆの内側・外側の高さ（上が小さい）
     const x = X(s * EA), y = Y(EY);
-    c.strokeStyle = '#3a2620'; c.lineWidth = 7; c.beginPath();
+    c.strokeStyle = sp === 'kuma' ? '#24140e' : '#3a2620'; c.lineWidth = w0 || (sp === 'kuma' ? 9.5 : 7); c.beginPath();
     c.moveTo(x - s * 24, y - inner); c.lineTo(x + s * 24, y - outer); c.stroke();
   };
-  const blush = k => [-1, 1].forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)'));
-  const sides = [-1, 1];
-  if (ex === 'normal') { sides.forEach(s => eye(s, 28, 34)); blush(1); }
-  else if (ex === 'smile') { sides.forEach(s => eye(s, 28, 34, true)); blush(1.25); }
-  else if (ex === 'blink') { sides.forEach(s => arc(s, false)); blush(1); }
+  const blush = k => sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)'));
+  if (ex === 'normal') { sides.forEach(s => { eye(s, 28, 34); if (sp === 'kuma') brow(s, 44, 50, 9); }); blush(1); }
+  else if (ex === 'smile') { sides.forEach(s => { eye(s, 28, 34, true); if (sp === 'kuma') brow(s, 46, 50, 8.5); }); blush(1.25); }
+  else if (ex === 'blink') { sides.forEach(s => { arc(s, false); if (sp === 'kuma') brow(s, 45, 50, 8.5); }); blush(1); }
   else if (ex === 'joy') { sides.forEach(s => arc(s, true)); blush(1.3); }
   else if (ex === 'focus') { sides.forEach(s => { eye(s, 26, 29); brow(s, 42, 54); }); blush(0.8); }
   else if (ex === 'shout') {
@@ -92,17 +111,22 @@ function drawFace(ex, light) {
   else if (ex === 'sad') { sides.forEach(s => { eye(s, 28, 33); brow(s, 54, 40); }); dot(X(-0.5), Y(1.78), 5, 8, 'rgba(170,215,255,0.9)'); blush(0.5); }
   const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 2; return t;
 }
-const FACE_MATS = { D: {}, L: {} };
-[false, true].forEach(light => FACE_EX.forEach(ex => {
-  FACE_MATS[light ? 'L' : 'D'][ex] = new THREE.MeshBasicMaterial({ map: drawFace(ex, light), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-}));
-COMMON.FACE = FACE_MATS.D.normal; COMMON.MOUTHO = new THREE.MeshBasicMaterial({ color: '#5a1c24' });
+const FACE_MATS = {};
+Object.keys(SPECIES).forEach(sp => {
+  FACE_MATS[sp] = {};
+  FACE_EX.forEach(ex => {
+    FACE_MATS[sp][ex] = new THREE.MeshBasicMaterial({ map: drawFace(ex, sp), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  });
+});
+COMMON.FACE = FACE_MATS.shiba.normal; COMMON.MOUTHO = new THREE.MeshBasicMaterial({ color: '#5a1c24' });
 function setFace(f, ex) {
   if (f.ex === ex) return; f.ex = ex;
-  f.face.material = FACE_MATS[f.panda ? 'L' : 'D'][ex];
+  const sp = f.sp || 'shiba';
+  f.face.material = (FACE_MATS[sp] || FACE_MATS.shiba)[ex];
   if (!f.mouthO) return;
   const o = FACE_MOUTH[ex];
   f.mouthO.visible = !!o; f.mouths.forEach(m => { m.visible = !o; });
+  if (f.tooth) f.tooth.visible = !o && sp === 'usagi';
   if (o) f.mouthO.scale.set(o[0], o[1], 0.014);
 }
 
@@ -110,8 +134,8 @@ function makeFig(o) {
   const g = new THREE.Group(); scene.add(g);
   const parts = [];
   const add = (geo, role, parent, sx, sy, sz) => {
-    if (geo === SPH && (o.lite || ['EYE', 'NOSE', 'HL', 'BLUSH', 'PAW', 'LIMB', 'PANTS', 'TAIL', 'GLOVE'].includes(role))) geo = SPL;
-    const m = new THREE.Mesh(geo, COMMON.EYE); m.castShadow = !!o.shadow && SHADOWS && !['HL', 'BLUSH', 'LINE', 'MOUTH', 'MOUTHO', 'EYE', 'FACE'].includes(role);
+    if (geo === SPH && (o.lite || ['EYE', 'NOSE', 'HL', 'BLUSH', 'PAW', 'LIMB', 'PANTS', 'TAIL', 'GLOVE', 'CHEST', 'TOOTH'].includes(role))) geo = SPL;
+    const m = new THREE.Mesh(geo, COMMON.EYE); m.castShadow = !!o.shadow && SHADOWS && !['HL', 'BLUSH', 'LINE', 'MOUTH', 'MOUTHO', 'EYE', 'FACE', 'CHEST', 'TOOTH'].includes(role);
     m.userData.role = role; (parent || g).add(m); parts.push(m);
     if (sx !== undefined) m.scale.set(sx, sy === undefined ? sx : sy, sz === undefined ? sx : sz);
     return m;
@@ -119,18 +143,20 @@ function makeFig(o) {
   const f = { g, parts, helmet: !!o.helmet };
   f.body = add(SPH, 'JERSEY');
   add(SPH, 'LINE', f.body, 1.05);
+  if (!o.lite) { f.chest = add(SPH, 'CHEST', f.body, 0.42, 0.28, 0.18); f.chest.position.set(0, 0.36, 0.88); }
   f.belt = add(cylGeo(0.2, 0.2), 'CAP');
   const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
   const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
   add(SPH, 'LINE', hs, 1.055);
-  add(SPH, 'MUZ', h, 0.115, 0.085, 0.09).position.set(0, -0.065, 0.165);
+  f.muz = add(SPH, 'MUZ', h, 0.115, 0.085, 0.09); f.muz.position.set(0, -0.065, 0.165);
   if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
-  f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.066, 0.085, 0.03); m.position.set(0.088 * s, -0.004, 0.19); m.rotation.z = 0.5 * s; return m; });
+  f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.066, 0.085, 0.03); m.position.set(0.088 * s, -0.004, 0.19); m.rotation.z = 0.42 * s; return m; });
   f.face = add(FACEG, 'FACE', h, 0.25 * 1.012, 0.225 * 1.012, 0.23 * 1.012);         // 目・まゆ・ほっぺ（表情で絵が変わる）
   f.mouths = [];
   if (!o.lite) {
     [-1, 1].forEach(s => { const m = add(MOUTHG, 'MOUTH', h); m.position.set(0.021 * s, -0.082, 0.248); m.rotation.set(-0.3, 0, Math.PI); f.mouths.push(m); });
     f.mouthO = add(SPH, 'MOUTHO', h, 0.03, 0.026, 0.014); f.mouthO.position.set(0, -0.092, 0.25); f.mouthO.visible = false;
+    f.tooth = add(SPH, 'TOOTH', h, 0.016, 0.014, 0.008); f.tooth.position.set(0, -0.092, 0.246); f.tooth.visible = false;
   }
   f.hl = [];
   f.coneEar = [-1, 1].map(s => {
@@ -161,13 +187,15 @@ function makeFig(o) {
   return f;
 }
 function setTeam(f, team) {
-  const M = MATS[team], S = SPECIES[UNIFORM[team].species];
-  f.team = team;
+  const sp = UNIFORM[team].species, M = MATS[team], S = SPECIES[sp];
+  f.team = team; f.sp = sp;
   f.parts.forEach(m => { const r = m.userData.role; m.material = M[r] || COMMON[r]; });
+  if (f.muz && S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]);
+  if (f.chest) f.chest.visible = sp === 'kuma' || sp === 'shiba';
   f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; if (S.earS) e.scale.set(S.earS[0], S.earS[1], 0.05); });
   f.longEar.forEach(e => { e.visible = S.ear === 'long'; });
   f.roundEar.forEach(e => { e.visible = S.ear === 'round'; });
-  f.panda = UNIFORM[team].species === 'panda';
+  f.panda = sp === 'panda';
   f.patch.forEach(p => { p.visible = f.panda; });
   f.ex = null; setFace(f, 'normal');
   f.curl.visible = S.tail === 'curl'; f.ball.visible = S.tail === 'ball';
