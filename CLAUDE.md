@@ -23,6 +23,10 @@
 - `build.mjs` — `node build.mjs` で `docs/index.html`（GitHub Pages 公開用）と `dist/artifact.html`（Claude内プレビュー用）を作る
 - `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）。アプリ化（PWA）用の `manifest.webmanifest` と `sw.js` もビルドで作られる。`docs/icons/` のアイコンは `python3 tools/make-icons.py` で作る。`docs/audio/<id>.mp3` を置いてビルドすると、実況の声として自動で使われる（スマホの機械音声は使わない）
 
+## 動作確認
+
+- `tools/test/` にヘッドレスChromiumの確認スクリプトがある（手順は `tools/test/README.md`）。ロジックを変えたら `thr.js`・`hbp.js`、オンラインに関わるなら `tac7.js`（SAME/DIFF）を回す
+
 ## 約束ごと
 
 - `src/` を編集したら必ず `node build.mjs` を実行して `docs/index.html` も更新してからコミットする
