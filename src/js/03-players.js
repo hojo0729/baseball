@@ -225,39 +225,16 @@ function batterJ(now, k) {
 
 /* ---- pitcher (built right-handed, mirrored for a lefty). k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
 function pitcherJ(k) { const J = pitcherJR(k); return lefty() ? mirrorJ(J) : J; }
+/* 投球フォーム：本物のモーションキャプチャ（03-motion.js の PITCH_MO）を k で再生する。
+   k 0-1 = 足を上げ始めてからリリースまで、1-1.35 = フォロースルー。右投げ。左投げは pitcherJ で左右反転 */
+const PJ_NAMES = ['pelvis', 'neck', 'head', 'sL', 'sR', 'eL', 'eR', 'hL', 'hR', 'hipL', 'hipR', 'kL', 'kR', 'fL', 'fR'];
 function pitcherJR(k) {
-  /* ちびキャラ用の投球フォーム（人の寸法で作り、squashJ で脚を縮める）。
-     0-0.32 足を高く上げる → 0.45-0.9 前へ踏み出しながら腕を後ろへ → 1 でリリース → 1-1.35 体を前に倒して後ろ足が上がる */
-  const M = MOUND_Y, Z0 = RUBBER_Z;
-  const lift = k < 0.32 ? ease(k / 0.32) : k < 0.5 ? 1 : 1 - ease(clamp((k - 0.5) / 0.25, 0, 1));
-  const s = ease(clamp((k - 0.45) / 0.45, 0, 1));
-  const fe = easeOut(clamp((k - 1) / 0.35, 0, 1));
-  const th = k < 0.4 ? -1.1 * ease(k / 0.4) : k < 1 ? -1.1 + 1.55 * ease(clamp((k - 0.6) / 0.4, 0, 1)) : 0.45 + 0.3 * fe;
-  const lean = 0.3 * s + 0.2 * fe - 0.05 * lift;                       // 上半身の前傾
-  const P = V(0.02, M + 0.98 - 0.13 * s + 0.03 * lift + 0.03 * fe, Z0 + 0.1 + 0.42 * s + 0.18 * fe);
-  const fR = V(-0.12 + 0.06 * fe, M + 0.3 * Math.sin(fe * Math.PI * 0.75), Z0 + 0.04 + 0.45 * fe);
-  const fL = V(0.06, M + 0.46 * lift, Z0 + 0.02 - 0.04 * lift).lerp(V(0.13, M, Z0 + 0.98), s);
-  const hipL = P.clone().add(rotY(V(0.12, -0.05, 0), th * 0.5)), hipR = P.clone().add(rotY(V(-0.12, -0.05, 0), th * 0.5));
-  const kL = hipL.clone().lerp(fL, 0.5).add(V(0.02, 0.3 * lift, 0.1 + 0.22 * lift + 0.08 * s));
-  const kR = hipR.clone().lerp(fR, 0.5).add(V(-0.02, 0.06 * fe, 0.08 + 0.12 * s));
-  const N = P.clone().add(V(0, 0.47 - 0.05 * (s + fe), lean));
-  const sR = N.clone().add(rotY(V(-0.19, -0.03, 0), th)), sL = N.clone().add(rotY(V(0.19, -0.03, 0), th));
-  const C0 = N.clone().add(V(0.02, -0.2, 0.2));
-  const AL = 0.5;
-  const arm = phi => { const r = phi * D2R; return sR.clone().add(V(-0.05, Math.cos(r) * AL, -Math.sin(r) * AL)); };
-  let hR;
-  if (k < 0.4) hR = C0.clone();
-  else if (k < 0.78) { const u = (k - 0.4) / 0.38; hR = C0.clone().lerp(arm(190 - 160 * ease(u)), clamp(u / 0.3, 0, 1)); }   // 下から後ろへ回して上へ
-  else if (k <= 1) hR = arm(30 - 50 * ((k - 0.78) / 0.22));
-  else hR = arm(-20 - 130 * fe).add(V(0.28 * fe, 0, 0));                 // 振り抜いてグラブ側の膝へ
-  const gOut = sL.clone().add(V(0.06, 0.06, 0.42)), gIn = N.clone().add(V(0.15, -0.22, 0.1));
-  let hL;
-  if (k < 0.4) hL = C0.clone().add(V(0.07, 0, 0));
-  else if (k < 0.85) hL = C0.clone().add(V(0.07, 0, 0)).lerp(gOut, ease(clamp((k - 0.4) / 0.3, 0, 1)));
-  else hL = gOut.lerp(gIn, ease(clamp((k - 0.85) / 0.3, 0, 1)));
-  const eR = sR.clone().lerp(hR, 0.5).add(V(-0.1, -0.03, 0)), eL = sL.clone().lerp(hL, 0.5).add(V(0.1, -0.06, 0));
-  const head = N.clone().add(V(0, 0.15, 0.03 + lean * 0.25));
-  return { pelvis: P, neck: N, head, sL, sR, eL, eR, hL, hR, hipL, hipR, kL, kR, fL, fR };
+  const M = PITCH_MO, f = clamp(k, 0, 1.35) / M.step, i0 = Math.min(M.n - 2, Math.floor(f)), a = f - i0, d = M.d, J = {};
+  PJ_NAMES.forEach((n, j) => {
+    const b0 = (i0 * 15 + j) * 3, b1 = b0 + 45;
+    J[n] = V(d[b0] + (d[b1] - d[b0]) * a + 0.02, d[b0 + 1] + (d[b1 + 1] - d[b0 + 1]) * a + MOUND_Y, d[b0 + 2] + (d[b1 + 2] - d[b0 + 2]) * a + RUBBER_Z + 0.08);
+  });
+  return J;
 }
 
 /* ---- fielders and runners ---- */
