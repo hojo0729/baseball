@@ -18,9 +18,12 @@ CMUモーションキャプチャの投球・打撃フォーム、効果音ラ�
 
 ## 3. 作業の流れ
 ```
+npm install                             # 初回のみ（playwright-core, three@0.149.0）
+git config core.hooksPath .githooks     # 初回のみ（pre-push フックを有効化。clone しただけでは有効にならない）
 node build.mjs                          # src/ → docs/index.html と dist/artifact.html
-python3 tools/test/make-test-page.py    # テスト用ページ（tools/test/README.md に準備手順）
-node tools/test/thr.js / hbp.js ...     # 動作確認
+node tools/test/make-test-page.mjs      # テスト用ページ tools/test/game.html を生成（Python 不要）
+node tools/test/smoke.mjs               # 起動スモーク＆全モード（ストーリー全5話・CPU・練習・オンライン）自動テスト
+node tools/check.mjs                    # 上記のビルド・構文・乱数チェック・smoke.mjs を一括実行（--full で thr/hbp/tac7 も実行）
 git add -A && git commit && git push    # docs/ もコミットする（GitHub Pages は main の /docs）
 ```
 - `src/` を触ったら必ず `node build.mjs` してから、`docs/` ごとコミットする（Pages はビルド結果を配信するため）。
@@ -67,13 +70,13 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 ## 11. 共同開発のルール（Claude / Gemini / ほかのAI、Take が混ざる）
 複数のAIが同じリポジトリを触るので、ぶつからないための決まり。
 
-1. **始める前に** `git pull`。作業前に、必ず最新の `main` に合わせる。
+1. **始める前に** `git pull`。初回（clone 後）は `git config core.hooksPath .githooks` を実行して `.githooks/pre-push` を有効化する（clone しただけでは有効にならない）。作業前に、必ず最新の `main` に合わせる。
 2. **1回の作業は1テーマ。** 終わったらすぐコミットして push（長く抱えない）。
-3. **コミットの終わりに `bash tools/check.sh`。** ビルド成功・`docs/` 更新・旧ユーザー名なしを確認する。
+3. **コミット・push の前に `node tools/check.mjs`（詳細テスト込みは `node tools/check.mjs --full`）。** ビルド成功・`docs/` 構文・旧ユーザー名なし・乱数チェック・起動スモーク＆全モード自動テスト（`smoke.mjs`）を確認する。`.githooks/pre-push` が有効なら `git push` 時にも自動で走り、失敗時は push を止める（`tools/check.sh` も `node tools/check.mjs` を呼ぶ薄い入口として残してある）。
 4. **`docs/index.html` と `docs/sw.js` は生成物。** 手で直さず、`src/` を直して `node build.mjs`。
    `git pull` でここが衝突したら、衝突を手で解かず、`src/` の衝突だけ解いてから `node build.mjs` で作り直してコミットする。
 5. **同じファイルを同時に大きく変えない。** 大きな変更（複数ファイルにまたがる）は、先に「作業ログ」へ一行書いてから始める。
-6. **旧ユーザー名をコード・文書・コミットメッセージに書かない。** `tools/check.sh` が見つける。
+6. **旧ユーザー名をコード・文書・コミットメッセージに書かない。** `tools/check.mjs` が見つける。
 7. **コミットメッセージの末尾に、作ったAIの名前を入れる**（例：`Co-Authored-By: Gemini <noreply@google.com>`）。誰が何を変えたか追えるようにするため。
 8. **履歴の書き換え（force push）は Take が頼んだときだけ。**
 9. **Windows で作業するときは `git config core.autocrlf false`（このリポジトリには `.gitattributes` で LF を固定してある）。** `node build.mjs` の結果が OS で変わらないよう、ファイル一覧は並べ替えてからハッシュにしている。ビルド直後に `docs/` が変わって見えたら、まずこの2点を疑う。
@@ -92,6 +95,7 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 - 締めるときにやること：`main` への直接 push を禁止（ブランチ保護）、PR 経由に、CI（check とスモークテスト）の成功を必須に、PR テンプレート、判定・オンラインの変更は別のAIがレビューしてからマージ、実機確認のチェックリスト。
 
 ### 作業ログ（新しいものを上に1行ずつ。AIも Take も書く）
+- 2026-10-18 Gemini（Antigravity）：Node.js v24＋Chromeのみで動く開発用テスト基盤（`package.json`、`tools/test/make-test-page.mjs`、`tools/test/lib.mjs`、`tools/test/smoke.mjs`、`tools/check.mjs`、`.githooks/pre-push`）を整備。
 - 2026-10-18 Gemini（Antigravity）：頭部スケールHEAD_Kを1.74→1.48に縮小、ほっぺ張り出しと首の高さを自然なちびキャラバランスに再調整。
 - 2026-10-18 Gemini（Antigravity）：ストーリーモード最終章・第5話「審判の日 人間たちの野球」を追加（ディストピア設定、5回戦・延長7回まで、ヒューマンズチームと人間3Dモデル・顔アイコン、動物オールスター打線、真エンディング）。実機未確認：第5話の通し試合展開とエンディング演出。
 - 2026-10-18 Gemini（Antigravity）：3Dキャラクターの二頭身マスコット化（肩幅・腰幅の短縮、頭部拡大HEAD_K 1.74、下ぶくれほっぺ、ぽてっとした胴体・太手足、打者の顔見せ角度、帽子の浅かぶり化）を実装。実機未確認：実機画面での打者・投手の二頭身マスコットバランス。

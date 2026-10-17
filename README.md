@@ -15,8 +15,14 @@
 ## 開発
 
 ```
-node build.mjs     # src/ から docs/index.html を作る
+npm install                               # 初回のみ（開発・テスト用の依存を入れる）
+git config core.hooksPath .githooks       # 初回のみ（pre-push フックを有効化。clone しただけでは有効にならない）
+node build.mjs                            # src/ から docs/index.html と dist/artifact.html を作る
+node tools/check.mjs                      # ビルド・構文・乱数検査＋起動スモーク＆全モード自動テスト
+node tools/check.mjs --full               # 上記に加えて thr / hbp / tac7 の詳細テストも実行
 ```
+
+> **注意**：`.githooks/pre-push`（`git push` 前に自動で `node tools/check.mjs` を走らせて失敗時に push を止める仕組み）は、`git clone` しただけでは有効になりません。クローン後に必ず `git config core.hooksPath .githooks` を1回実行してください。
 
 公開は GitHub Pages（main ブランチの `/docs`）。構成と約束ごとは `CLAUDE.md` を参照。
 

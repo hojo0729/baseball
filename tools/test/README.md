@@ -1,22 +1,27 @@
-# 動作確認スクリプト（ヘッドレスChromium）
+# 動作確認スクリプト（ヘッドレス Chrome / Node.js のみ・Python 不要）
 
-`dist/artifact.html` をテスト用に加工（`window.__dbg` のデバッグ用フックを足し、Supabase をモックに差し替え）して、Playwright で動かす。
+`dist/artifact.html` をテスト用に加工（`window.__dbg` のデバッグ用フックを足し、Supabase をモックに差し替え）して、`playwright-core`（システムの Chrome）と内蔵ローカル HTTP サーバー（`tools/test/lib.mjs`）で動かす。
 ゲーム本体には入らない（`tools/` はビルド対象外）。
 
 ## 準備（初回のみ）
-    npm i three@0.149.0 playwright   # three は game.html が読む。playwright のブラウザは入れ済みの Chromium を使う
-    # PLAYWRIGHT_BROWSERS_PATH が未設定なら: npx playwright install chromium
+    npm install                              # devDependencies (playwright-core, three@0.149.0) を入れる（ブラウザのダウンロードはしない）
+    git config core.hooksPath .githooks      # pre-push フックを有効化（clone しただけでは有効にならないため必ず実行）
 
 ## 使い方
-    node build.mjs                          # まず本体をビルド（dist/artifact.html ができる）
-    python3 tools/test/make-test-page.py    # tools/test/game.html を作る（src を変えるたびにやり直す）
-    node tools/test/thr.js                  # 送球先の選択（満塁・1塁・3塁など）
-    node tools/test/hbp.js                  # デッドボール→乱闘→投手交代（スクショ bw-*.png）
-    node tools/test/faces2.js               # 顔の表情の確認画像（f2-*.png）
-    node tools/test/ingame.js               # 守備側の通常画面とホームラン（ig-*.png）
-    node tools/test/ui.js                   # メニュー〜試合開始〜ホームラン〜守備のスクショ
-    node tools/test/tac7.js                 # オンライン2タブの同期確認（SAME/DIFF。サイコロの乱数で時々ぶれる）
+    node tools/check.mjs                     # 推奨：ビルド → 構文・乱数チェック → game.html 生成 → smoke.mjs を一括実行
+    node tools/check.mjs --full              # 上記に加えて thr.js / hbp.js / tac7.js も一括実行
 
-スクショは実行したフォルダに出る。`__dbg` のフックは `make-test-page.py` の先頭にある
-（`hit(c)` で打球結果を強制、`pitch()` で1球投げる、`gopit()` で守備側で開始、`face(team, expr)` で顔の確認 など）。
-THREE_JS 環境変数で three.min.js の場所を変えられる。
+### 個別に動かす場合
+    node build.mjs                           # まず本体をビルド（dist/artifact.html ができる）
+    node tools/test/make-test-page.mjs       # tools/test/game.html を作る（src を変えるたびにやり直す）
+    node tools/test/smoke.mjs                # 起動スモーク＆全モード（メニュー・ストーリー全5話・CPU・練習・オンライン・整合・リセット漏れ）テスト
+    node tools/test/thr.js                   # 送球先の選択（満塁・1塁・3塁など）
+    node tools/test/hbp.js                   # デッドボール→乱闘→投手交代（スクショ bw-*.png）
+    node tools/test/faces2.js                # 顔の表情の確認画像（f2-*.png）
+    node tools/test/ingame.js                # 守備側の通常画面とホームラン（ig-*.png）
+    node tools/test/ui.js                    # メニュー〜試合開始〜ホームラン〜守備のスクショ
+    node tools/test/tac7.js                  # オンライン2タブの同期確認（SAME/DIFF）
+
+スクショは実行したフォルダに出る。`__dbg` のフックは `tools/test/make-test-page.mjs` の先頭にある
+（`hit(c)` で打球結果を強制、`pitch()` で1球投げる、`ff()` で投球・待機時間を即座に早送り、`gopit()` で守備側で開始、`face(team, expr)` で顔の確認 など）。
+環境変数 `CHROME_PATH` で Chrome の実行ファイルパスを、`THREE_JS` で `three.min.js` の場所を変えられる。
