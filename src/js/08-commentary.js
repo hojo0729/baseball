@@ -41,7 +41,20 @@ const LINES = {
   change: ['スリーアウト、チェンジです。', 'ここでチェンジ。', '攻守交代です。'],
   relief: ['ピッチャー交代です。', 'ここでマウンドを譲ります。'],
   big: ['巨大バット登場！当たる範囲が大きいぞ！', '来ました、巨大バット！'],
-  magic: ['魔球モード発動！打てるのか！', '魔球です！']
+  magic: ['魔球モード発動！打てるのか！', '魔球です！'],
+  star: ['スーパースター登場！球場がわいています！', '来ました！二刀流のスーパースター！'],
+  starP: ['二刀流スターがマウンドへ！', 'スター登板です！'],
+  lefty: ['サウスポーの登場です！', '左腕がマウンドに上がります！'],
+  crit: ['会心の一振り！', '会心の当たりだ！'],
+  vanish: ['出た！消える魔球！', 'ボールが消えた！'],
+  extra: ['延長戦に突入です！', '決着は延長へ！'],
+  dice: ['さあ、運命のサイコロです！', 'サイコロ！何が出るか！'],
+  dice1: ['残念、はずれです！'],
+  dice2: ['ミートアップ！次のバッターに注目！'],
+  dice3: ['パワーアップ！一発あるか！'],
+  dice4: ['ランナー一塁から始まります！'],
+  dice5: ['1点ボーナス！'],
+  dice6: ['なんと2点ボーナス！大きい！']
 };
 
 function cmtRand() { cmt.s = (cmt.s * 1664525 + 1013904223) >>> 0; return cmt.s / 4294967296; }
@@ -97,7 +110,8 @@ function setCmtMode(m) {
 function commentPitch(o) {                       // called from launchBall
   const B = curBatter(), P = curPitcher(); cmt.bat = B.name; cmt.pit = P.name;
   if (cmt.mode === 0) return;
-  if (o.key === 'gou') say(cmtLine('gou'), 2);
+  if (o.vn) say(cmtLine('vanish'), 2);
+  else if (o.key === 'gou') say(cmtLine('gou'), 2);
   else if (o.key === 'chg' && cmtRand() < 0.6) say(cmtLine('chg'), 1);
   else if (G.b + G.s === 0) say(cmtLine('first'), 1);
   else if (cmtRand() < 0.3) say(cmtLine('pitch'), 1);
@@ -111,6 +125,9 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   const pts = Number((t.match(/(\d)点/) || [])[1] || 0);
   let key = null, extra = '';
   if (/プレイボール/.test(t)) key = 'play';
+  else if (/スーパースター登場/.test(t)) key = 'star';
+  else if (/二刀流スター登板/.test(t)) key = 'starP';
+  else if (/サイコロ/.test(t)) key = 'dice';
   else if (/ホームラン/.test(t)) key = pts >= 2 ? 'hr' + pts : 'hr';
   else if (/見逃し三振/.test(t)) key = 'KL';
   else if (/三振/.test(t)) key = 'K';
@@ -134,6 +151,9 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/ピッチャー交代/.test(t)) key = 'relief';
   else if (/巨大バット/.test(t)) key = 'big';
   else if (/魔球/.test(t)) key = 'magic';
+  if (key === 'relief' && /サウスポー/.test(s || '')) key = 'lefty';
+  if (key === 'change' && online && G.inning === 7) key = 'extra';
+  if (/^会心/.test(s || '') && !/^hr/.test(key)) key = 'crit';
   if (!key || !LINES[key]) return;
   if (pts && !/^hr/.test(key)) extra = ' ' + pts + '点が入りました！';
   if (/ピッチャー交代/.test(t) && s) extra = ' ' + s.split('（')[0];

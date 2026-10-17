@@ -183,6 +183,7 @@ function showDiceBanner(d) {
     clearInterval(diceTimer);
     $('#bt').textContent = '出た目 ' + d.v + '！';
     $('#bs').textContent = d.text;
+    say(cmtLine('dice' + d.v), 2);
   }, 90);
 }
 
