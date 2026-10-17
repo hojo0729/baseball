@@ -78,7 +78,7 @@ function bgmNoiseAt(t, d, vol, fc) {
   const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   src.buffer = bgmBuf; f.type = 'bandpass'; f.frequency.value = fc; f.Q.value = 1.2;
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  src.connect(f); f.connect(g); g.connect(bgmGain); src.start(t, Math.random() * 0.5); src.stop(t + d + 0.02);
+  src.connect(f); f.connect(g); g.connect(bgmGain); src.start(t, sfxRnd() * 0.5); src.stop(t + d + 0.02);
 }
 function bgmKick(t) {
   const o = ac.createOscillator(), g = ac.createGain();

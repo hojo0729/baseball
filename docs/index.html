@@ -374,7 +374,7 @@ function bgmNoiseAt(t, d, vol, fc) {
   const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   src.buffer = bgmBuf; f.type = 'bandpass'; f.frequency.value = fc; f.Q.value = 1.2;
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  src.connect(f); f.connect(g); g.connect(bgmGain); src.start(t, Math.random() * 0.5); src.stop(t + d + 0.02);
+  src.connect(f); f.connect(g); g.connect(bgmGain); src.start(t, sfxRnd() * 0.5); src.stop(t + d + 0.02);
 }
 function bgmKick(t) {
   const o = ac.createOscillator(), g = ac.createGain();
@@ -1426,17 +1426,17 @@ fwPts.frustumCulled = false; fwPts.visible = false; scene.add(fwPts);
 const FW_COL = [[1, .8, .3], [1, .35, .3], [.4, .8, 1], [.6, 1, .5], [1, .5, .9], [1, 1, .9]];
 let fwNext = 0, fwQueue = [], flashUntil = 0;
 function fwBurst(at) {
-  const c = FW_COL[(Math.random() * FW_COL.length) | 0], cx = rnd(-24, 24), cy = rnd(16, 26), cz = rnd(-112, -100), sp = rnd(38, 48);   // 観客席の前（打者目線の画面に入る高さ）
+  const c = FW_COL[(sfxRnd() * FW_COL.length) | 0], cx = -24 + sfxRnd() * 48, cy = 16 + sfxRnd() * 10, cz = -112 + sfxRnd() * 12, sp = 38 + sfxRnd() * 10;   // 観客席の前（打者目線の画面に入る高さ）
   for (let k = 0; k < 90; k++) {
     const i = fwNext; fwNext = (fwNext + 1) % FW_N;
-    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u), v = sp * (0.75 + Math.random() * 0.25);
+    const u = sfxRnd() * 2 - 1, a = sfxRnd() * Math.PI * 2, r = Math.sqrt(1 - u * u), v = sp * (0.75 + sfxRnd() * 0.25);
     fwVel.set([Math.cos(a) * r * v, u * v, Math.sin(a) * r * v], i * 3);
     fwPos.set([cx, cy, cz], i * 3); fwBase.set(c, i * 3); fwT[i] = at;
   }
 }
 /* ホームラン・勝利：at（秒）から n 発の花火、観客のウェーブ、照明のフラッシュ */
 function celebrate(at, n) {
-  for (let i = 0; i < n; i++) fwQueue.push(at + i * 0.45 + Math.random() * 0.2);
+  for (let i = 0; i < n; i++) fwQueue.push(at + i * 0.45 + sfxRnd() * 0.2);
   waveUntil = Math.max(waveUntil, at + 5); flashUntil = Math.max(flashUntil, at + 1.6);
 }
 let lightK = 1, darkCss = false;
