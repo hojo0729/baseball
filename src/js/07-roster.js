@@ -38,7 +38,7 @@ const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(
 
 /* which roster bats and which fields right now */
 function teamsNow() {
-  if (match && G) { const bat = battingSide() === match.side ? 'home' : match.opp; return { bat, fld: bat === 'home' ? match.opp : 'home' }; }
+  if (match && G) { const bat = battingSide() === match.side ? match.mine : match.opp; return { bat, fld: bat === match.mine ? match.opp : match.mine }; }
   if (online && G) { const bat = battingSide() === 'home' ? 'home' : 'away'; return { bat, fld: bat === 'home' ? 'away' : 'home' }; }
   const opp = story ? story.opp : 'away';
   return mode === 'bat' ? { bat: 'home', fld: opp } : { bat: opp, fld: 'home' };

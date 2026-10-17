@@ -583,7 +583,7 @@ function hud() {
     const sc = onlineScore();
     $('#inn').textContent = inningLabel();
     if (online) { $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away; }
-    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = 'しば - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = ROSTER[match.mine].name.slice(0, 2) + ' - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
   }
   updateRunners();
   updateGoal();
@@ -1715,11 +1715,21 @@ function startFree() {
   setMode(mode);
 }
 /* ---- CPU対戦：9回の試合（先攻・後攻を交代しながら）。相手チームはランダム ---- */
-let match = null;   // { side: 'home'|'away'（しばいぬズが後攻か先攻か）, opp: 相手のロスター, score, half }
+let match = null;   // { side: 'home'|'away'（自分が後攻か先攻か）, mine: 自分のロスター, opp: 相手のロスター, score, half }
 function showCpuMenu() {
   overlay({ title: 'CPU対戦', text: '9回までの試合。表と裏で、打つのと投げるのを交代します。同点なら12回まで延長。（いまのCPU：' + DIFF[diffLv].name + '）',
-    b1: ['先攻で試合', () => chooseDiff(() => startMatch('away'))], b2: ['後攻で試合', () => chooseDiff(() => startMatch('home'))],
+    b1: ['先攻で試合', () => pickTeam('away')], b2: ['後攻で試合', () => pickTeam('home')],
     b3: ['練習（打つだけ／投げるだけ）', startFree], b4: ['もどる', showMenu] });
+}
+/* 自分のチームを選ぶ（相手はほかの4チームからランダム）→ CPUの強さ → 試合開始 */
+const TEAM_ORDER = ['home', 'away', 'neko', 'usagi', 'kuma'];
+function pickTeam(side, page) {
+  const go = t => () => chooseDiff(() => startMatch(side, t));
+  const ts = page ? TEAM_ORDER.slice(3) : TEAM_ORDER.slice(0, 3), o = { title: 'チームをえらぶ',
+    text: 'しばいぬズ＝粘り強い　パンダーズ＝パワー　ニャンキーズ＝足と守備　ラビッツ＝内野安打　ヒグマーズ＝重い球' };
+  ts.forEach((t, i) => { o['b' + (i + 1)] = [ROSTER[t].name, go(t)]; });
+  if (page) o.b3 = ['◀ もどる', () => pickTeam(side, 0)]; else o.b4 = ['ほかのチーム ▶', () => pickTeam(side, 1)];
+  overlay(o);
 }
 /* CPUの強さを選んでから始める（選んだ強さは次回も使う。練習モードにも効く） */
 function chooseDiff(go) {
@@ -1735,14 +1745,14 @@ function matchRole() {
   setTeams(); resize(); hud();
 }
 function matchHint() { return mode === 'bat' ? '投手が投げたら、ボールが通る位置をタップして打つ' : '弾く向きで球種が決まる。指を離した位置がコース、弾く速さが球速'; }
-function startMatch(side) {
-  audioInit(); story = null;
-  const opps = ['away', 'neko', 'usagi', 'kuma'];
-  match = { side, opp: opps[Math.floor(Math.random() * opps.length)], score: { home: 0, away: 0 }, half: 0 };
+function startMatch(side, mine) {
+  audioInit(); story = null; mine = mine || 'home';
+  const opps = TEAM_ORDER.filter(t => t !== mine);
+  match = { side, mine, opp: opps[Math.floor(Math.random() * opps.length)], score: { home: 0, away: 0 }, half: 0 };
   newGame(); G.maxHalf = 18; G.skill = { crit: 3, vn: 3 };
   $('.seg').hidden = true; $('#menuBtn').hidden = false; $('#overlay').hidden = true;
   matchRole();
-  showBanner('プレイボール', 'しばいぬズ（' + (side === 'away' ? '先攻' : '後攻') + '） 対 ' + ROSTER[match.opp].name, 'g');
+  showBanner('プレイボール', ROSTER[mine].name + '（' + (side === 'away' ? '先攻' : '後攻') + '） 対 ' + ROSTER[match.opp].name, 'g');
   const dd = applyInningDice(); if (dd) setTimeout(() => showDiceBanner(dd), 1900);
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = now_() + (dd ? 5.5 : 2.4);
   setHint(matchHint()); updateGoal();
@@ -1772,7 +1782,7 @@ function showMatchOver() {
   const sb = onlineScore(), me = sb[match.side], cpu = sb[match.side === 'home' ? 'away' : 'home'], opp = ROSTER[match.opp].name;
   const inn = Math.ceil(Math.min(G.inning, 24) / 2);
   idle();
-  overlay({ title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: 'しばいぬズ ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
+  overlay({ title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: ROSTER[match.mine].name + ' ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
     b1: ['もう一度', showCpuMenu], b2: ['メニュー', showMenu] });
 }
 /* the menu button during a CPU match: the game stops while the sheet is open */
@@ -2364,7 +2374,7 @@ const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(
 
 /* which roster bats and which fields right now */
 function teamsNow() {
-  if (match && G) { const bat = battingSide() === match.side ? 'home' : match.opp; return { bat, fld: bat === 'home' ? match.opp : 'home' }; }
+  if (match && G) { const bat = battingSide() === match.side ? match.mine : match.opp; return { bat, fld: bat === match.mine ? match.opp : match.mine }; }
   if (online && G) { const bat = battingSide() === 'home' ? 'home' : 'away'; return { bat, fld: bat === 'home' ? 'away' : 'home' }; }
   const opp = story ? story.opp : 'away';
   return mode === 'bat' ? { bat: 'home', fld: opp } : { bat: opp, fld: 'home' };

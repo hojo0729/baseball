@@ -365,7 +365,7 @@ function hud() {
     const sc = onlineScore();
     $('#inn').textContent = inningLabel();
     if (online) { $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away; }
-    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = 'しば - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = ROSTER[match.mine].name.slice(0, 2) + ' - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
   }
   updateRunners();
   updateGoal();
