@@ -172,6 +172,7 @@ function updateBall(now, dt, pj) {
     const t = (now - ball.start) / ball.dur;
     ballPosAt(t, tmpV);
     const hid = ball.vn && t > 0.45 && t < 0.85;   // 消える魔球：途中で見えなくなる
+    if (!ball.done && !ball.mitt && t >= 1.08) { ball.mitt = true; sfx.mitt(ball.speed); }   // キャッチャーミットに収まった音
     ballMesh.position.copy(tmpV); ballMesh.scale.setScalar(1);
     ballMesh.visible = tmpV.z < 1.0 && !hid;
     ballMesh.rotateOnAxis(ball.axis, ball.rps * dt);

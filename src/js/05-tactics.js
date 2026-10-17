@@ -103,6 +103,7 @@ function settleSteal(c, now) {
   const from = V(0, 1.2, 0.8), to = BASE_PT[tgt], t0 = now + 0.15, dur = from.distanceTo(to) / 33;
   s.throw = { from, to, t0, dur };
   s.arrive = t0 + dur; s.runEnd = s.arrive + (safe ? -0.25 : 0.35);
+  sfx.slide(s.arrive - now - 0.45);
   stealAnim = s;
   const nb = G.bases.slice(), B0 = G.bases.slice();
   s.run.forEach(i => { nb[i] = 0; if (i !== s.lead || safe) nb[i + 1] = B0[i] || 3; });

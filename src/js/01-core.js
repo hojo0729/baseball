@@ -32,7 +32,30 @@ let ac = null;
 function audioInit() {
   if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
   if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
+  sfxLoad();
   bgmStartIfOn();
+}
+/* ---- 録音の効果音（効果音ラボ：商用無料・クレジット不要。素材ファイルの再配布は禁止なので、XOR して docs/sfx/*.bin に置いている。
+   tools/make-sfx.py で作る）。読めない環境（Claude内のプレビューなど）では合成音のまま ---- */
+const SFX_KEY = 'dobutsu-league-sfx', SFX_NAMES = ['bat1', 'bat2', 'batHR', 'mitt1', 'mitt2', 'slide1', 'slide2'];
+const sfxRec = {};
+let sfxReq = false;
+function sfxLoad() {
+  if (sfxReq || !ac || !window.fetch) return; sfxReq = true;
+  SFX_NAMES.forEach(n => fetch('sfx/' + n + '.bin').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(a => {
+    const u = new Uint8Array(a);
+    for (let i = 0; i < u.length; i++) u[i] ^= SFX_KEY.charCodeAt(i % SFX_KEY.length);
+    return new Promise((res, rej) => ac.decodeAudioData(u.buffer, res, rej));
+  }).then(b => { sfxRec[n] = b; }).catch(() => {}));
+}
+function playRec(n, vol, delay, rate) {
+  const b = sfxRec[n]; if (!ac || !b) return false;
+  try {
+    const s = ac.createBufferSource(), g = ac.createGain();
+    s.buffer = b; s.playbackRate.value = rate || 1; g.gain.value = vol;
+    s.connect(g); g.connect(ac.destination); s.start(ac.currentTime + Math.max(0, delay || 0));
+    return true;
+  } catch (e) { return false; }
 }
 
 /* ---- 応援のリズム：録音ではなく、その場で鳴らす（外部ファイルなし） ----
@@ -145,11 +168,14 @@ function burst(f, d, vol, type) {
     o.start(t); o.stop(t + d);
   } catch (e) {}
 }
+/* 効果音用の乱数。Math.random はオンラインの共有シード（withSeed）で使うので、音では触らない */
+let sfxS = 12345;
+const sfxRnd = () => (sfxS = (Math.imul(sfxS, 1664525) + 1013904223) >>> 0) / 4294967296;
 function noise(d, vol, fc, rise) {
   if (!ac) return;
   try {
     const n = Math.floor(ac.sampleRate * d), b = ac.createBuffer(1, n, ac.sampleRate), ch = b.getChannelData(0);
-    for (let i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < n; i++) ch[i] = sfxRnd() * 2 - 1;
     const s = ac.createBufferSource(); s.buffer = b;
     const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = fc; f.Q.value = 0.8;
     const g = ac.createGain(), t = ac.currentTime;
@@ -203,7 +229,19 @@ function batSound(ctx, dest, t, q, kind) {
   } catch (e) {}
 }
 const sfx = {
-  crack(q, kind) { if (ac) batSound(ac, ac.destination, ac.currentTime, q === undefined ? 0.7 : q, kind || 'play'); },
+  crack(q, kind, hr) {
+    if (!ac) return;
+    q = q === undefined ? 0.7 : q; kind = kind || 'play';
+    if (kind !== 'bunt' && (q > 0.5 || hr)) {                     // しっかり捉えた当たりは本物のカキーン（ホームランは歓声入り）
+      const n = hr ? 'batHR' : q > 0.8 ? 'bat1' : 'bat2';
+      if (playRec(n, hr ? 1.1 : Math.min(1.2, 0.55 + 0.6 * q), 0, kind === 'foul' ? 1.05 : 1)) return;
+    }
+    batSound(ac, ac.destination, ac.currentTime, q, kind);
+  },
+  mitt(speed) {                                                   // ミットに収まる音（速い球ほど大きく）
+    if (!playRec(sfxRnd() < 0.5 ? 'mitt1' : 'mitt2', 0.35 + clamp((speed - 100) / 50, 0, 1) * 0.5, 0, 0.96 + sfxRnd() * 0.08)) this.pop();
+  },
+  slide(delay) { playRec(sfxRnd() < 0.5 ? 'slide1' : 'slide2', 0.8, delay); },
   pop() { burst(240, 0.09, 0.2, 'triangle'); noise(0.07, 0.3, 900, 0.05); },
   swish() { noise(0.16, 0.14, 1800, 0.5); },
   cheer(k) { noise(0.9 + k * 0.7, 0.05 + k * 0.05, 700, 0.35); }
@@ -655,7 +693,7 @@ function resolveCore(c, C) {
   let t = '', sub = info, tn = 'n', delay = 0, cheer = 0;
   play = null;
   if (c.kind === 'take' || c.kind === 'miss') {
-    sfx.pop();
+    if (!ball.mitt) sfx.mitt(ball.speed);
     const st = settleSteal(c, now);
     if (st && st.ended) { t = st.label; tn = tone(false); sub = info; }
     else {
@@ -672,7 +710,7 @@ function resolveCore(c, C) {
     if (st) { delay = st.arrive - now + 0.05; nextAt = Math.max(nextAt, st.arrive + 1.5); }
   } else {
     if (c.kind === 'play' && c.res === 'ゴロアウト' && !c.bunt && trT('bat') === 'usagi' && Math.random() < 0.1) { c.res = 'ゴロヒット'; c.bases = 1; c.trait = 'ぴょんぴょん内野安打！'; }
-    sfx.crack(c.q === undefined ? 0.6 : c.q, c.bunt ? 'bunt' : c.kind);
+    sfx.crack(c.q === undefined ? 0.6 : c.q, c.bunt ? 'bunt' : c.kind, c.kind === 'play' && c.bases === 4);
     commentContact(c);
     const sg = steal, hr = sg && sg.hitRun ? sg : null;
     settleSteal(c, now);
