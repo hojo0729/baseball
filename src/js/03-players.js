@@ -9,12 +9,12 @@ const GRAD = (() => {
 // the stadium key light is strong; darken toon base colors so fur keeps its saturation after tone mapping
 const toon = c => new THREE.MeshToonMaterial({ color: new THREE.Color(c).multiplyScalar(0.55), gradientMap: GRAD });
 const SPECIES = {
-  shiba: { HEAD: '#d4762c', MUZ: '#fbf3e6', EARC: '#d4762c', EARIN: '#f2c2ae', LIMB: '#d4762c', PAW: '#fbf3e6', TAIL: '#d4762c', PATCH: '#d4762c', ear: 'cone', earS: [0.075, 0.16], tail: 'curl', hl: 0.011 },
+  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', ear: 'cone', earS: [0.075, 0.16], tail: 'curl', hl: 0.011 },
   panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#26282e', ear: 'round', tail: 'ball', hl: 0.014 }
 ,
-  neko: { HEAD: '#a3a8b0', MUZ: '#f6f3ec', EARC: '#a3a8b0', EARIN: '#f2b6bf', LIMB: '#a3a8b0', PAW: '#f6f3ec', TAIL: '#a3a8b0', PATCH: '#a3a8b0', ear: 'cone', earS: [0.066, 0.12], tail: 'ball', hl: 0.012 },
+  neko: { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', ear: 'cone', earS: [0.07, 0.12], tail: 'ball', hl: 0.012 },
   usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', ear: 'long', tail: 'ball', hl: 0.013 },
-  kuma: { HEAD: '#7b4d2a', MUZ: '#d8b083', EARC: '#7b4d2a', EARIN: '#d8b083', LIMB: '#7b4d2a', PAW: '#5d3a20', TAIL: '#7b4d2a', PATCH: '#7b4d2a', ear: 'round', tail: 'ball', hl: 0.011 }
+  kuma: { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', ear: 'round', tail: 'ball', hl: 0.011 }
 };
 const UNIFORM = {
   home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f' },
@@ -33,7 +33,9 @@ for (const team in UNIFORM) {
 const COMMON = {
   EYE: toon('#1b1a1f'), NOSE: toon('#2a1d19'), SHOE: toon('#1e2026'), GLOVE: toon('#8a5428'),
   HL: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
-  BLUSH: new THREE.MeshBasicMaterial({ color: '#ff8a8a', transparent: true, opacity: 0.45, depthWrite: false })
+  BLUSH: new THREE.MeshBasicMaterial({ color: '#ff7f8f', transparent: true, opacity: 0.62, depthWrite: false }),
+  LINE: new THREE.MeshBasicMaterial({ color: '#3a2a24', side: THREE.BackSide }),      // 輪郭線（裏面を少し大きく描く）
+  MOUTH: new THREE.MeshBasicMaterial({ color: '#3a2420' })
 };
 const geoCache = {};
 const cylGeo = (a, b) => geoCache[a + '_' + b] || (geoCache[a + '_' + b] = new THREE.CylinderGeometry(b, a, 1, 8));
@@ -43,38 +45,42 @@ const HELG = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5
 const BRIM = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false, -Math.PI / 2, Math.PI);
 const EARG = new THREE.ConeGeometry(1, 1, 8);
 const CURL = new THREE.TorusGeometry(0.055, 0.03, 6, 10, Math.PI * 1.6);
+const MOUTHG = new THREE.TorusGeometry(0.022, 0.0055, 4, 8, Math.PI);   // ω の片側
 
 function makeFig(o) {
   const g = new THREE.Group(); scene.add(g);
   const parts = [];
   const add = (geo, role, parent, sx, sy, sz) => {
     if (geo === SPH && (o.lite || ['EYE', 'NOSE', 'HL', 'BLUSH', 'PAW', 'LIMB', 'PANTS', 'TAIL', 'GLOVE'].includes(role))) geo = SPL;
-    const m = new THREE.Mesh(geo, COMMON.EYE); m.castShadow = !!o.shadow && SHADOWS && role !== 'HL' && role !== 'BLUSH';
+    const m = new THREE.Mesh(geo, COMMON.EYE); m.castShadow = !!o.shadow && SHADOWS && !['HL', 'BLUSH', 'LINE', 'MOUTH', 'EYE'].includes(role);
     m.userData.role = role; (parent || g).add(m); parts.push(m);
     if (sx !== undefined) m.scale.set(sx, sy === undefined ? sx : sy, sz === undefined ? sx : sz);
     return m;
   };
   const f = { g, parts, helmet: !!o.helmet };
   f.body = add(SPH, 'JERSEY');
+  add(SPH, 'LINE', f.body, 1.05);
   f.belt = add(cylGeo(0.2, 0.2), 'CAP');
-  const h = f.head = new THREE.Group(); g.add(h);
-  add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
+  const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
+  const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
+  add(SPH, 'LINE', hs, 1.055);
   add(SPH, 'MUZ', h, 0.115, 0.085, 0.09).position.set(0, -0.065, 0.165);
   if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
   f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.056, 0.072, 0.03); m.position.set(0.085 * s, 0.0, 0.19); m.rotation.z = 0.5 * s; return m; });
   [-1, 1].forEach(s => {
-    add(SPH, 'EYE', h, 0.03, 0.038, 0.02).position.set(0.085 * s, 0.01, 0.205);
+    add(SPH, 'EYE', h, 0.031, 0.034, 0.02).position.set(0.088 * s, 0.0, 0.207);
+    if (!o.lite) { const m = add(MOUTHG, 'MOUTH', h); m.position.set(0.021 * s, -0.082, 0.248); m.rotation.set(-0.3, 0, Math.PI); }
     f.hl = f.hl || [];
     if (o.lite) return;
-    const hl = add(SPH, 'HL', h, 0.011); hl.position.set(0.085 * s + 0.01, 0.025, 0.222); f.hl.push(hl);
-    const b = add(SPH, 'BLUSH', h, 0.042, 0.026, 0.012); b.position.set(0.145 * s, -0.055, 0.165); b.rotation.y = 0.55 * s;
+    const hl = add(SPH, 'HL', h, 0.011); hl.position.set(0.088 * s + 0.011, 0.013, 0.225); f.hl.push(hl);
+    const b = add(SPH, 'BLUSH', h, 0.045, 0.026, 0.012); b.position.set(0.15 * s, -0.058, 0.165); b.rotation.y = 0.6 * s;
   });
   f.coneEar = [-1, 1].map(s => {
-    const e = add(EARG, 'EARC', h, 0.075, 0.16, 0.05); e.position.set(0.13 * s, 0.2, -0.01); e.rotation.z = -0.35 * s;
+    const e = add(EARG, 'EARC', h, 0.075, 0.16, 0.05); e.position.set(0.165 * s, 0.215, 0.0); e.rotation.z = -0.55 * s;
     if (!o.lite) { const i = add(EARG, 'EARIN', e, 0.6, 0.6, 0.6); i.position.set(0, -0.08, 0.5); }
     return e;
   });
-  f.roundEar = [-1, 1].map(s => { const e = add(SPH, 'EARC', h, 0.075, 0.075, 0.045); e.position.set(0.165 * s, 0.17, -0.02); return e; });
+  f.roundEar = [-1, 1].map(s => { const e = add(SPH, 'EARC', h, 0.08, 0.08, 0.05); e.position.set(0.185 * s, 0.17, -0.0); return e; });
   f.longEar = [-1, 1].map(s => {
     const e = add(SPH, 'EARC', h, 0.05, 0.17, 0.035); e.position.set(0.075 * s, 0.33, -0.02); e.rotation.z = -0.18 * s;
     if (!o.lite) { const i = add(SPH, 'EARIN', e, 0.6, 0.75, 0.6); i.position.set(0, 0, 0.55); }
@@ -83,12 +89,12 @@ function makeFig(o) {
   if (o.helmet) { add(HELG, 'CAP', h, 0.255).position.y = 0.02; }
   else add(CAPG, 'CAP', h, 0.245).position.y = 0.04;
   const brim = add(BRIM, 'CAP', h, 0.15, 0.014, 0.15); brim.position.set(0, 0.05, 0.19);
-  f.ua = [add(cylGeo(0.07, 0.062), 'JERSEY'), add(cylGeo(0.07, 0.062), 'JERSEY')];
-  f.fa = [add(cylGeo(0.058, 0.05), 'LIMB'), add(cylGeo(0.058, 0.05), 'LIMB')];
+  f.ua = [add(cylGeo(0.085, 0.078), 'JERSEY'), add(cylGeo(0.085, 0.078), 'JERSEY')];
+  f.fa = [add(cylGeo(0.074, 0.066), 'LIMB'), add(cylGeo(0.074, 0.066), 'LIMB')];
   f.ej = o.lite ? null : [add(SPH, 'LIMB'), add(SPH, 'LIMB')];
   f.paw = [add(SPH, 'PAW'), add(SPH, 'PAW')];
-  f.th = [add(cylGeo(0.095, 0.08), 'PANTS'), add(cylGeo(0.095, 0.08), 'PANTS')];
-  f.sh = [add(cylGeo(0.075, 0.065), 'SOCK'), add(cylGeo(0.075, 0.065), 'SOCK')];
+  f.th = [add(cylGeo(0.11, 0.098), 'PANTS'), add(cylGeo(0.11, 0.098), 'PANTS')];
+  f.sh = [add(cylGeo(0.09, 0.082), 'SOCK'), add(cylGeo(0.09, 0.082), 'SOCK')];
   f.kj = o.lite ? null : [add(SPH, 'PANTS'), add(SPH, 'PANTS')];
   f.shoe = [add(SPH, 'SHOE'), add(SPH, 'SHOE')];
   f.curl = add(CURL, 'TAIL'); f.ball = add(SPH, 'TAIL');
@@ -109,16 +115,17 @@ function setTeam(f, team) {
 }
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
-const SQ = 0.72;
+const SQ = 0.72, LEG_SQ = 0.5, HIP_H = 0.9, HEAD_K = 1.42;   // 脚はより短く、頭は大きく
+const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
   for (const k in J) {
     const p = J[k].clone();
-    if (!(keepHands && (k === 'hL' || k === 'hR'))) p.y = base + (p.y - base) * SQ;
+    if (!(keepHands && (k === 'hL' || k === 'hR'))) p.y = sqY(p.y, base);
     o[k] = p;
   }
   const up = o.head.clone().sub(o.neck).normalize();
-  o.head = o.neck.clone().addScaledVector(up, 0.22);
+  o.head = o.neck.clone().addScaledVector(up, 0.27);
   return o;
 }
 function seg(m, a, b) {
@@ -133,20 +140,20 @@ function poseFig(f, J, yaw, headYaw) {
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
   f.body.position.addVectors(J.pelvis, J.neck).multiplyScalar(0.5);
   f.body.quaternion.setFromUnitVectors(_Y, _d.multiplyScalar(1 / L));
-  f.body.scale.set(0.2, L * 0.72, 0.19);
+  f.body.scale.set(0.25, L * 0.66, 0.23);
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
   f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(0.98, 0.035, 0.94);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
   seg(f.ua[0], J.sL, J.eL); seg(f.fa[0], J.eL, J.hL);
   seg(f.ua[1], J.sR, J.eR); seg(f.fa[1], J.eR, J.hR);
-  if (f.ej) { dot(f.ej[0], J.eL, 0.058); dot(f.ej[1], J.eR, 0.058); }
-  dot(f.paw[0], J.hL, 0.068); dot(f.paw[1], J.hR, 0.068);
+  if (f.ej) { dot(f.ej[0], J.eL, 0.078); dot(f.ej[1], J.eR, 0.078); }
+  dot(f.paw[0], J.hL, 0.085); dot(f.paw[1], J.hR, 0.085);
   [[J.hipL, J.kL, J.fL, 0], [J.hipR, J.kR, J.fR, 1]].forEach(([hp, kn, ft, i]) => {
     seg(f.th[i], hp, kn);
     _a.copy(ft); _a.y += 0.07; seg(f.sh[i], kn, _a);
-    if (f.kj) dot(f.kj[i], kn, 0.08);
+    if (f.kj) dot(f.kj[i], kn, 0.1);
     f.shoe[i].position.set(ft.x + Math.sin(yaw) * 0.03, ft.y + 0.055, ft.z + Math.cos(yaw) * 0.03);
-    f.shoe[i].scale.set(0.085, 0.065, 0.125); f.shoe[i].rotation.set(0, yaw, 0);
+    f.shoe[i].scale.set(0.1, 0.075, 0.135); f.shoe[i].rotation.set(0, yaw, 0);
   });
   _b.set(-Math.sin(yaw), 0, -Math.cos(yaw));
   _a.copy(J.pelvis).addScaledVector(_b, 0.2); _a.y += 0.06;
