@@ -1569,11 +1569,11 @@ function jerseyTex(base, trim, pin) {
   });
 }
 const SPECIES = {
-  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011 },
-  panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014 },
-  neko:  { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', NOSE: '#d96b78', CHEST: '#fff6ea', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012 },
-  usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013 },
-  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011 }
+  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011, bulk: 1 },
+  panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014, bulk: 1.07 },
+  neko:  { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', NOSE: '#d96b78', CHEST: '#fff6ea', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94 },
+  usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013, bulk: 0.93 },
+  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 }
 };
 const UNIFORM = {
   home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true },
@@ -1793,28 +1793,29 @@ function squashJ(J, base, keepHands) {
   o.head = o.neck.clone().addScaledVector(up, 0.27);
   return o;
 }
-function seg(m, a, b) {
+function seg(m, a, b, w = 1) {
   _d.subVectors(b, a); const L = _d.length() || 1e-4;
   m.position.addVectors(a, b).multiplyScalar(0.5);
   m.quaternion.setFromUnitVectors(_Y, _d.multiplyScalar(1 / L));
-  m.scale.set(1, L, 1);
+  m.scale.set(w, L, w);
 }
 function dot(m, p, r) { m.position.copy(p); m.scale.setScalar(r); }
 const _a = V(), _b = V();
 function poseFig(f, J, yaw, headYaw) {
+  const bk = ((SPECIES[f.sp] && SPECIES[f.sp].bulk) || 1) * (f.star ? 1.06 : 1);
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
   f.body.position.addVectors(J.pelvis, J.neck).multiplyScalar(0.5);
   f.body.quaternion.setFromUnitVectors(_Y, _d.multiplyScalar(1 / L));
-  f.body.scale.set(0.25, L * 0.66, 0.23);
+  f.body.scale.set(0.25 * bk, L * 0.66, 0.23 * bk);
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
-  f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(0.98, 0.035, 0.94);
+  f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(0.98 * bk, 0.035, 0.94 * bk);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
-  seg(f.ua[0], J.sL, J.eL); seg(f.fa[0], J.eL, J.hL);
-  seg(f.ua[1], J.sR, J.eR); seg(f.fa[1], J.eR, J.hR);
+  seg(f.ua[0], J.sL, J.eL, bk); seg(f.fa[0], J.eL, J.hL);
+  seg(f.ua[1], J.sR, J.eR, bk); seg(f.fa[1], J.eR, J.hR);
   if (f.ej) { dot(f.ej[0], J.eL, 0.078); dot(f.ej[1], J.eR, 0.078); }
   dot(f.paw[0], J.hL, 0.085); dot(f.paw[1], J.hR, 0.085);
   [[J.hipL, J.kL, J.fL, 0], [J.hipR, J.kR, J.fR, 1]].forEach(([hp, kn, ft, i]) => {
-    seg(f.th[i], hp, kn);
+    seg(f.th[i], hp, kn, bk);
     _a.copy(ft); _a.y += 0.07; seg(f.sh[i], kn, _a);
     if (f.kj) dot(f.kj[i], kn, 0.1);
     f.shoe[i].position.set(ft.x + Math.sin(yaw) * 0.03, ft.y + 0.055, ft.z + Math.cos(yaw) * 0.03);
@@ -1838,6 +1839,7 @@ let shownLeft = false, shownStar = false;
 function refreshShown() {
   if (!G || !(phase === 'idle' || phase === 'wait' || phase === 'ready' || phase === 'deliver')) return;
   const B = curBatter(); shownLeft = B.side === 'L'; shownStar = B.star;
+  batterF.star = !!shownStar; pitcherF.star = !!curPitcher().star;
 }
 function mirrorJ(J) { const o = {}; for (const k in J) o[k] = mirX(J[k]); return o; }
 function makeSwingPlan(C) {
