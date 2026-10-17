@@ -29,3 +29,9 @@ AI音声などで作ったファイルを id の名前（例 `hr_1.mp3`）で `d
 ## スマホにアプリとして入れる
 
 https://saboten-apps.github.io/baseball/ をスマホのブラウザで開き、Chrome なら メニュー → 「アプリをインストール」（または「ホーム画面に追加」）。iPhone の Safari は 共有 → 「ホーム画面に追加」。全画面で開き、一度開いたあとは電波が弱くても起動する（オンライン対戦は通信が必要）。
+
+## クレジット
+
+- 投球・打撃フォームは CMU Graphics Lab Motion Capture Database のデータをもとにしています。The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
+- 効果音の一部は「効果音ラボ」（https://soundeffect-lab.info/）の素材です。
+- 実況の声は Gemini TTS、曲は Lyria で生成しています。
