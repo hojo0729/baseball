@@ -1,0 +1,8 @@
+# 改行は常に LF（Windows の autocrlf でビルド結果が変わるのを防ぐ）
+* text=auto eol=lf
+*.png binary
+*.mp3 binary
+*.bin binary
+*.ico binary
+*.webp binary
+*.jpg binary

@@ -76,8 +76,10 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 6. **旧ユーザー名をコード・文書・コミットメッセージに書かない。** `tools/check.sh` が見つける。
 7. **コミットメッセージの末尾に、作ったAIの名前を入れる**（例：`Co-Authored-By: Gemini <noreply@google.com>`）。誰が何を変えたか追えるようにするため。
 8. **履歴の書き換え（force push）は Take が頼んだときだけ。**
-9. **分からないことは憶測で直さず、このファイルと `CLAUDE.md` に書き足す。** 次のAIが同じところでつまずかないように。
+9. **Windows で作業するときは `git config core.autocrlf false`（このリポジトリには `.gitattributes` で LF を固定してある）。** `node build.mjs` の結果が OS で変わらないよう、ファイル一覧は並べ替えてからハッシュにしている。ビルド直後に `docs/` が変わって見えたら、まずこの2点を疑う。
+10. **分からないことは憶測で直さず、このファイルと `CLAUDE.md` に書き足す。** 次のAIが同じところでつまずかないように。
 
 ### 作業ログ（新しいものを上に1行ずつ。AIも Take も書く）
+- 2026-10-17 Claude：Gemini（Windows）の調査で、`docs/sw.js` のハッシュが OS で変わる原因（readdirSync の順序・CRLF）を特定。`build.mjs` に sort、`.gitattributes` で LF 固定。
 - 2026-10-17 Claude：クレジット画面を追加、履歴を書き換え（作者名・旧URL）、共同開発ルールと `tools/check.sh` を追加。実機未確認：顔・送球選択・デッドボール頻度・打球角度・効果音の音量。
 
