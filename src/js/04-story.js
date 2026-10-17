@@ -118,8 +118,31 @@ function showMenu() {
   overlay({
     title: 'どうぶつリーグ', logo: true,
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame], b5: ['設定', showSettings]
+    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame], b5: ['遊び方', () => showGuide(0)], b6: ['設定', showSettings]
   });
+}
+const GUIDE = [
+  ['遊び方 ① 打つ・走る',
+    '・ボールがミットに届く直前に、通る位置をタップしてスイング\n' +
+    '・ボールの下を叩くとフライ、上を叩くとゴロになります\n' +
+    '・走者がいるときは下のボタンで盗塁・エンドラン・バント・スクイズのサインを出せます\n' +
+    '・盗塁（CPU戦）は投手が足を上げた瞬間に押すと好スタート（早すぎると牽制されます）'],
+  ['遊び方 ② 投げる・守る',
+    '・弾く向きで球種が変わります（↑ストレート、→スライダー、↓フォーク、ジグザグでナックルなど）\n' +
+    '・指を離した位置がコース、弾く速さが球速です（↑を遅く弾くとチェンジ、特に速く弾くと剛速球）\n' +
+    '・走者がいるときのゴロ（CPU戦）はスローになり、投げる塁を選べます（◎○△は成功率の目安）'],
+  ['遊び方 ③ 技・ギミック',
+    '・「会心の一振り」はミート幅と飛距離アップ、「消える魔球」は球が途中で消えます\n' +
+    '・「代打の切り札」「守護神」は1試合に1回ずつ、ここぞの場面で使えます\n' +
+    '・奇数回のサイコロ、回の頭のハプニング、どうぶつ固有スキルは「設定」でオン・オフできます']
+];
+function showGuide(i, back) {
+  i = i || 0; back = back || showMenu;
+  const [title, text] = GUIDE[i];
+  overlay({ title, plain: true, cred: true, text,
+    b1: i + 1 < GUIDE.length ? ['つぎへ ▶', () => showGuide(i + 1, back)] : ['もどる', back],
+    b2: i > 0 ? ['◀ まえへ', () => showGuide(i - 1, back)] : ['もどる', back],
+    b3: i > 0 && i + 1 < GUIDE.length ? ['もどる', back] : null });
 }
 /* 設定：ギミックのオン・オフ（この端末に保存。オンラインは部屋を作った人の設定で遊ぶ） */
 function showSettings() {
@@ -216,7 +239,7 @@ function showMatchOver() {
 function matchPause() {
   const info = story ? story.short + '　' + $('#inn').textContent : twoTeam() ? inningLabel() : $('#inn').textContent;
   overlay({ title: '試合中', text: info + '　' + $('#slab').textContent + '　' + $('#runs').textContent,
-    b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', showMenu] });
+    b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['遊び方', () => showGuide(0, matchPause)], b3: ['試合をやめる', showMenu] });
 }
 function startStory() {
   let i = loadProgress(); if (i >= STAGES.length) i = 0;
