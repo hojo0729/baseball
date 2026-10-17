@@ -80,7 +80,7 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 10. **分からないことは憶測で直さず、このファイルと `CLAUDE.md` に書き足す。** 次のAIが同じところでつまずかないように。
 
 ### 作業ログ（新しいものを上に1行ずつ。AIも Take も書く）
-- 2026-10-17 Gemini（Antigravity）：遊び方ガイド（3ページ）を追加、BGM/花火乱数をsfxRndに統一、乱闘時の退場条件・ゴロ送球選択時の3塁走者生還・オンライン交代キュー・全モード一時停止・#hapB位置を修正。
+- 2026-10-17 Gemini（Antigravity）：遊び方ガイド（3ページ）を追加、BGM/花火乱数をsfxRndに統一、乱闘時の退場条件・ゴロ送球選択時の3塁走者生還・オンライン交代キュー・全モード一時停止・#hapB位置を修正。実機未確認：遊び方ガイドの表示、ストーリー・練習中の一時停止、ハプニングバッジの位置、オンラインの交代の通し動作。
 - 2026-10-17 Claude：Gemini（Windows）の調査で、`docs/sw.js` のハッシュが OS で変わる原因（readdirSync の順序・CRLF）を特定。`build.mjs` に sort、`.gitattributes` で LF 固定。
 - 2026-10-17 Gemini（Antigravity）：環境を確認。node build.mjs と tools/check.sh が通ることを確認。
 - 2026-10-17 Claude：クレジット画面を追加、履歴を書き換え（作者名・旧URL）、共同開発ルールと `tools/check.sh` を追加。実機未確認：顔・送球選択・デッドボール頻度・打球角度・効果音の音量。
