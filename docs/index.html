@@ -368,8 +368,51 @@ function noise(d, vol, fc, rise) {
     s.connect(f); f.connect(g); g.connect(ac.destination); s.start(t);
   } catch (e) {}
 }
+/* the crack of a wooden bat, built from its parts (no recordings):
+   a dull ball thump, a short splintery snap, a few ringing modes of the bat, and a slap-back echo off the stands.
+   q = contact quality 0..1: on the sweet spot it rings bright and long; off it, a low short "bok". kind: 'play' | 'foul' | 'bunt'.
+   Takes any AudioContext (also an OfflineAudioContext, for previews). */
+let crackNoise = null;
+function batSound(ctx, dest, t, q, kind) {
+  try {
+    q = clamp(q, 0, 1);
+    const bunt = kind === 'bunt', tip = kind === 'foul' && q < 0.45;
+    const sweet = bunt ? 0 : clamp((q - 0.55) / 0.4, 0, 1);       // 0 = off the sweet spot, 1 = dead center
+    const vol = bunt ? 0.35 : tip ? 0.45 : 0.6 + 0.4 * q;
+    const out = ctx.createGain(); out.gain.value = vol * 0.62;   // keeps the loudest crack below clipping
+    // slap-back echo from the stands
+    const dl = ctx.createDelay(1), fb = ctx.createGain(), lp = ctx.createBiquadFilter(), wet = ctx.createGain();
+    dl.delayTime.value = 0.19; fb.gain.value = 0.34; lp.type = 'lowpass'; lp.frequency.value = 1800; wet.gain.value = bunt ? 0.08 : 0.22 + 0.15 * sweet;
+    out.connect(dest); out.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl); lp.connect(wet); wet.connect(dest);
+    // 1) ball thump
+    const th = ctx.createOscillator(), tg = ctx.createGain();
+    th.type = 'sine'; th.frequency.setValueAtTime(bunt ? 260 : 230, t); th.frequency.exponentialRampToValueAtTime(bunt ? 160 : 120, t + 0.05);
+    tg.gain.setValueAtTime(bunt ? 0.6 : 0.8, t); tg.gain.exponentialRampToValueAtTime(0.001, t + (bunt ? 0.05 : 0.07));   // the weight of the ball
+    th.connect(tg); tg.connect(out); th.start(t); th.stop(t + 0.1);
+    // 2) splintery snap: a very short burst of bright noise
+    if (!crackNoise || crackNoise.sampleRate !== ctx.sampleRate) {
+      const n = Math.floor(ctx.sampleRate * 0.12), b = ctx.createBuffer(1, n, ctx.sampleRate), ch = b.getChannelData(0);
+      let s = 987654321; for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; ch[i] = (s / 0x7fffffff * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.012)); }
+      crackNoise = b;
+    }
+    const ns = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), ng = ctx.createGain();
+    ns.buffer = crackNoise; hp.type = 'highpass'; hp.frequency.value = bunt ? 1200 : 1300;
+    ng.gain.value = bunt ? 0.25 : 0.22 + 0.1 * sweet;              // a little snap only: too much of it sounds like clappers
+    ns.connect(hp); hp.connect(ng); ng.connect(out); ns.start(t);
+    // 3) the bat rings: a handful of modes, higher and longer on the sweet spot, lower and damped off it
+    // kept low and short: long, pitched rings sound like a wood block rather than a bat
+    const tune = bunt ? 0.95 : 0.85 + 0.1 * sweet, ring = bunt ? 0.3 : tip ? 0.32 : 0.35 + 0.15 * sweet;
+    [[480, 0.11, 1], [1190, 0.085, 0.75], [2240, 0.06, 0.5], [3520, 0.035, 0.32]].forEach(([f, d, a]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(f * tune * 1.02, t); o.frequency.exponentialRampToValueAtTime(f * tune, t + 0.03);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(a * 0.32, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0005, t + d * ring + 0.01);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + d * ring + 0.05);
+    });
+    setTimeout(() => { try { out.disconnect(); fb.disconnect(); } catch (e) {} }, 2500);   // let the echo die, then free the nodes
+  } catch (e) {}
+}
 const sfx = {
-  crack() { burst(1400, 0.09, 0.16, 'square'); burst(180, 0.14, 0.2, 'triangle'); noise(0.08, 0.25, 2500, 0.05); },
+  crack(q, kind) { if (ac) batSound(ac, ac.destination, ac.currentTime, q === undefined ? 0.7 : q, kind || 'play'); },
   pop() { burst(240, 0.09, 0.2, 'triangle'); noise(0.07, 0.3, 900, 0.05); },
   swish() { noise(0.16, 0.14, 1800, 0.5); },
   cheer(k) { noise(0.9 + k * 0.7, 0.05 + k * 0.05, 700, 0.35); }
@@ -775,7 +818,7 @@ function resolveCore(c, C) {
     nextAt = now + 1.7;
     if (st) { delay = st.arrive - now + 0.05; nextAt = Math.max(nextAt, st.arrive + 1.5); }
   } else {
-    sfx.crack();
+    sfx.crack(c.q === undefined ? 0.6 : c.q, c.bunt ? 'bunt' : c.kind);
     commentContact(c);
     const sg = steal, hr = sg && sg.hitRun ? sg : null;
     settleSteal(c, now);
