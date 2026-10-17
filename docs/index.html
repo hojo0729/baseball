@@ -2173,7 +2173,7 @@ function showCmtText(text) {
 }
 /* 録音ファイル docs/audio/<id>.mp3 があればそれを再生する（無ければ字幕だけ）。
    id は LINES の key_番号（例 hr_2）。ファイル一覧は tools/export-voice-script.mjs で出せる。 */
-const VOICE_IDS = ["KL_1","KL_2","K_2","K_3","ball_1","ball_3","chg_2","first_1","foul_2","gou_1","gou_2","gou_3","miss_1","miss_3","pitch_1","pitch_2","pitch_3","play_1","play_2","strike_1","strike_2","strike_3"];   // filled in by build.mjs from the files in docs/audio
+const VOICE_IDS = ["KL_1","KL_2","K_1","K_2","K_3","ball_3","big_1","big_2","bunt_1","bunt_2","change_1","change_2","change_3","chg_1","chg_2","crit_1","crit_2","double_1","double_2","dp_1","dp_2","dp_3","err_2","first_1","first_2","first_3","foul_1","foul_2","foul_3","fout_1","fout_2","fout_3","gou_1","gou_2","gou_3","gout_1","gout_3","hitBig_1","hitBig_2","hitBig_3","hit_1","hit_2","hit_3","hr2_1","hr3_1","hr4_1","hr_1","hr_2","hr_3","lefty_1","lefty_2","magic_1","magic_2","miss_1","miss_2","miss_3","pick_1","pick_2","pitch_1","pitch_2","pitch_3","play_2","play_3","relief_1","relief_2","sac_1","sac_2","single_1","single_2","single_3","squeeze_1","squeeze_2","starP_1","starP_2","star_1","star_2","stealX_1","stealX_2","steal_1","steal_2","strike_1","strike_2","strike_3","strike_4","vanish_1","walk_1","walk_2"];   // filled in by build.mjs from the files in docs/audio
 function cmtPreload() {
   if (cmt.pre) return; cmt.pre = {};
   VOICE_IDS.forEach(id => {
