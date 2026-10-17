@@ -479,6 +479,7 @@ $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
 $('#go5').addEventListener('click', () => { audioInit(); if (ovAction5) ovAction5(); });
+$('#go6').addEventListener('click', () => { audioInit(); if (ovAction6) ovAction6(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else if (match && G && !G.over) matchPause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));

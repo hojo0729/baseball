@@ -28,7 +28,7 @@ const STAGES = [
     win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
     lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
 ];
-let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null, ovAction5 = null;
+let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null, ovAction5 = null, ovAction6 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
@@ -73,6 +73,7 @@ function overlay(o) {
   $('#overlay').classList.toggle('dlg', !!o.dlg);
   $('#overlay').classList.toggle('logo', !!o.logo);
   $('#overlay').classList.toggle('clear', !!o.clear);
+  $('#overlay').classList.toggle('cred', !!o.cred);
   $('#goBtn').classList.toggle('plain', !!o.plain);
   const bd = $('#obadge'); bd.hidden = !o.logo;
   if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのバッジ
@@ -92,6 +93,7 @@ function overlay(o) {
   setB($('#go3'), o.b3); if (o.b3) ovAction3 = o.b3[1];
   setB($('#go4'), o.b4); if (o.b4) ovAction4 = o.b4[1];
   setB($('#go5'), o.b5); if (o.b5) ovAction5 = o.b5[1];
+  setB($('#go6'), o.b6); if (o.b6) ovAction6 = o.b6[1];
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -124,7 +126,13 @@ function showSettings() {
   const row = (k, name, sub) => [name + '：' + (OPT[k] ? 'オン' : 'オフ') + '\n' + sub, () => { OPT[k] = !OPT[k]; saveOpt(); showSettings(); }];
   overlay({ title: '設定', plain: true, text: '次の試合から反映されます。オンライン対戦は部屋を作った人の設定になります。',
     b1: row('dice', 'サイコロ', '奇数の回に攻撃側が振る'), b2: row('hap', 'ハプニング', '風・雨・ウェーブ・照明トラブル'),
-    b3: row('trait', 'どうぶつ固有スキル', 'チームごとの特性'), b4: row('skill', '技', '会心の一振り・消える魔球'), b5: ['もどる', showMenu] });
+    b3: row('trait', 'どうぶつ固有スキル', 'チームごとの特性'), b4: row('skill', '技', '会心の一振り・消える魔球'), b5: ['クレジット', showCredits], b6: ['もどる', showMenu] });
+}
+/* クレジット（素材の出どころ。README と同じ内容） */
+function showCredits() {
+  overlay({ title: 'クレジット', plain: true, cred: true,
+    text: '・投球・打撃フォーム：CMU Graphics Lab Motion Capture Database（mocap.cs.cmu.edu）のデータをもとにしています。The database was created with funding from NSF EIA-0196217.\n・効果音の一部：効果音ラボ（soundeffect-lab.info）\n・実況の声：Gemini TTS／曲：Lyria で生成\n・3D 描画：Three.js（MIT License）',
+    b1: ['もどる', showSettings] });
 }
 function startFree() {
   story = null; match = null;

@@ -201,3 +201,5 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #obtns .go.plain small { color: var(--dim); }
 
 .chip { white-space: pre-line; }
+
+#overlay.cred #od { white-space: pre-line; text-align: left; font-size: 12.5px; line-height: 1.7; max-width: 30ch; }
