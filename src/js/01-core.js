@@ -230,9 +230,13 @@ let G = null;
 let phase = 'idle';            // idle | wait | deliver | fly | result
 let ball = null, swing = null, play = null, batAnim = null, pending = null, flick = null, aim = null;
 let nextAt = 0, deliverStart = 0, shakeUntil = 0, shakeAmp = 0, pendBanner = null;
+const OPT = { dice: true, hap: true, trait: true, skill: true };   // 設定：ギミックのオン・オフ
+try { Object.assign(OPT, JSON.parse(localStorage.getItem('yakyu-opts') || '{}')); } catch (e) {}
+function saveOpt() { try { localStorage.setItem('yakyu-opts', JSON.stringify(OPT)); } catch (e) {} }
+function opt(k) { return online && onl.opts ? onl.opts[k] !== false : OPT[k] !== false; }
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
-function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: { crit: 2, vn: 2 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
+function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
 
 /* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
 const HAP = [
@@ -268,8 +272,8 @@ function rollHap(odd) {
   if (story) return;
   const tm = teamsNow(); G.traitSeen = G.traitSeen || {};       // 各チームの固有スキルを最初に1回だけ紹介
   let w = odd ? 4600 : 1500;
-  [tm.bat, tm.fld].forEach(t => { if (!G.traitSeen[t] && TRAIT[t]) { G.traitSeen[t] = 1; queueHap({ n: ROSTER[t].name + '【' + TRAIT[t].n + '】', d: TRAIT[t].d }, w); w += 3400; } });
-  if (G.inning < 2) return;
+  if (opt('trait')) [tm.bat, tm.fld].forEach(t => { if (!G.traitSeen[t] && TRAIT[t]) { G.traitSeen[t] = 1; queueHap({ n: ROSTER[t].name + '【' + TRAIT[t].n + '】', d: TRAIT[t].d }, w); w += 3400; } });
+  if (G.inning < 2 || !opt('hap')) return;
   const f = () => { const a = Math.random(), b = Math.random(); return [a, b]; };
   const [a, b] = online ? withSeed(((onl.seed || 0) + G.inning * 104729) >>> 0, f) : f();
   if (a > 0.3) return;
@@ -295,8 +299,8 @@ function applyInningDice() {
   if (!G || G.diceInn === G.inning) return null;
   G.diceInn = G.inning;
   const inn = twoTeam() ? Math.ceil(G.inning / 2) : G.inning;   // 奇数の回（表も裏も、攻撃側が振る）
-  rollHap(inn % 2 === 1);
-  if (inn % 2 !== 1) return null;
+  rollHap(inn % 2 === 1 && opt('dice'));
+  if (inn % 2 !== 1 || !opt('dice')) return null;
   const v = rollDie(), text = DICE_FX[v]();
   hud();
   return { v, text };

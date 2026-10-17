@@ -228,6 +228,8 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 .pitches { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
 .pitches .pg { min-height: 46px; border-radius: 12px; font-size: 11.5px; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); }
 .pitches .pg i { font-size: 17px; }
+#obtns .go.plain { font: 700 15px var(--f-body); background: rgba(16, 35, 31, .85); border: 1px solid #36594f; box-shadow: 0 3px 0 rgba(0, 0, 0, .45); letter-spacing: 0; }
+#obtns .go.plain small { color: var(--dim); }
 </style>
 </head>
 <body>
@@ -268,6 +270,7 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
         <button class="go2" id="go2" hidden>フリー対戦</button>
         <button class="go2" id="go3" hidden>オンライン対戦</button>
         <button class="go2" id="go4" hidden></button>
+        <button class="go2" id="go5" hidden></button>
       </div>
     </div>
   </div>
@@ -518,9 +521,13 @@ let G = null;
 let phase = 'idle';            // idle | wait | deliver | fly | result
 let ball = null, swing = null, play = null, batAnim = null, pending = null, flick = null, aim = null;
 let nextAt = 0, deliverStart = 0, shakeUntil = 0, shakeAmp = 0, pendBanner = null;
+const OPT = { dice: true, hap: true, trait: true, skill: true };   // 設定：ギミックのオン・オフ
+try { Object.assign(OPT, JSON.parse(localStorage.getItem('yakyu-opts') || '{}')); } catch (e) {}
+function saveOpt() { try { localStorage.setItem('yakyu-opts', JSON.stringify(OPT)); } catch (e) {} }
+function opt(k) { return online && onl.opts ? onl.opts[k] !== false : OPT[k] !== false; }
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
-function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: { crit: 2, vn: 2 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
+function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
 
 /* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
 const HAP = [
@@ -556,8 +563,8 @@ function rollHap(odd) {
   if (story) return;
   const tm = teamsNow(); G.traitSeen = G.traitSeen || {};       // 各チームの固有スキルを最初に1回だけ紹介
   let w = odd ? 4600 : 1500;
-  [tm.bat, tm.fld].forEach(t => { if (!G.traitSeen[t] && TRAIT[t]) { G.traitSeen[t] = 1; queueHap({ n: ROSTER[t].name + '【' + TRAIT[t].n + '】', d: TRAIT[t].d }, w); w += 3400; } });
-  if (G.inning < 2) return;
+  if (opt('trait')) [tm.bat, tm.fld].forEach(t => { if (!G.traitSeen[t] && TRAIT[t]) { G.traitSeen[t] = 1; queueHap({ n: ROSTER[t].name + '【' + TRAIT[t].n + '】', d: TRAIT[t].d }, w); w += 3400; } });
+  if (G.inning < 2 || !opt('hap')) return;
   const f = () => { const a = Math.random(), b = Math.random(); return [a, b]; };
   const [a, b] = online ? withSeed(((onl.seed || 0) + G.inning * 104729) >>> 0, f) : f();
   if (a > 0.3) return;
@@ -583,8 +590,8 @@ function applyInningDice() {
   if (!G || G.diceInn === G.inning) return null;
   G.diceInn = G.inning;
   const inn = twoTeam() ? Math.ceil(G.inning / 2) : G.inning;   // 奇数の回（表も裏も、攻撃側が振る）
-  rollHap(inn % 2 === 1);
-  if (inn % 2 !== 1) return null;
+  rollHap(inn % 2 === 1 && opt('dice'));
+  if (inn % 2 !== 1 || !opt('dice')) return null;
   const v = rollDie(), text = DICE_FX[v]();
   hud();
   return { v, text };
@@ -1777,7 +1784,7 @@ const STAGES = [
     win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
     lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
 ];
-let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null;
+let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null, ovAction5 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
@@ -1822,6 +1829,7 @@ function overlay(o) {
   $('#overlay').classList.toggle('dlg', !!o.dlg);
   $('#overlay').classList.toggle('logo', !!o.logo);
   $('#overlay').classList.toggle('clear', !!o.clear);
+  $('#goBtn').classList.toggle('plain', !!o.plain);
   const bd = $('#obadge'); bd.hidden = !o.logo;
   if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのバッジ
     const i = document.createElement('i'); i.textContent = TEAM_COL[t][1]; i.style.background = TEAM_COL[t][0]; bd.appendChild(i);
@@ -1839,6 +1847,7 @@ function overlay(o) {
   setB($('#go2'), o.b2); if (o.b2) ovAction2 = o.b2[1];
   setB($('#go3'), o.b3); if (o.b3) ovAction3 = o.b3[1];
   setB($('#go4'), o.b4); if (o.b4) ovAction4 = o.b4[1];
+  setB($('#go5'), o.b5); if (o.b5) ovAction5 = o.b5[1];
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -1852,7 +1861,7 @@ function dialog(lines, done) {
   };
   step();
 }
-function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
+function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
@@ -1863,8 +1872,15 @@ function showMenu() {
   overlay({
     title: 'どうぶつリーグ', logo: true,
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
+    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame], b5: ['設定', showSettings]
   });
+}
+/* 設定：ギミックのオン・オフ（この端末に保存。オンラインは部屋を作った人の設定で遊ぶ） */
+function showSettings() {
+  const row = (k, name, sub) => [name + '：' + (OPT[k] ? 'オン' : 'オフ') + '\n' + sub, () => { OPT[k] = !OPT[k]; saveOpt(); showSettings(); }];
+  overlay({ title: '設定', plain: true, text: '次の試合から反映されます。オンライン対戦は部屋を作った人の設定になります。',
+    b1: row('dice', 'サイコロ', '奇数の回に攻撃側が振る'), b2: row('hap', 'ハプニング', '風・雨・ウェーブ・照明トラブル'),
+    b3: row('trait', 'どうぶつ固有スキル', 'チームごとの特性'), b4: row('skill', '技', '会心の一振り・消える魔球'), b5: ['もどる', showMenu] });
 }
 function startFree() {
   story = null; match = null;
@@ -1907,7 +1923,7 @@ function startMatch(side, mine) {
   audioInit(); story = null; mine = mine || 'home';
   const opps = TEAM_ORDER.filter(t => t !== mine);
   match = { side, mine, opp: opps[Math.floor(Math.random() * opps.length)], score: { home: 0, away: 0 }, half: 0 };
-  newGame(); G.maxHalf = 18; G.skill = { crit: 3, vn: 3 };
+  newGame(); G.maxHalf = 18; G.skill = opt('skill') ? { crit: 3, vn: 3 } : { crit: 0, vn: 0 };
   $('.seg').hidden = true; $('#menuBtn').hidden = false; $('#overlay').hidden = true;
   matchRole();
   showBanner('プレイボール', ROSTER[mine].name + '（' + (side === 'away' ? '先攻' : '後攻') + '） 対 ' + ROSTER[match.opp].name, 'g');
@@ -1992,9 +2008,35 @@ throwMesh.visible = false; scene.add(throwMesh);
 let sign = null;               // batting sign chosen before the pitch: steal | run | bunt | squeeze
 let curBunt = false;           // the batter is squared to bunt on this pitch
 let steal = null, stealAnim = null, cpuStealPlan = false, cpuBuntPlan = false, pickoff = null;
+let stealJump = 0, stealMsg = '', timeOut = false;   // 盗塁のスタートの良し悪し / 打者のタイム
+/* 盗塁（CPUが投げるとき）：投手のモーションに合わせて押す。動く前は早すぎて牽制される。足を上げた瞬間が一番いい */
+function stealPress(now) {
+  if (sign === 'steal' || timeOut) { if (timeOut) setHint('タイム中は走れません'); return; }
+  const st = stealers(); if (!st.length) return;
+  const k = pitcherK(now), sp = G.bases[st[0]] || 3;
+  if (k <= 0.03) {
+    sign = null; stealJump = 0; stealMsg = '';
+    showBanner('スタートが早い！', '牽制球', 'n');
+    startPickoff(now, Math.random() < 0.6 - (sp - 3) * 0.08);
+    return;
+  }
+  sign = 'steal';
+  stealJump = clamp(0.12 - Math.max(0, k - 0.25) * 0.6, -0.3, 0.12);
+  stealMsg = k <= 0.3 ? '好スタート！' : k <= 0.55 ? 'まずまずのスタート' : 'スタートが遅れた…';
+}
+function toggleTime() {
+  if (online) {
+    if (!timeOut && !(onl.timeLeft > 0)) { setHint('タイムはもう使えません（1試合3回）'); return; }
+    timeOut = !timeOut; if (timeOut) onl.timeLeft--;
+    send('time', { on: timeOut });
+  } else {
+    timeOut = !timeOut;
+    if (!timeOut) nextAt = Math.max(nextAt, now_() + 1.2);
+  }
+}
 const runSign = () => sign === 'steal' || sign === 'run' || sign === 'squeeze';
 const SIGN_HINT = {
-  steal: '盗塁のサイン。投球と同時に走者が走る',
+  steal: '盗塁のサイン。投球と同時に走者が走る（相手に見える）',
   run: 'エンドラン。走者が走るので必ず打とう（ゴロでもゲッツーにならない）',
   bunt: 'バント。ボールが通る位置をタップしてバットを当てる',
   squeeze: 'スクイズ。3塁走者が突っ込む。必ずバットに当てよう'
@@ -2024,13 +2066,14 @@ function startSigns(now, sg) {
   if (online) { s = sg || null; sign = null; onl.oppSign = null; }
   else if (mode === 'bat') { s = sign; sign = null; }
   else { s = cpuStealPlan ? 'steal' : cpuBuntPlan ? 'bunt' : null; cpuStealPlan = cpuBuntPlan = false; }
+  const jump = stealJump; stealJump = 0; stealMsg = '';
   if (!s) return '';
   let msg = '';
   if (s === 'bunt' || s === 'squeeze') { curBunt = true; msg = mode === 'pit' ? 'バントの構え！' : ''; }
   if (s === 'steal' || s === 'run') {
     const run = stealers();
     if (run.length) {
-      steal = { run, lead: run[0], t0: now, runEnd: now + 3.4, hitRun: s === 'run' };
+      steal = { run, lead: run[0], t0: now, runEnd: now + 3.4, hitRun: s === 'run', jump: s === 'steal' && !online && mode === 'bat' ? jump : 0 };
       msg = s === 'run' ? 'エンドラン！' : run.length > 1 ? 'ダブルスチール！' : (mode === 'pit' ? '走った！速い球で刺そう' : '盗塁！');
     }
   }
@@ -2056,7 +2099,7 @@ function settleSteal(c, now) {
   const rs = G.bases[s.lead] || 3, arm = ROSTER[teamsNow().fld].arm || 3, ly = ball.T[1];
   let p = 0.62 + (128 - ball.speed) / 100 * 0.7 + TYPES[ball.key].hard * 0.08
     + (rs - 3) * 0.08 - (arm - 3) * 0.06 + (ly > 0.6 ? 0.04 : ly < -0.6 ? -0.03 : 0)
-    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0) + (trT('bat') === 'neko' ? 0.1 : 0);
+    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0) + (trT('bat') === 'neko' ? 0.1 : 0) + (s.jump || 0);
   p = clamp(p, 0.15, 0.95);
   const safe = Math.random() < p, tgt = s.lead + 2;              // first -> 2B, second -> 3B
   const from = V(0, 1.2, 0.8), to = BASE_PT[tgt], t0 = now + 0.15, dur = from.distanceTo(to) / 33;
@@ -2207,6 +2250,7 @@ function actOptions() {
       if (st) o.push(['steal', (st > 1 ? 'ダブルスチール' : '盗塁') + ' 走' + GRADE[G.bases[stealers()[0]] || 3]], ['run', 'エンドラン']);
       o.push(['bunt', 'バント']);
       if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
+      if (timeOut || (pitcherK(now_()) <= 0 && (!online || onl.timeLeft > 0))) o.push(['time', timeOut ? 'プレイ再開' : 'タイム']);
     }
     if ((phase === 'wait' || (phase === 'fly' && ball && !ball.done && !swing)) && G.skill.crit > 0) o.push(['crit', '会心の一振り ' + G.skill.crit]);
     const ph = phOption(); if (ph) o.push(ph);
@@ -2223,7 +2267,7 @@ function actOptions() {
 function refreshAct() {
   // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
   const o = actOptions(), el = $('#acts'), none = false;
-  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + critArm + vanishArm;
+  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + critArm + vanishArm + stealMsg + timeOut;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
@@ -2231,7 +2275,8 @@ function refreshAct() {
     b.className = 'chip' + (/^(crit|vn|closer|ph)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
-  if (mode === 'bat' && phase === 'wait') setHint(sign ? 'サイン：' + SIGN_HINT[sign] : '投手が投げたら、ボールが通る位置をタップして打つ');
+  if (mode === 'bat' && phase === 'wait') setHint(timeOut ? 'タイム中。作戦をゆっくり選んで「プレイ再開」' : stealMsg ? '盗塁：' + stealMsg
+    : sign ? 'サイン：' + SIGN_HINT[sign] : stealers().length && !online ? '盗塁は投手が足を上げた瞬間に押すと好スタート（早すぎると牽制）' : '投手が投げたら、ボールが通る位置をタップして打つ');
 }
 $('#acts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -2243,6 +2288,8 @@ $('#acts').addEventListener('click', e => {
   else if (k === 'ph') userPinch();
   else if (k === 'crit') critArm = !critArm;
   else if (k === 'vn') vanishArm = !vanishArm;
+  else if (k === 'time') { if (mode === 'bat' && phase === 'wait') toggleTime(); }
+  else if (k === 'steal' && !online && mode === 'bat' && phase === 'wait') stealPress(now_());
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });
 
@@ -2371,7 +2418,7 @@ function onPresence() {
 function onMsg(m) {
   if (!m || m.from === onl.me) return;
   if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
-  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; beginOnline(); } }
+  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline(); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
@@ -2379,11 +2426,12 @@ function onMsg(m) {
   else if (m.type === 'pick') onPickMsg(m);
   else if (m.type === 'closer') { const t = teamsNow().fld; relieve(t, ROSTER[t].closer, true); }
   else if (m.type === 'ph') pinchHit(m.t, m.slot);
+  else if (m.type === 'time') { onl.oppTime = !!m.on; if (mode === 'pit') setHint(m.on ? '相手がタイムをとりました' : 'プレイ再開'); }
   else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
 }
 
 /* the host picks the shared seed (used for the inning dice) and starts */
-function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; send('start', { seed: onl.seed }); beginOnline(); }
+function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; onl.opts = Object.assign({}, OPT); send('start', { seed: onl.seed, opts: onl.opts }); beginOnline(); }
 /* a pickoff thrown by the pitcher: the batter's device runs the same play */
 function onPickMsg(m) {
   if (!online) return;
@@ -2394,6 +2442,7 @@ function onPickMsg(m) {
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null; match = null;
+  onl.timeLeft = 3; onl.oppTime = false; timeOut = false;
   onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;
@@ -2450,6 +2499,8 @@ function onlineAfterResult() {
   if (G.inning >= 6 && G.inning % 2 === 0 && sc.home > sc.away) G.over = true;   // walk-off in any bottom half from the 3rd on
   if (G.over) { showOnlineOver(); return; }
   if (G.inning !== onl.half) {
+    if (timeOut) { timeOut = false; send('time', { on: false }); }
+    onl.oppTime = false;
     applyRole();
     const dd = applyInningDice();
     const B = curBatter(), lead = B.star ? '　先頭はスーパースター ' + B.name : '';
@@ -2532,7 +2583,7 @@ const TRAIT = {
   usagi: { n: 'ぴょんぴょん', d: '内野ゴロがときどき内野安打になる' },
   kuma: { n: '重い剛腕', d: '投げる球が重く、打たれても打球が弱い' }
 };
-function trT(which) { return G && !story ? teamsNow()[which] : null; }
+function trT(which) { return G && !story && opt('trait') ? teamsNow()[which] : null; }
 const GRADE = ['', 'E', 'D', 'C', 'B', 'A', 'S', 'S'];
 const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(x || '');
 
@@ -3128,6 +3179,7 @@ cv.addEventListener('pointerdown', e => {
       fxTap = now; tapRing.position.set(p.x, p.y, 0.01);
     }
   } else if (phase === 'ready') {
+    if (online && onl.oppTime) { setHint('相手がタイム中です'); return; }
     flick = { pts: [[x, y, now * 1000]] }; setAim(x, y);
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   }
@@ -3242,6 +3294,7 @@ $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovActio
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
+$('#go5').addEventListener('click', () => { audioInit(); if (ovAction5) ovAction5(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else if (match && G && !G.over) matchPause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
@@ -3288,6 +3341,7 @@ function frame() {
     if (batAnim) batAnim.t0 += d;
     if (swing) swing.time += d;
   }
+  if (phase === 'wait' && timeOut && !online) nextAt = Math.max(nextAt, now + 1.0);   // タイム中は投げない
   if (phase === 'wait' && now >= nextAt) { if (!tryCpuPickoff(now)) cpuPitch(); }
   else if (phase === 'pick') stepPickoff(now);
   else if (phase === 'deliver' && now >= deliverStart + DELIVER) { const p = pending; pending = null; launchBall(p); }

@@ -122,7 +122,7 @@ function onPresence() {
 function onMsg(m) {
   if (!m || m.from === onl.me) return;
   if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
-  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; beginOnline(); } }
+  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline(); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'bye') opponentLeft();
@@ -130,11 +130,12 @@ function onMsg(m) {
   else if (m.type === 'pick') onPickMsg(m);
   else if (m.type === 'closer') { const t = teamsNow().fld; relieve(t, ROSTER[t].closer, true); }
   else if (m.type === 'ph') pinchHit(m.t, m.slot);
+  else if (m.type === 'time') { onl.oppTime = !!m.on; if (mode === 'pit') setHint(m.on ? '相手がタイムをとりました' : 'プレイ再開'); }
   else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
 }
 
 /* the host picks the shared seed (used for the inning dice) and starts */
-function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; send('start', { seed: onl.seed }); beginOnline(); }
+function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; onl.opts = Object.assign({}, OPT); send('start', { seed: onl.seed, opts: onl.opts }); beginOnline(); }
 /* a pickoff thrown by the pitcher: the batter's device runs the same play */
 function onPickMsg(m) {
   if (!online) return;
@@ -145,6 +146,7 @@ function onPickMsg(m) {
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null; match = null;
+  onl.timeLeft = 3; onl.oppTime = false; timeOut = false;
   onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;
@@ -201,6 +203,8 @@ function onlineAfterResult() {
   if (G.inning >= 6 && G.inning % 2 === 0 && sc.home > sc.away) G.over = true;   // walk-off in any bottom half from the 3rd on
   if (G.over) { showOnlineOver(); return; }
   if (G.inning !== onl.half) {
+    if (timeOut) { timeOut = false; send('time', { on: false }); }
+    onl.oppTime = false;
     applyRole();
     const dd = applyInningDice();
     const B = curBatter(), lead = B.star ? '　先頭はスーパースター ' + B.name : '';

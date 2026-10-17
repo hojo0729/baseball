@@ -28,7 +28,7 @@ const STAGES = [
     win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
     lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
 ];
-let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null;
+let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null, ovAction5 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
@@ -73,6 +73,7 @@ function overlay(o) {
   $('#overlay').classList.toggle('dlg', !!o.dlg);
   $('#overlay').classList.toggle('logo', !!o.logo);
   $('#overlay').classList.toggle('clear', !!o.clear);
+  $('#goBtn').classList.toggle('plain', !!o.plain);
   const bd = $('#obadge'); bd.hidden = !o.logo;
   if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのバッジ
     const i = document.createElement('i'); i.textContent = TEAM_COL[t][1]; i.style.background = TEAM_COL[t][0]; bd.appendChild(i);
@@ -90,6 +91,7 @@ function overlay(o) {
   setB($('#go2'), o.b2); if (o.b2) ovAction2 = o.b2[1];
   setB($('#go3'), o.b3); if (o.b3) ovAction3 = o.b3[1];
   setB($('#go4'), o.b4); if (o.b4) ovAction4 = o.b4[1];
+  setB($('#go5'), o.b5); if (o.b5) ovAction5 = o.b5[1];
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -103,7 +105,7 @@ function dialog(lines, done) {
   };
   step();
 }
-function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
+function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
@@ -114,8 +116,15 @@ function showMenu() {
   overlay({
     title: 'どうぶつリーグ', logo: true,
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
+    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame], b5: ['設定', showSettings]
   });
+}
+/* 設定：ギミックのオン・オフ（この端末に保存。オンラインは部屋を作った人の設定で遊ぶ） */
+function showSettings() {
+  const row = (k, name, sub) => [name + '：' + (OPT[k] ? 'オン' : 'オフ') + '\n' + sub, () => { OPT[k] = !OPT[k]; saveOpt(); showSettings(); }];
+  overlay({ title: '設定', plain: true, text: '次の試合から反映されます。オンライン対戦は部屋を作った人の設定になります。',
+    b1: row('dice', 'サイコロ', '奇数の回に攻撃側が振る'), b2: row('hap', 'ハプニング', '風・雨・ウェーブ・照明トラブル'),
+    b3: row('trait', 'どうぶつ固有スキル', 'チームごとの特性'), b4: row('skill', '技', '会心の一振り・消える魔球'), b5: ['もどる', showMenu] });
 }
 function startFree() {
   story = null; match = null;
@@ -158,7 +167,7 @@ function startMatch(side, mine) {
   audioInit(); story = null; mine = mine || 'home';
   const opps = TEAM_ORDER.filter(t => t !== mine);
   match = { side, mine, opp: opps[Math.floor(Math.random() * opps.length)], score: { home: 0, away: 0 }, half: 0 };
-  newGame(); G.maxHalf = 18; G.skill = { crit: 3, vn: 3 };
+  newGame(); G.maxHalf = 18; G.skill = opt('skill') ? { crit: 3, vn: 3 } : { crit: 0, vn: 0 };
   $('.seg').hidden = true; $('#menuBtn').hidden = false; $('#overlay').hidden = true;
   matchRole();
   showBanner('プレイボール', ROSTER[mine].name + '（' + (side === 'away' ? '先攻' : '後攻') + '） 対 ' + ROSTER[match.opp].name, 'g');

@@ -6,9 +6,35 @@ throwMesh.visible = false; scene.add(throwMesh);
 let sign = null;               // batting sign chosen before the pitch: steal | run | bunt | squeeze
 let curBunt = false;           // the batter is squared to bunt on this pitch
 let steal = null, stealAnim = null, cpuStealPlan = false, cpuBuntPlan = false, pickoff = null;
+let stealJump = 0, stealMsg = '', timeOut = false;   // 盗塁のスタートの良し悪し / 打者のタイム
+/* 盗塁（CPUが投げるとき）：投手のモーションに合わせて押す。動く前は早すぎて牽制される。足を上げた瞬間が一番いい */
+function stealPress(now) {
+  if (sign === 'steal' || timeOut) { if (timeOut) setHint('タイム中は走れません'); return; }
+  const st = stealers(); if (!st.length) return;
+  const k = pitcherK(now), sp = G.bases[st[0]] || 3;
+  if (k <= 0.03) {
+    sign = null; stealJump = 0; stealMsg = '';
+    showBanner('スタートが早い！', '牽制球', 'n');
+    startPickoff(now, Math.random() < 0.6 - (sp - 3) * 0.08);
+    return;
+  }
+  sign = 'steal';
+  stealJump = clamp(0.12 - Math.max(0, k - 0.25) * 0.6, -0.3, 0.12);
+  stealMsg = k <= 0.3 ? '好スタート！' : k <= 0.55 ? 'まずまずのスタート' : 'スタートが遅れた…';
+}
+function toggleTime() {
+  if (online) {
+    if (!timeOut && !(onl.timeLeft > 0)) { setHint('タイムはもう使えません（1試合3回）'); return; }
+    timeOut = !timeOut; if (timeOut) onl.timeLeft--;
+    send('time', { on: timeOut });
+  } else {
+    timeOut = !timeOut;
+    if (!timeOut) nextAt = Math.max(nextAt, now_() + 1.2);
+  }
+}
 const runSign = () => sign === 'steal' || sign === 'run' || sign === 'squeeze';
 const SIGN_HINT = {
-  steal: '盗塁のサイン。投球と同時に走者が走る',
+  steal: '盗塁のサイン。投球と同時に走者が走る（相手に見える）',
   run: 'エンドラン。走者が走るので必ず打とう（ゴロでもゲッツーにならない）',
   bunt: 'バント。ボールが通る位置をタップしてバットを当てる',
   squeeze: 'スクイズ。3塁走者が突っ込む。必ずバットに当てよう'
@@ -38,13 +64,14 @@ function startSigns(now, sg) {
   if (online) { s = sg || null; sign = null; onl.oppSign = null; }
   else if (mode === 'bat') { s = sign; sign = null; }
   else { s = cpuStealPlan ? 'steal' : cpuBuntPlan ? 'bunt' : null; cpuStealPlan = cpuBuntPlan = false; }
+  const jump = stealJump; stealJump = 0; stealMsg = '';
   if (!s) return '';
   let msg = '';
   if (s === 'bunt' || s === 'squeeze') { curBunt = true; msg = mode === 'pit' ? 'バントの構え！' : ''; }
   if (s === 'steal' || s === 'run') {
     const run = stealers();
     if (run.length) {
-      steal = { run, lead: run[0], t0: now, runEnd: now + 3.4, hitRun: s === 'run' };
+      steal = { run, lead: run[0], t0: now, runEnd: now + 3.4, hitRun: s === 'run', jump: s === 'steal' && !online && mode === 'bat' ? jump : 0 };
       msg = s === 'run' ? 'エンドラン！' : run.length > 1 ? 'ダブルスチール！' : (mode === 'pit' ? '走った！速い球で刺そう' : '盗塁！');
     }
   }
@@ -70,7 +97,7 @@ function settleSteal(c, now) {
   const rs = G.bases[s.lead] || 3, arm = ROSTER[teamsNow().fld].arm || 3, ly = ball.T[1];
   let p = 0.62 + (128 - ball.speed) / 100 * 0.7 + TYPES[ball.key].hard * 0.08
     + (rs - 3) * 0.08 - (arm - 3) * 0.06 + (ly > 0.6 ? 0.04 : ly < -0.6 ? -0.03 : 0)
-    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0) + (trT('bat') === 'neko' ? 0.1 : 0);
+    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0) + (trT('bat') === 'neko' ? 0.1 : 0) + (s.jump || 0);
   p = clamp(p, 0.15, 0.95);
   const safe = Math.random() < p, tgt = s.lead + 2;              // first -> 2B, second -> 3B
   const from = V(0, 1.2, 0.8), to = BASE_PT[tgt], t0 = now + 0.15, dur = from.distanceTo(to) / 33;
@@ -221,6 +248,7 @@ function actOptions() {
       if (st) o.push(['steal', (st > 1 ? 'ダブルスチール' : '盗塁') + ' 走' + GRADE[G.bases[stealers()[0]] || 3]], ['run', 'エンドラン']);
       o.push(['bunt', 'バント']);
       if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
+      if (timeOut || (pitcherK(now_()) <= 0 && (!online || onl.timeLeft > 0))) o.push(['time', timeOut ? 'プレイ再開' : 'タイム']);
     }
     if ((phase === 'wait' || (phase === 'fly' && ball && !ball.done && !swing)) && G.skill.crit > 0) o.push(['crit', '会心の一振り ' + G.skill.crit]);
     const ph = phOption(); if (ph) o.push(ph);
@@ -237,7 +265,7 @@ function actOptions() {
 function refreshAct() {
   // The row keeps its height even when empty (and while the ball is in flight), so the stadium view never resizes mid-pitch.
   const o = actOptions(), el = $('#acts'), none = false;
-  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + critArm + vanishArm;
+  const key = o.map(x => x.join(':')).join() + '|' + sign + '|' + critArm + vanishArm + stealMsg + timeOut;
   if (el.dataset.k === key) return;
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
@@ -245,7 +273,8 @@ function refreshAct() {
     b.className = 'chip' + (/^(crit|vn|closer|ph)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
-  if (mode === 'bat' && phase === 'wait') setHint(sign ? 'サイン：' + SIGN_HINT[sign] : '投手が投げたら、ボールが通る位置をタップして打つ');
+  if (mode === 'bat' && phase === 'wait') setHint(timeOut ? 'タイム中。作戦をゆっくり選んで「プレイ再開」' : stealMsg ? '盗塁：' + stealMsg
+    : sign ? 'サイン：' + SIGN_HINT[sign] : stealers().length && !online ? '盗塁は投手が足を上げた瞬間に押すと好スタート（早すぎると牽制）' : '投手が投げたら、ボールが通る位置をタップして打つ');
 }
 $('#acts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -257,5 +286,7 @@ $('#acts').addEventListener('click', e => {
   else if (k === 'ph') userPinch();
   else if (k === 'crit') critArm = !critArm;
   else if (k === 'vn') vanishArm = !vanishArm;
+  else if (k === 'time') { if (mode === 'bat' && phase === 'wait') toggleTime(); }
+  else if (k === 'steal' && !online && mode === 'bat' && phase === 'wait') stealPress(now_());
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });

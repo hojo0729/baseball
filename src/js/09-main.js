@@ -300,6 +300,7 @@ cv.addEventListener('pointerdown', e => {
       fxTap = now; tapRing.position.set(p.x, p.y, 0.01);
     }
   } else if (phase === 'ready') {
+    if (online && onl.oppTime) { setHint('相手がタイム中です'); return; }
     flick = { pts: [[x, y, now * 1000]] }; setAim(x, y);
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   }
@@ -414,6 +415,7 @@ $('#goBtn').addEventListener('click', () => { audioInit(); if (ovAction) ovActio
 $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction2(); });
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
+$('#go5').addEventListener('click', () => { audioInit(); if (ovAction5) ovAction5(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
 $('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else if (match && G && !G.over) matchPause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
@@ -460,6 +462,7 @@ function frame() {
     if (batAnim) batAnim.t0 += d;
     if (swing) swing.time += d;
   }
+  if (phase === 'wait' && timeOut && !online) nextAt = Math.max(nextAt, now + 1.0);   // タイム中は投げない
   if (phase === 'wait' && now >= nextAt) { if (!tryCpuPickoff(now)) cpuPitch(); }
   else if (phase === 'pick') stepPickoff(now);
   else if (phase === 'deliver' && now >= deliverStart + DELIVER) { const p = pending; pending = null; launchBall(p); }

@@ -32,7 +32,7 @@ const TRAIT = {
   usagi: { n: 'ぴょんぴょん', d: '内野ゴロがときどき内野安打になる' },
   kuma: { n: '重い剛腕', d: '投げる球が重く、打たれても打球が弱い' }
 };
-function trT(which) { return G && !story ? teamsNow()[which] : null; }
+function trT(which) { return G && !story && opt('trait') ? teamsNow()[which] : null; }
 const GRADE = ['', 'E', 'D', 'C', 'B', 'A', 'S', 'S'];
 const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(x || '');
 
