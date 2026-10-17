@@ -226,32 +226,37 @@ function batterJ(now, k) {
 /* ---- pitcher (built right-handed, mirrored for a lefty). k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
 function pitcherJ(k) { const J = pitcherJR(k); return lefty() ? mirrorJ(J) : J; }
 function pitcherJR(k) {
+  /* ちびキャラ用の投球フォーム（人の寸法で作り、squashJ で脚を縮める）。
+     0-0.32 足を高く上げる → 0.45-0.9 前へ踏み出しながら腕を後ろへ → 1 でリリース → 1-1.35 体を前に倒して後ろ足が上がる */
   const M = MOUND_Y, Z0 = RUBBER_Z;
-  const lift = k < 0.35 ? ease(k / 0.35) : k < 0.55 ? 1 : 1 - ease(clamp((k - 0.55) / 0.25, 0, 1));
-  const s = ease(clamp((k - 0.5) / 0.5, 0, 1));
+  const lift = k < 0.32 ? ease(k / 0.32) : k < 0.5 ? 1 : 1 - ease(clamp((k - 0.5) / 0.25, 0, 1));
+  const s = ease(clamp((k - 0.45) / 0.45, 0, 1));
   const fe = easeOut(clamp((k - 1) / 0.35, 0, 1));
-  const th = k < 0.4 ? -1.2 * ease(k / 0.4) : k < 1 ? -1.2 + 1.65 * ease(clamp((k - 0.6) / 0.4, 0, 1)) : 0.45 + 0.35 * fe;
-  const P = V(0.02, M + 0.98 - 0.14 * s + 0.03 * lift, Z0 + 0.15 + 0.75 * s + 0.25 * fe);
-  const fR = V(-0.12, M + 0.12 * Math.sin(fe * Math.PI), Z0 + 0.05 + 0.55 * fe);
-  const fL = V(0.08, M + 0.42 * lift, Z0 + 0.05 + 0.05 * lift).lerp(V(0.14, M - 0.06, Z0 + 1.55), s);
+  const th = k < 0.4 ? -1.1 * ease(k / 0.4) : k < 1 ? -1.1 + 1.55 * ease(clamp((k - 0.6) / 0.4, 0, 1)) : 0.45 + 0.3 * fe;
+  const lean = 0.3 * s + 0.2 * fe - 0.05 * lift;                       // 上半身の前傾
+  const P = V(0.02, M + 0.98 - 0.13 * s + 0.03 * lift + 0.03 * fe, Z0 + 0.1 + 0.42 * s + 0.18 * fe);
+  const fR = V(-0.12 + 0.06 * fe, M + 0.3 * Math.sin(fe * Math.PI * 0.75), Z0 + 0.04 + 0.45 * fe);
+  const fL = V(0.06, M + 0.46 * lift, Z0 + 0.02 - 0.04 * lift).lerp(V(0.13, M, Z0 + 0.98), s);
   const hipL = P.clone().add(rotY(V(0.12, -0.05, 0), th * 0.5)), hipR = P.clone().add(rotY(V(-0.12, -0.05, 0), th * 0.5));
-  const kL = hipL.clone().lerp(fL, 0.5).add(V(0.02, 0.05 * lift, 0.12 + 0.2 * lift)), kR = hipR.clone().lerp(fR, 0.5).add(V(-0.02, 0, 0.1));
-  const N = P.clone().add(V(0, 0.47 - 0.05 * (s + fe), -0.05 * lift + 0.2 * s + 0.15 * fe));
+  const kL = hipL.clone().lerp(fL, 0.5).add(V(0.02, 0.3 * lift, 0.1 + 0.22 * lift + 0.08 * s));
+  const kR = hipR.clone().lerp(fR, 0.5).add(V(-0.02, 0.06 * fe, 0.08 + 0.12 * s));
+  const N = P.clone().add(V(0, 0.47 - 0.05 * (s + fe), lean));
   const sR = N.clone().add(rotY(V(-0.19, -0.03, 0), th)), sL = N.clone().add(rotY(V(0.19, -0.03, 0), th));
   const C0 = N.clone().add(V(0.02, -0.2, 0.2));
-  const arm = phi => { const r = phi * D2R; return sR.clone().add(V(-0.05, Math.cos(r) * 0.62, -Math.sin(r) * 0.62)); };
+  const AL = 0.5;
+  const arm = phi => { const r = phi * D2R; return sR.clone().add(V(-0.05, Math.cos(r) * AL, -Math.sin(r) * AL)); };
   let hR;
-  if (k < 0.35) hR = C0.clone();
-  else if (k < 0.75) { const u = (k - 0.35) / 0.4; hR = C0.clone().lerp(arm(180 - 150 * ease(u)), clamp(u / 0.25, 0, 1)); }
-  else if (k <= 1) hR = arm(30 - 55 * ((k - 0.75) / 0.25));
-  else hR = arm(-25 - 125 * fe);
-  const gOut = sL.clone().add(V(0.05, 0.05, 0.45)), gIn = N.clone().add(V(0.12, -0.25, 0.12));
+  if (k < 0.4) hR = C0.clone();
+  else if (k < 0.78) { const u = (k - 0.4) / 0.38; hR = C0.clone().lerp(arm(190 - 160 * ease(u)), clamp(u / 0.3, 0, 1)); }   // 下から後ろへ回して上へ
+  else if (k <= 1) hR = arm(30 - 50 * ((k - 0.78) / 0.22));
+  else hR = arm(-20 - 130 * fe).add(V(0.28 * fe, 0, 0));                 // 振り抜いてグラブ側の膝へ
+  const gOut = sL.clone().add(V(0.06, 0.06, 0.42)), gIn = N.clone().add(V(0.15, -0.22, 0.1));
   let hL;
-  if (k < 0.35) hL = C0.clone().add(V(0.07, 0, 0));
-  else if (k < 0.85) hL = C0.clone().add(V(0.07, 0, 0)).lerp(gOut, ease(clamp((k - 0.35) / 0.3, 0, 1)));
+  if (k < 0.4) hL = C0.clone().add(V(0.07, 0, 0));
+  else if (k < 0.85) hL = C0.clone().add(V(0.07, 0, 0)).lerp(gOut, ease(clamp((k - 0.4) / 0.3, 0, 1)));
   else hL = gOut.lerp(gIn, ease(clamp((k - 0.85) / 0.3, 0, 1)));
   const eR = sR.clone().lerp(hR, 0.5).add(V(-0.1, -0.03, 0)), eL = sL.clone().lerp(hL, 0.5).add(V(0.1, -0.06, 0));
-  const head = N.clone().add(V(0, 0.15, 0.03));
+  const head = N.clone().add(V(0, 0.15, 0.03 + lean * 0.25));
   return { pelvis: P, neck: N, head, sL, sR, eL, eR, hL, hR, hipL, hipR, kL, kR, fL, fR };
 }
 
