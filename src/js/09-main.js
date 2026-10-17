@@ -379,7 +379,7 @@ $('#go2').addEventListener('click', () => { audioInit(); if (ovAction2) ovAction
 $('#go3').addEventListener('click', () => { audioInit(); if (ovAction3) ovAction3(); });
 $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction4(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
-$('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else showMenu(); });
+$('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else if (match && G && !G.over) matchPause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
 $('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
 function bgmLabel() { const on = bgmWanted(), b = $('#bgmBtn'); b.textContent = '♪ 応援 ' + (on ? 'オン' : 'オフ'); b.classList.toggle('off', !on); }
@@ -400,6 +400,7 @@ $('#pitches').addEventListener('click', e => {
 });
 
 let lastT = now_(), perfN = 0, perfSum = 0, degraded = LITE;
+let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
   if (!degraded && !document.hidden && rawDt < 0.5) {
@@ -408,6 +409,20 @@ function frame() {
       if (perfSum / perfN > 0.034) { degraded = true; renderer.setPixelRatio(1); key.castShadow = false; resize(); }
       perfN = 0; perfSum = 0;
     }
+  }
+  // CPU match: the game holds still while the menu sheet is open, then picks up where it was
+  if (match && !$('#overlay').hidden && phase !== 'idle') {
+    if (!pausedAt) pausedAt = now;
+    renderer.render(scene, camera); requestAnimationFrame(frame); return;
+  }
+  if (pausedAt) {
+    const d = now - pausedAt; pausedAt = 0;
+    nextAt += d; deliverStart += d; shakeUntil += d;
+    if (ball) ball.start += d;
+    if (play) { play.start += d; if (play.shot) play.shot.at += d; }
+    if (pendBanner) pendBanner.at += d;
+    if (batAnim) batAnim.t0 += d;
+    if (swing) swing.time += d;
   }
   if (phase === 'wait' && now >= nextAt) { if (!tryCpuPickoff(now)) cpuPitch(); }
   else if (phase === 'pick') stepPickoff(now);

@@ -94,25 +94,86 @@ function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; c
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
   if (onl.ch || online) leaveRoom();
-  story = null; idle();
+  story = null; match = null; idle();
   $('.seg').hidden = true; $('#menuBtn').hidden = true;
   const done = loadProgress();
   overlay({
     title: 'どうぶつリーグ',
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
-    b1: ['ストーリー', startStory], b2: ['フリー対戦', startFree], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
+    b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
   });
 }
 function startFree() {
-  story = null;
+  story = null; match = null;
   $('.seg').hidden = false; $('#menuBtn').hidden = false;
   setMode(mode);
+}
+/* ---- CPU対戦：9回の試合（先攻・後攻を交代しながら）。相手チームはランダム ---- */
+let match = null;   // { side: 'home'|'away'（しばいぬズが後攻か先攻か）, opp: 相手のロスター, score, half }
+function showCpuMenu() {
+  overlay({ title: 'CPU対戦', text: '9回までの試合。表と裏で、打つのと投げるのを交代します。同点なら12回まで延長。',
+    b1: ['先攻で試合', () => startMatch('away')], b2: ['後攻で試合', () => startMatch('home')],
+    b3: ['練習（打つだけ／投げるだけ）', startFree], b4: ['もどる', showMenu] });
+}
+function matchRole() {
+  match.half = G.inning;
+  mode = battingSide() === match.side ? 'bat' : 'pit';
+  $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
+  $('#pitches').hidden = mode !== 'pit';
+  setTeams(); resize(); hud();
+}
+function matchHint() { return mode === 'bat' ? '投手が投げたら、ボールが通る位置をタップして打つ' : '弾く向きで球種が決まる。指を離した位置がコース、弾く速さが球速'; }
+function startMatch(side) {
+  audioInit(); story = null;
+  const opps = ['away', 'neko', 'usagi', 'kuma'];
+  match = { side, opp: opps[Math.floor(Math.random() * opps.length)], score: { home: 0, away: 0 }, half: 0 };
+  newGame(); G.maxHalf = 18; G.skill = { crit: 3, vn: 3 };
+  $('.seg').hidden = true; $('#menuBtn').hidden = false; $('#overlay').hidden = true;
+  matchRole();
+  showBanner('プレイボール', 'しばいぬズ（' + (side === 'away' ? '先攻' : '後攻') + '） 対 ' + ROSTER[match.opp].name, 'g');
+  const dd = applyInningDice(); if (dd) setTimeout(() => showDiceBanner(dd), 1900);
+  phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = now_() + (dd ? 5.5 : 2.4);
+  setHint(matchHint()); updateGoal();
+}
+function matchAfterResult() {
+  const sb = onlineScore();
+  if (G.inning >= G.maxHalf && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // サヨナラ
+  if (G.over) { showMatchOver(); return; }
+  clearPlay();
+  let wait = rnd(1.6, 2.2);
+  if (G.inning !== match.half) {                     // チェンジ：攻守交代
+    matchRole();
+    const dd = applyInningDice();
+    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備'), 'n');
+    if (dd) { setTimeout(() => showDiceBanner(dd), 1600); wait += 3.5; } else wait += 0.8;
+  }
+  phase = mode === 'bat' ? 'wait' : 'ready';
+  nextAt = now_() + wait;
+  if (mode === 'bat' && stealers().length) nextAt += 1.2;
+  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < 0.25;
+  cpuBuntPlan = mode === 'pit' && !cpuStealPlan && (G.bases[0] || G.bases[1]) && G.outs === 0 && Math.random() < 0.3;
+  cpuRelief();
+  updateGoal(); announceChance();
+  setHint(matchHint());
+}
+function showMatchOver() {
+  const sb = onlineScore(), me = sb[match.side], cpu = sb[match.side === 'home' ? 'away' : 'home'], opp = ROSTER[match.opp].name;
+  const inn = Math.ceil(Math.min(G.inning, 24) / 2);
+  idle();
+  overlay({ title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: 'しばいぬズ ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
+    b1: ['もう一度', showCpuMenu], b2: ['メニュー', showMenu] });
+}
+/* the menu button during a CPU match: the game stops while the sheet is open */
+function matchPause() {
+  overlay({ title: '試合中', text: inningLabel() + '　' + $('#slab').textContent + '　' + $('#runs').textContent,
+    b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', showMenu] });
 }
 function startStory() {
   let i = loadProgress(); if (i >= STAGES.length) i = 0;
   showStage(i);
 }
 function showStage(i) {
+  match = null;
   story = STAGES[i];
   mode = story.mode;
   $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');

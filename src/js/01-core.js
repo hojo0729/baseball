@@ -167,7 +167,8 @@ function rollDie() {
 function applyInningDice() {
   if (!G || G.diceInn === G.inning) return null;
   G.diceInn = G.inning;
-  if (G.inning % 2 !== 1) return null;
+  const inn = twoTeam() ? Math.ceil(G.inning / 2) : G.inning;   // 奇数の回（表も裏も、攻撃側が振る）
+  if (inn % 2 !== 1) return null;
   const v = rollDie(), text = DICE_FX[v]();
   hud();
   return { v, text };
@@ -235,9 +236,11 @@ function hud() {
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
   $('#runs').textContent = G.runs;
   $('#slab').textContent = mode === 'bat' ? '得点' : '失点';
-  if (online) {
+  if (twoTeam()) {
     const sc = onlineScore();
-    $('#inn').textContent = inningLabel(); $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away;
+    $('#inn').textContent = inningLabel();
+    if (online) { $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away; }
+    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = 'しば - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
   }
   updateRunners();
   updateGoal();
@@ -264,10 +267,12 @@ function flushBanner() {
 /* ---- count / base logic ---- */
 function endPA() { G.b = 0; G.s = 0; G.pa++; nextBatter(); }
 function endInning(label) {
-  if (online) { onl.score[battingSide()] += G.runs; G.runs = 0; }   // bank this half's runs for the batting team
+  const sb = scoreBook(), last = G.maxHalf || 3;
+  if (twoTeam()) { sb[battingSide()] += G.runs; G.runs = 0; }   // bank this half's runs for the batting team
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
-  if (G.inning > (G.maxHalf || 3)) G.over = !online || onl.score.home !== onl.score.away;   // online: extra innings until one side pulls ahead
-  if (online && G.inning >= 6 && G.inning % 2 === 0 && onl.score.home > onl.score.away) G.over = true;   // home leads going into a bottom half
+  if (G.inning > last) G.over = !twoTeam() || sb.home !== sb.away;   // two-team games: extra innings until one side pulls ahead
+  if (match && G.inning > 24) G.over = true;                          // CPU match: a tie after the 12th is a draw
+  if (twoTeam() && G.inning >= last && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // home leads going into the last bottom half
   return label + ' / チェンジ';
 }
 function out(label) {
@@ -565,6 +570,7 @@ function clearPlay() {
 function afterResult() {
   flushBanner();
   if (online) { onlineAfterResult(); return; }
+  if (match) { matchAfterResult(); return; }
   if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }
   if (G.over) { showOver(); return; }
   const dd = applyInningDice();

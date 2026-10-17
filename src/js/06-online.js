@@ -25,12 +25,15 @@ function withSeed(seed, fn) {
 }
 
 const battingSide = () => (G.inning % 2 === 1 ? 'away' : 'home');   // top half: guest (pandas) bat, bottom: host (shibas)
+/* two-team games (online, or the 9-inning CPU match) keep a running score per side */
+const twoTeam = () => online || !!match;
+function scoreBook() { return online ? onl.score : match ? match.score : { home: 0, away: 0 }; }
 function onlineScore() {
-  const s = { home: onl.score.home, away: onl.score.away };
+  const b = scoreBook(), s = { home: b.home, away: b.away };
   if (G) s[battingSide()] += G.runs;                                // runs of the half in progress (banked at each change)
   return s;
 }
-function inningLabel() { const h = G.inning; return (h > 6 ? '延長' : '') + Math.ceil(h / 2) + '回' + (h % 2 ? '表' : '裏'); }
+function inningLabel() { const h = G.inning; return (h > (G.maxHalf || 6) ? '延長' : '') + Math.ceil(h / 2) + '回' + (h % 2 ? '表' : '裏'); }
 function teamName(side) { return side === 'home' ? 'しばいぬズ' : 'パンダーズ'; }
 
 /* ---- lobby ---- */
@@ -139,7 +142,7 @@ function onPickMsg(m) {
 
 /* ---- game flow ---- */
 function beginOnline() {
-  onl.started = true; online = true; story = null;
+  onl.started = true; online = true; story = null; match = null;
   onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null;
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
   newGame(); G.maxHalf = 6;

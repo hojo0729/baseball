@@ -152,7 +152,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/巨大バット/.test(t)) key = 'big';
   else if (/魔球/.test(t)) key = 'magic';
   if (key === 'relief' && /サウスポー/.test(s || '')) key = 'lefty';
-  if (key === 'change' && online && G.inning === 7) key = 'extra';
+  if (key === 'change' && twoTeam() && G.inning === (G.maxHalf || 6) + 1) key = 'extra';
   if (/^会心/.test(s || '') && !/^hr/.test(key)) key = 'crit';
   if (!key || !LINES[key]) return;
   if (pts && !/^hr/.test(key)) extra = ' ' + pts + '点が入りました！';

@@ -28,6 +28,7 @@ const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(
 
 /* which roster bats and which fields right now */
 function teamsNow() {
+  if (match && G) { const bat = battingSide() === match.side ? 'home' : match.opp; return { bat, fld: bat === 'home' ? match.opp : 'home' }; }
   if (online && G) { const bat = battingSide() === 'home' ? 'home' : 'away'; return { bat, fld: bat === 'home' ? 'away' : 'home' }; }
   const opp = story ? story.opp : 'away';
   return mode === 'bat' ? { bat: 'home', fld: opp } : { bat: opp, fld: 'home' };
@@ -57,7 +58,7 @@ const HAND_JA = { R: '右', L: '左', S: '両' };
 function nextBatter() { const s = teamState(teamsNow().bat); s.order++; }
 function spendStamina(speed, key) {
   const s = teamState(teamsNow().fld);
-  s.sta = Math.max(0, s.sta - (1.4 + Math.max(0, speed - 125) / 25 + (key === 'gou' ? 0.8 : 0)));
+  s.sta = Math.max(0, s.sta - (1.4 + Math.max(0, speed - 125) / 25 + (key === 'gou' ? 0.8 : 0)) * (match ? 0.7 : 1));   // a 9-inning game needs longer outings
 }
 function relieve(t) {
   const s = teamState(t);
