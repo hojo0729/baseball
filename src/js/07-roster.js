@@ -24,6 +24,15 @@ const ROSTER = {
     bat: [['コグマ', 3, 3], ['ツキノワ', 3, 4, 'L'], ['グリズ', 4, 7, 'S*'], ['ベア', 3, 5], ['ヒグ太', 2, 5], ['クマ吉', 3, 4], ['マロン', 2, 4], ['ハニー', 3, 3], ['ドングリ', 2, 3]],
     pit: [['ヒグマ', 5, 3, 3, 90, '', ['str','gou','sht','snk']], ['シロクマ', 4, 3, 3, 45, 'L', ['str','cut','sli','cur']], ['ポーラ', 4, 4, 4, 35, '', ['str','frk','knk','chg']]] }
 };
+/* どうぶつ固有スキル：チーム（どうぶつ）ごとの特性。ストーリーでは使わない */
+const TRAIT = {
+  home: { n: '忠犬ガッツ', d: '2ストライクからでも粘れる' },
+  away: { n: '笹パワー', d: '打球が強い（+8km/h）' },
+  neko: { n: '猫の身のこなし', d: '盗塁が決まりやすく、ファインプレーも出やすい' },
+  usagi: { n: 'ぴょんぴょん', d: '内野ゴロがときどき内野安打になる' },
+  kuma: { n: '重い剛腕', d: '投げる球が重く、打たれても打球が弱い' }
+};
+function trT(which) { return G && !story ? teamsNow()[which] : null; }
 const GRADE = ['', 'E', 'D', 'C', 'B', 'A', 'S', 'S'];
 const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(x || '');
 
@@ -42,7 +51,8 @@ function teamState(t) {
 function curBatter() {
   const t = teamsNow().bat, s = teamState(t), slot = s.order % 9, sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
-  const bn = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
+  const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
+  const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1
   return { slot: slot + 1, name: b[0], m: clamp(b[1] + bn.m, 1, 6), p: clamp(b[2] + bn.p, 1, 6), sp: sub ? b[4] : (ROSTER[t].run[slot] || 3), hand, side, star: isStar(b[3]), ph: sub };
 }
 function curPitcher() {

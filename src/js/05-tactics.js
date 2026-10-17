@@ -24,7 +24,7 @@ function stealers() {
 }
 /* a runner is put out without ending the plate appearance */
 /* how often a CPU runner goes: fast runners steal more */
-function cpuStealChance() { const st = stealers(); return st.length ? 0.06 + (G.bases[st[0]] || 3) * 0.055 : 0; }
+function cpuStealChance() { const st = stealers(); return st.length ? 0.06 + (G.bases[st[0]] || 3) * 0.055 + (trT('bat') === 'neko' ? 0.04 : 0) : 0; }
 function runnerOut(i) {
   G.bases[i] = 0; G.outs++;
   if (G.outs >= 3) { G.b = 0; G.s = 0; return true; }
@@ -70,7 +70,7 @@ function settleSteal(c, now) {
   const rs = G.bases[s.lead] || 3, arm = ROSTER[teamsNow().fld].arm || 3, ly = ball.T[1];
   let p = 0.62 + (128 - ball.speed) / 100 * 0.7 + TYPES[ball.key].hard * 0.08
     + (rs - 3) * 0.08 - (arm - 3) * 0.06 + (ly > 0.6 ? 0.04 : ly < -0.6 ? -0.03 : 0)
-    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0);
+    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0) + (trT('bat') === 'neko' ? 0.1 : 0);
   p = clamp(p, 0.15, 0.95);
   const safe = Math.random() < p, tgt = s.lead + 2;              // first -> 2B, second -> 3B
   const from = V(0, 1.2, 0.8), to = BASE_PT[tgt], t0 = now + 0.15, dur = from.distanceTo(to) / 33;

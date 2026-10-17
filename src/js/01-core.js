@@ -234,6 +234,45 @@ let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔�
 
 function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: { crit: 2, vn: 2 }, diceInn: -1 }; critArm = vanishArm = false; hud(); }
 
+/* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
+const HAP = [
+  { t: 'windU', n: '追い風！', d: 'この回、フライがよく伸びる' },
+  { t: 'windD', n: '向かい風…', d: 'この回、フライが伸びにくい' },
+  { t: 'rain', n: '雨が降ってきた！', d: 'この回、ぬかるんでエラーが出やすい' },
+  { t: 'wave', n: '球場がウェーブ！', d: 'この回、攻撃側のミートが上がる' },
+  { t: 'dark', n: '照明トラブル！', d: '次の2球、ボールが見えにくい' }
+];
+const hapOn = t => !!(G && G.hap && G.hap.inn === G.inning && G.hap.t === t);
+function darkNow() {
+  if (!G || !G.hap || G.hap.t !== 'dark' || G.hap.inn !== G.inning || G.hap.left <= 0) return false;
+  G.hap.left--; return true;
+}
+const hapQ = []; let hapBusy = false, hapEl = null;
+function queueHap(h, wait) { setTimeout(() => { hapQ.push(h); if (!hapBusy) nextHap(); }, wait || 0); }
+function nextHap() {
+  const h = hapQ.shift();
+  if (!h) { hapBusy = false; return; }
+  hapBusy = true;
+  if (!hapEl) { hapEl = document.createElement('div'); hapEl.id = 'hap'; $('#stage').appendChild(hapEl); }
+  hapEl.innerHTML = '<b>' + h.n + '</b><span>' + h.d + '</span>';
+  hapEl.classList.remove('show'); void hapEl.offsetWidth; hapEl.classList.add('show');
+  if (h.say) say({ text: h.n + h.d, id: 'hap' }, 1);
+  setTimeout(() => { hapEl.classList.remove('show'); setTimeout(nextHap, 300); }, 3000);
+}
+function rollHap(odd) {
+  G.hap = null;
+  if (story) return;
+  const tm = teamsNow(); G.traitSeen = G.traitSeen || {};       // 各チームの固有スキルを最初に1回だけ紹介
+  let w = odd ? 4600 : 1500;
+  [tm.bat, tm.fld].forEach(t => { if (!G.traitSeen[t] && TRAIT[t]) { G.traitSeen[t] = 1; queueHap({ n: ROSTER[t].name + '【' + TRAIT[t].n + '】', d: TRAIT[t].d }, w); w += 3400; } });
+  if (G.inning < 2) return;
+  const f = () => { const a = Math.random(), b = Math.random(); return [a, b]; };
+  const [a, b] = online ? withSeed(((onl.seed || 0) + G.inning * 104729) >>> 0, f) : f();
+  if (a > 0.3) return;
+  const h = HAP[Math.floor(b * HAP.length)];
+  G.hap = { t: h.t, inn: G.inning, left: 2 };
+  queueHap({ n: h.n, d: h.d, say: true }, w);
+}
 /* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
 const DICE_FX = {
   1: () => { G.outs = Math.max(G.outs, 2); return '大凶！ いきなり2アウト…'; },
@@ -252,6 +291,7 @@ function applyInningDice() {
   if (!G || G.diceInn === G.inning) return null;
   G.diceInn = G.inning;
   const inn = twoTeam() ? Math.ceil(G.inning / 2) : G.inning;   // 奇数の回（表も裏も、攻撃側が振る）
+  rollHap(inn % 2 === 1);
   if (inn % 2 !== 1) return null;
   const v = rollDie(), text = DICE_FX[v]();
   hud();
@@ -315,6 +355,7 @@ function dots(id, n, on) {
 }
 function hud() {
   pitchIcons();
+  $('#stage').classList.toggle('rain', hapOn('rain'));
   $('#inn').textContent = Math.min(G.inning, 3) + '回';
   dots('#db', 3, G.b); dots('#ds', 2, G.s); dots('#do', 2, G.outs);
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
@@ -414,6 +455,10 @@ function advance(n, label) {
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
 function contact(dt, d, vy, speed, boost, crit, evAdd) {
   if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
+  const tB = trT('bat'), tF = trT('fld');                 // どうぶつ固有スキル（ストーリー以外）
+  const gutsOn = tB === 'home' && G.s === 2;
+  if (gutsOn) dt *= 0.8;                                  // 忠犬ガッツ：2ストライクから粘れる
+  evAdd = (evAdd || 0) + (tB === 'away' ? 8 : 0) - (tF === 'kuma' ? 8 : 0);   // 笹パワー / 重い剛腕
   const BT = curBatter(), bm = (0.7 + 0.1 * BT.m) * (BT.side === pitcherHand() ? 0.94 : 1.04);   // platoon edge vs opposite-handed pitchers
   dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
@@ -429,7 +474,8 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
     return { kind: 'foul', q, dir, ev, launch, dist: rnd(25, 70) };
   }
   const v = ev / 3.6, th = launch * Math.PI / 180;
-  const dist = launch < 5 ? 22 + q * 55 : 0.62 * v * v / 9.8 * Math.sin(2 * Math.min(th, 1.5));
+  const wm = hapOn('windU') ? 1.07 : hapOn('windD') ? 0.93 : 1;   // ハプニング：風
+  const dist = launch < 5 ? 22 + q * 55 : 0.62 * v * v / 9.8 * Math.sin(2 * Math.min(th, 1.5)) * wm;
   const r = Math.random();
   let res, bases = 0;
   if (launch < 5) { if (r < 0.12 + 0.55 * q) { res = 'ゴロヒット'; bases = 1; } else res = 'ゴロアウト'; }
@@ -444,7 +490,8 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
     else res = '内野フライ';
   }
   else res = 'ポップフライ';
-  return { kind: 'play', q, dir, ev, launch, dist, res, bases };
+  const trait = bases > 0 && gutsOn ? '忠犬ガッツ！' : bases === 4 && tB === 'away' ? '笹パワー！' : '';
+  return { kind: 'play', q, dir, ev, launch, dist, res, bases, trait };
 }
 
 /* ---- pitch flight ---- */
@@ -455,7 +502,7 @@ function launchBall(o) {
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
-    key: o.key, speed: o.speed, vn: !!o.vn, T: [o.tx, o.ty], P0,
+    key: o.key, speed: o.speed, vn: !!o.vn || darkNow(), T: [o.tx, o.ty], P0,
     tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
@@ -612,6 +659,7 @@ function resolveCore(c, C) {
     nextAt = now + 1.7;
     if (st) { delay = st.arrive - now + 0.05; nextAt = Math.max(nextAt, st.arrive + 1.5); }
   } else {
+    if (c.kind === 'play' && c.res === 'ゴロアウト' && !c.bunt && trT('bat') === 'usagi' && Math.random() < 0.1) { c.res = 'ゴロヒット'; c.bases = 1; c.trait = 'ぴょんぴょん内野安打！'; }
     sfx.crack(c.q === undefined ? 0.6 : c.q, c.bunt ? 'bunt' : c.kind);
     commentContact(c);
     const sg = steal, hr = sg && sg.hitRun ? sg : null;
@@ -634,7 +682,7 @@ function resolveCore(c, C) {
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
       else {
-        if (c.res !== 'ポップフライ' && Math.random() < (play.grounder ? 0.07 : 0.05)) {
+        if (c.res !== 'ポップフライ' && Math.random() < (play.grounder ? 0.07 : 0.05) * (hapOn('rain') ? 2.2 : 1)) {
           t = advance(1, 'エラー！'); G.hits--; play.err = true; play.caught = false; play.endY = BALL_R; play.fr = 1;
           play.roll = play.hd.clone().multiplyScalar(play.grounder ? 7 : 3); play.run = B0;
         }
@@ -654,7 +702,8 @@ function resolveCore(c, C) {
       }
       if (play.sp && (play.err || c.bunt || (play.throws && play.throws.length > 1) || play.tag)) { play.sp = null; if (play.caught) play.endY = 1.35; }   // ゲッツー・エラー・犠牲フライでは出さない
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
-      if (play.sp) { sub = 'スーパープレー！ ' + sub; cheer = Math.max(cheer, 1.0); }
+      if (play.sp) { sub = 'スーパープレー！' + (trT('fld') === 'neko' ? '（猫の身のこなし）' : '') + ' ' + sub; cheer = Math.max(cheer, 1.0); }
+      else if (c.trait && c.bases > 0) sub = c.trait + ' ' + sub;
       if (c.crit) sub = '会心の一振り！ ' + sub;
       delay = play.throws ? play.T + play.throwEnd : Math.min(play.T, 2.4) * 0.9;
     }

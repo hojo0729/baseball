@@ -120,3 +120,12 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
   background: linear-gradient(145deg, #fffdf6, #ece4d2); border: 1px solid #cfc3a8; border-radius: 12px; box-shadow: inset 0 0 8px rgba(0, 0, 0, .12); backface-visibility: hidden; }
 .dice .f i { width: 11px; height: 11px; border-radius: 50%; background: #1d1d22; place-self: center; box-shadow: inset 0 1px 1px rgba(255, 255, 255, .25); }
 .dice .f i.red { width: 17px; height: 17px; background: #d0302a; }
+
+/* ハプニング・固有スキルの告知 */
+#hap { position: absolute; left: 50%; top: 17%; transform: translate(-50%, -8px); max-width: 86%; padding: 8px 16px; border-radius: 12px; background: rgba(10, 20, 14, .82); border: 1px solid rgba(255, 220, 120, .6); color: #fff; text-align: center; pointer-events: none; z-index: 7; opacity: 0; transition: opacity .25s, transform .25s; }
+#hap.show { opacity: 1; transform: translate(-50%, 0); }
+#hap b { display: block; font-size: 17px; color: #ffd866; }
+#hap span { display: block; font-size: 12px; margin-top: 2px; }
+#stage.rain::after { content: ''; position: absolute; left: -20%; top: -40%; width: 140%; height: 180%; pointer-events: none; z-index: 3; opacity: .35;
+  background: repeating-linear-gradient(104deg, transparent 0 14px, rgba(190, 215, 255, .55) 14px 15px); animation: rainfall .45s linear infinite; }
+@keyframes rainfall { from { transform: translateY(-26px); } to { transform: translateY(0); } }

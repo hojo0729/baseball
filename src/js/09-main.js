@@ -24,7 +24,7 @@ function makePlay(c, C, now) {
   const fr = isOut ? 1 : hr ? 0.35 : foul ? 0.6 : rnd(0.55, 0.8);
   /* スーパープレー：強い当たりのアウトで、たまに野手が飛びつく／跳ぶ（見た目だけ。結果は変えない） */
   let sp = null, endY = caught ? 1.35 : BALL_R;
-  if (isOut && !foul && !c.bunt && !c.popup && c.res !== 'ポップフライ' && Math.random() < 0.5) {
+  if (isOut && !foul && !c.bunt && !c.popup && c.res !== 'ポップフライ' && Math.random() < (trT('fld') === 'neko' ? 0.75 : 0.5)) {
     if (grounder && c.ev >= 110) sp = 'dive';
     else if (caught && c.launch < 24 && c.ev >= 115) { sp = 'dive'; endY = 0.5; }
     else if (caught && Math.hypot(L.x, L.z) >= 62) { sp = 'jump'; endY = 2.3; }
