@@ -54,9 +54,9 @@ git add -A && git commit && git push    # docs/ もコミットする（GitHub P
 遊び方ガイド、ペナントレース（5チームのリーグ戦）、成績の記録、ホームラン競争、オンラインでの送球先選択（守備側の選択を同期する設計が要る）、守備のピンチ曲、リプレイ、CPUの代打・継投の強化、Play Store 公開（テスター12人・25ドル）。
 推し順：遊び方ガイド → ペナントレース。
 
-## 9. GitHub ユーザー名を変える予定
-Take は名前と誕生日が入った GitHub ユーザー名 `saboten-apps` を変えたい（新しい名前は未定）。変えると Pages の URL が変わり、PWA は入れ直しになる。
-変更後に直す場所：`src/js/06-online.js`、`README.md`、`build.mjs`、そして `node build.mjs` で再生成される `docs/` と `dist/`。リポジトリの URL は GitHub が転送するが、Pages の URL は転送されない。
+## 9. GitHub ユーザー名の変更（完了）
+旧 `saboten-apps` から `saboten-apps` に変更済み。Pages の URL は `https://saboten-apps.github.io/baseball/`。旧 URL は見られず、PWA は入れ直しになる。
+URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node build.mjs` で `docs/` と `dist/` を作り直す。
 
 ## 10. 進め方の約束
 - 依頼の意図が曖昧なときは、短く確認してよい。ただし、大きな機能は先に方針を一言伝える。
