@@ -451,12 +451,12 @@ function ballPosAt(t, out) {
   return out.set(out.x + (out.x - _bp.x) * k, out.y + (out.y - _bp.y) * k, out.z + (out.z - _bp.z) * k);
 }
 /* CPUの強さ（CPU対戦と練習）。ストーリーは各話の調整をそのまま使う
-   bat: CPU打者のバットの芯のずれ / pow: CPU打者の打球の速さ(km/h) / tsd: タイミングのぶれ / chase: ボール球に手を出す率 / spd: CPU投手の球速 / wild: 制球の乱れ / zone: ストライクを投げる率 / edge: 際どいコースを狙う率 */
+   fool: 配球にだまされやすさ / bat: CPU打者のバットの芯のずれ / pow: CPU打者の打球の速さ(km/h) / tsd: タイミングのぶれ / chase: ボール球に手を出す率 / spd: CPU投手の球速 / wild: 制球の乱れ / zone: ストライクを投げる率 / edge: 際どいコースを狙う率 */
 const DIFF = [
-  { name: 'よわい', bat: 1.9, tsd: 1.7, chase: 1.6, pow: -10, spd: -8, wild: 0.1, zone: 0.82, edge: 0, center: 0.55 },
-  { name: 'ふつう', bat: 1, tsd: 1, chase: 1, pow: 0, spd: 0, wild: 0, zone: 0.68, edge: 0, center: 0.9 },
-  { name: 'つよい', bat: 0.78, tsd: 0.75, chase: 0.6, pow: 3, spd: 5, wild: -0.03, zone: 0.62, edge: 0.5, center: 0.9 },
-  { name: '鬼', bat: 0.6, tsd: 0.55, chase: 0.4, pow: 6, spd: 9, wild: -0.05, zone: 0.58, edge: 0.75, center: 0.9 }
+  { name: 'よわい', bat: 1.9, tsd: 1.7, chase: 1.6, pow: -10, fool: 1.3, spd: -8, wild: 0.1, zone: 0.82, edge: 0, center: 0.55 },
+  { name: 'ふつう', bat: 1, tsd: 1, chase: 1, pow: 0, fool: 1, spd: 0, wild: 0, zone: 0.68, edge: 0, center: 0.9 },
+  { name: 'つよい', bat: 0.78, tsd: 0.75, chase: 0.6, pow: 3, fool: 0.75, spd: 5, wild: -0.03, zone: 0.62, edge: 0.5, center: 0.9 },
+  { name: '鬼', bat: 0.6, tsd: 0.55, chase: 0.4, pow: 6, fool: 0.55, spd: 9, wild: -0.05, zone: 0.58, edge: 0.75, center: 0.9 }
 ];
 let diffLv = 1;
 try { const v = Number(localStorage.getItem('yakyu-diff')); if (v >= 0 && v < DIFF.length) diffLv = v; } catch (e) {}
@@ -480,6 +480,29 @@ function cpuPitch() {
   tx += gauss() * Math.max(0, wild); ty += gauss() * Math.max(0, wild);
   launchBall({ key, speed: clamp(rnd(T.min, T.max) + bonus + LV.spd + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx, ty });
 }
+/* 配球: the CPU hitter remembers the previous pitch of this plate appearance.
+   緩急 (a big change of speed) throws off the timing, 出し入れ (a far-away spot) throws off the bat path,
+   repeating the same pitch to the same spot lets the hitter time it (慣れ), and the corners of the zone are harder to square up than the middle.
+   Returns multipliers for the timing spread (t) and the contact error (d), plus an added error (dAdd). */
+function pitchCraft(LV) {
+  const T = ball.T, prev = G.seq && G.seq.pa === G.pa ? G.seq : null, f = LV.fool;
+  let t = 1, d = 1, dAdd = 0, same = 0;
+  if (prev) {
+    const dv = Math.abs(ball.speed - prev.speed), dist = Math.hypot(T[0] - prev.tx, T[1] - prev.ty);
+    t *= 1 + Math.min(0.8, dv / 40) * f;                      // 緩急: 20 km/h の差でタイミングのぶれが約1.5倍
+    dAdd += Math.min(0.22, dist * 0.1) * f;                   // 出し入れ: 前の球から遠いほど芯を外す
+    if (prev.key === ball.key && dist < 0.5) same = prev.same + 1;
+  }
+  const learn = Math.min(0.45, same * 0.18) / Math.max(0.5, f);   // 慣れ: 同じ球を同じ所へ続けるほど合わせてくる（強い打者ほど早く）
+  t *= 1 - Math.min(0.6, learn); d *= 1 - Math.min(0.6, learn);
+  const o = Math.max(Math.abs(T[0]), Math.abs(T[1]));
+  if (o <= 1) {
+    if (o > 0.65) dAdd += (o - 0.65) * 0.8 * f;               // 四隅・際どいコースは芯で捉えにくい
+    else if (o < 0.35) d *= 0.85;                             // ど真ん中は打ちやすい
+  }
+  G.seq = { pa: G.pa, speed: ball.speed, tx: T[0], ty: T[1], key: ball.key, same };
+  return { t, d, dAdd };
+}
 function cpuBat() {
   const T = ball.T, o = Math.max(Math.abs(T[0]), Math.abs(T[1])), inz = o <= 1.05;
   const ty = TYPES[ball.key];
@@ -487,11 +510,12 @@ function cpuBat() {
   let p = inz ? 0.85 : 0.22 * LV.chase;
   if (G.s === 2) p = inz ? 0.97 : Math.min(0.85, 0.5 * LV.chase);
   if (o > 1.5) p = 0.05;
-  const tsd = (0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03) * (ball.vn ? 1.6 : 1) * LV.tsd;   // 消える魔球：見えない間は合わせにくい
+  const sq = pitchCraft(LV);
+  const tsd = (0.045 + Math.max(0, ball.speed - 110) / 40 * 0.03 + ty.hard * 0.03) * (ball.vn ? 1.6 : 1) * LV.tsd * sq.t;   // 消える魔球：見えない間は合わせにくい
   const BT = curBatter();
   const k = {
     swing: Math.random() < p, dt: gauss() * tsd,
-    d: (Math.abs(gauss()) * (0.30 + ty.hard * 0.18) + Math.max(0, o - 1) * 0.5) * (story && story.batSkill || 1) * LV.bat * (1.3 - 0.1 * BT.m) + (magicActive() ? 0.35 : 0),
+    d: (Math.abs(gauss()) * (0.30 + ty.hard * 0.18) + Math.max(0, o - 1) * 0.5) * (story && story.batSkill || 1) * LV.bat * (1.3 - 0.1 * BT.m) * sq.d + sq.dAdd + (magicActive() ? 0.35 : 0),
     vy: 0.1 + gauss() * 0.35
   };
   ball.cpu = k;
