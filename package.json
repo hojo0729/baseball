@@ -1,0 +1,8 @@
+{
+  "name": "doubutsu-league",
+  "private": true,
+  "devDependencies": {
+    "playwright-core": "^1.52.0",
+    "three": "0.149.0"
+  }
+}

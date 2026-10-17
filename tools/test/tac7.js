@@ -1,10 +1,10 @@
-const { chromium } = require('playwright');
+const { launchBrowser, attachErrors } = require('./lib.mjs');
 (async () => {
-  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const { b, url } = await launchBrowser();
   const ctx = await b.newContext({ viewport: { width: 380, height: 760 } });
+  await ctx.addInitScript(() => { localStorage.setItem('yakyu-opts', JSON.stringify({ dice: false, hap: false })); });
   const A = await ctx.newPage(), B = await ctx.newPage();
-  const errs = []; [A, B].forEach((p, i) => p.on('pageerror', e => errs.push('P' + i + ' ' + e.message)));
-  const url = 'file://' + process.cwd() + '/ot/game.html';
+  const errs = []; [A, B].forEach((p, i) => attachErrors(p, errs, 'P' + i + ' '));
   await A.goto(url); await B.goto(url); await A.waitForTimeout(1500);
   await A.click('#go3'); await A.click('#goBtn'); await A.waitForTimeout(300);
   const code = (await A.textContent('#ot')).replace(/\D/g, '');

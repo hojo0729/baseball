@@ -1,7 +1,6 @@
-const { chromium } = require('playwright');
-(async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
-const p=await b.newPage({viewport:{width:700,height:900},deviceScaleFactor:1});const errs=[];p.on('pageerror',e=>errs.push(e.message));
-await p.goto('file://'+__dirname+'/game.html');await p.waitForTimeout(1500);
+const { openGame } = require('./lib.mjs');
+(async()=>{const { b, p, errs } = await openGame({width:700,height:900});
+await p.waitForTimeout(1500);
 await p.evaluate(()=>__dbg.gopit());await p.waitForTimeout(6800);
 const hp=await p.evaluate(()=>__dbg.headPos());console.log('head',hp);
 const [hx,hy,hz]=hp;
