@@ -725,7 +725,7 @@ function resolveCore(c, C) {
     t = hitByPitch(); tn = tone(true); sub = info;
     if (G.hbp[key] >= 2) {
       G.hbp[key] = 0; t = '乱闘！'; sub = 'デッドボール2個目　両軍がベンチから飛び出す';
-      if (!story) { G.eject = P.team; sub += '　' + P.name + ' 退場'; }
+      if (!story && P.next) { G.eject = P.team; sub += '　' + P.name + ' 退場'; }
       brawl = { at: now + 0.9, end: now + 4.6, shot: frameShot([V(-4, 1, 3), V(4, 1, 3), V(0, 2.5, -7)], now + 0.9) };
       sfx.boo(); cheer = 0;
     }
