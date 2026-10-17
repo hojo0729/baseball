@@ -87,6 +87,24 @@ function pitcherK(now) {
   if ((phase === 'fly' || phase === 'result') && ball) return 1 + clamp((now - ball.start) / 0.5, 0, 1) * 0.35;
   return 0;
 }
+/* 野手の表情：打球を追うとき・捕ったとき・ホームランを見上げるとき */
+function fielderFace(i, k) {
+  if (!play) return 'normal';
+  if (play.hr) return 'wow';
+  if (play.foul) return 'normal';
+  if (play.bi === i) {
+    const u = (now_() - play.start - 0.12) / play.T;
+    if (play.sp && u > 0.75) return 'joy';
+    if (u < 0.95) return 'shout';
+    return play.err ? 'sad' : play.caught ? 'smile' : 'normal';
+  }
+  return 'normal';
+}
+function updateFaces(now, k) {
+  const hit = play && play.hr;
+  faceFor(pitcherF, (phase === 'deliver' && k > 0.45) || (phase === 'fly' && ball && now - ball.start < 0.45) ? 'shout' : hit ? 'sad' : 'normal', now);
+  faceFor(batterF, hit ? 'joy' : (phase === 'deliver' || phase === 'fly') ? 'focus' : 'normal', now);
+}
 function updateFielders(now, k) {
   const ready = phase === 'fly' || phase === 'deliver' || (phase === 'wait' && k > 0.6) ? 1 : 0.3;
   fielderF.forEach((f, i) => {
@@ -111,6 +129,7 @@ function updateFielders(now, k) {
     let J = squashJ(fielderJ(x, z, yaw, now * 11 + i * 1.7, mv, rd, reach), 0);
     if (spU !== null) J = superPose(J, play.sp, spU, x, z, yaw);
     poseFig(f, J, yaw, yaw);
+    faceFor(f, fielderFace(i, k), now);
   });
 }
 /* スーパープレーの体の動き。dive = 前に飛びつく（足元を軸に前へ倒す）、jump = 高く跳ぶ */
@@ -142,6 +161,7 @@ function updateRunAnim(now) {
     const x = lerp(sx, tx, k), z = lerp(sz, tz, k), yaw = Math.atan2(tx - sx, tz - sz);
     f.g.visible = true;
     poseFig(f, squashJ(fielderJ(x, z, yaw, now * 12 + i, k > 0 && k < 1 ? 1 : 0, 0, 0), 0), yaw, yaw);
+    faceFor(f, k > 0 && k < 1 ? 'shout' : 'smile', now);
   });
 }
 function updateBall(now, dt, pj) {
@@ -267,6 +287,7 @@ function update(now, dt) {
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
   updateFielders(now, k);
+  updateFaces(now, k);
   updateRunAnim(now);
   updateRunning(now);
   refreshAct();
