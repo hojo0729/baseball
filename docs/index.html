@@ -445,12 +445,12 @@ function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0
 
 /* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
 const DICE_FX = {
-  1: () => 'はずれ…',
-  2: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 1, p: 0 }; return '次の打者　ミート+1'; },
-  3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 0, p: 1 }; return '次の打者　パワー+1'; },
-  4: () => { if (G.bases[0]) { G.runs += 1; return '1点ボーナス'; } G.bases[0] = 3; return 'ランナーが1塁に！'; },
-  5: () => { G.runs += 1; return '1点ボーナス！'; },
-  6: () => { G.runs += 2; return '2点ボーナス！！'; }
+  1: () => { G.outs = Math.max(G.outs, 2); return '大凶！ いきなり2アウト…'; },
+  2: () => { G.outs = Math.max(G.outs, 1); return '凶… 1アウトから開始'; },
+  3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 2, p: 2 }; return '次の打者　ミート+2 パワー+2'; },
+  4: () => { G.bases[0] = G.bases[0] || 3; G.bases[1] = G.bases[1] || 3; return 'ノーアウト1・2塁のチャンス！'; },
+  5: () => { G.runs += 2; return '2点ボーナス！！'; },
+  6: () => { G.runs += 4; return '4点ボーナス！！！大当たり'; }
 };
 function rollDie() {
   if (!online) return Math.floor(Math.random() * 6) + 1;
@@ -861,7 +861,9 @@ function resolveCore(c, C) {
         }
         tn = tone(!!play.err);
       }
+      if (play.sp && (play.err || c.bunt || (play.throws && play.throws.length > 1) || play.tag)) { play.sp = null; if (play.caught) play.endY = 1.35; }   // ゲッツー・エラー・犠牲フライでは出さない
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
+      if (play.sp) { sub = 'スーパープレー！ ' + sub; cheer = Math.max(cheer, 1.0); }
       if (c.crit) sub = '会心の一振り！ ' + sub;
       delay = play.throws ? play.T + play.throwEnd : Math.min(play.T, 2.4) * 0.9;
     }
@@ -1853,17 +1855,17 @@ function buntResult(c, B, squeeze) {
   const bsp = curBatter().sp;
   if (c.popup) return { t: out('バント失敗（小フライ）'), good: false };
   if (squeeze) {
-    if (Math.random() < 0.15) { const t = advance(1, 'スクイズ成功！ 内野安打'); G.hits--; return { t, good: true }; }
+    if (Math.random() < 0.06) { const t = advance(1, 'スクイズ成功！ 内野安打'); G.hits--; return { t, good: true }; }
     endPA(); G.outs++;
     G.bases = [0, B[0], B[1]]; G.runs++;
     return { t: 'スクイズ成功！ 1点', good: true, thr: [1] };
   }
   const r = Math.random();
   if (!(B[0] || B[1] || B[2])) {
-    if (r < 0.3) return { t: advance(1, 'バントヒット'), good: true };
+    if (r < 0.08) return { t: advance(1, 'バントヒット'), good: true };
     return { t: out('バントアウト'), good: false, thr: [1] };
   }
-  if (r < 0.12) return { t: advance(1, 'バントヒット'), good: true };
+  if (r < 0.04) return { t: advance(1, 'バントヒット'), good: true };
   const chain = B[0] ? (B[1] ? (B[2] ? 2 : 1) : 0) : -1;       // highest base in the forced chain
   if (r < 0.27 && chain >= 0) {                                 // lead forced runner is cut down
     endPA(); G.outs++;
@@ -1905,17 +1907,17 @@ function tryCpuPickoff(now) {
   if (G.pickPa !== G.pa) { G.pickPa = G.pa; G.pickN = 0; }
   if (G.pickN >= 2 || Math.random() > (runSign() ? 0.3 : 0.15)) return false;
   G.pickN++;
-  startPickoff(now, Math.random() < (sign === 'steal' || sign === 'run' ? 0.3 : 0.05));
+  startPickoff(now, runSign() && Math.random() < 0.3);   // 走る指示を出していないときは刺されない
   return true;
 }
 function userPickoff() {
   if (mode !== 'pit' || phase !== 'ready' || !(G.bases[0] || G.bases[1])) return;
   if (online) {   // the pitcher's device decides and tells the batter's device
-    const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = Math.random() < (planned ? 0.4 : 0.07);
+    const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = planned && Math.random() < 0.4;   // 走る気配がないときは刺せない
     startPickoff(now_(), out); send('pick', { out }); return;
   }
   const planned = cpuStealPlan;
-  startPickoff(now_(), Math.random() < (planned ? 0.4 : 0.07));
+  startPickoff(now_(), planned && Math.random() < 0.4);
   if (planned && Math.random() < 0.5) cpuStealPlan = false;     // the runner gets scared off
 }
 function stepPickoff(now) {
@@ -2442,7 +2444,9 @@ const LINES = {
   hr3: ['入ったー！3ランホームラン！'],
   hr4: ['満塁ホームラン！グランドスラム！'],
   gout: ['ゴロです。一塁へ送ってアウト。', '内野ゴロ、アウト。', 'しっかり処理しました。'],
-  fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。', 'ライナー！捕られました！'],
+  fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。'],
+  lout: ['ライナー！捕られました！'],
+  pout: ['内野フライ！捕りました、アウト。', '高く上がった！しっかり捕ってアウト。'],
   dp: ['ゲッツー！助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
   err: ['エラー！ボールがこぼれた！', 'ああっと、エラーです！'],
   steal: ['スタートを切った！盗塁成功！', '盗塁セーフ！いい走りです！'],
@@ -2460,14 +2464,15 @@ const LINES = {
   lefty: ['サウスポーの登場です！', '左腕がマウンドに上がります！'],
   crit: ['会心の一振り！', '会心の当たりだ！'],
   vanish: ['出た！消える魔球！', 'ボールが消えた！'],
+  super: ['すごい！スーパープレー！', 'なんという守備だ！飛びつきました！'],
   extra: ['延長戦に突入です！', '決着は延長へ！'],
   dice: ['さあ、運命のサイコロです！', 'サイコロ！何が出るか！'],
-  dice1: ['残念、はずれです！'],
-  dice2: ['ミートアップ！次のバッターに注目！'],
-  dice3: ['パワーアップ！一発あるか！'],
-  dice4: ['ランナー一塁から始まります！'],
-  dice5: ['1点ボーナス！'],
-  dice6: ['なんと2点ボーナス！大きい！']
+  dice1: ['大凶です！いきなり2アウト！'],
+  dice2: ['凶です…1アウトからのスタート。'],
+  dice3: ['パワーもミートも大幅アップ！一発あるか！'],
+  dice4: ['ノーアウト一・二塁のチャンス！'],
+  dice5: ['2点ボーナス！'],
+  dice6: ['なんと4点ボーナス！大当たりだ！']
 };
 
 function cmtRand() { cmt.s = (cmt.s * 1664525 + 1013904223) >>> 0; return cmt.s / 4294967296; }
@@ -2486,7 +2491,7 @@ function showCmtText(text) {
 }
 /* 録音ファイル docs/audio/<id>.mp3 があればそれを再生する（無ければ字幕だけ）。
    id は LINES の key_番号（例 hr_2）。ファイル一覧は tools/export-voice-script.mjs で出せる。 */
-const VOICE_IDS = ["KL_1","KL_2","K_1","K_2","K_3","ball_3","big_1","big_2","bunt_1","bunt_2","change_1","change_2","change_3","chg_1","chg_2","crit_1","crit_2","double_1","double_2","dp_1","dp_2","dp_3","err_2","first_1","first_2","first_3","foul_1","foul_2","foul_3","fout_1","fout_2","fout_3","gou_1","gou_2","gou_3","gout_1","gout_3","hitBig_1","hitBig_2","hitBig_3","hit_1","hit_2","hit_3","hr2_1","hr3_1","hr4_1","hr_1","hr_2","hr_3","lefty_1","lefty_2","miss_1","miss_2","miss_3","pick_1","pick_2","pitch_1","pitch_2","pitch_3","play_2","play_3","relief_1","relief_2","sac_1","sac_2","single_1","single_2","single_3","squeeze_1","squeeze_2","starP_1","starP_2","star_1","star_2","stealX_1","stealX_2","steal_1","steal_2","strike_1","strike_2","strike_3","strike_4","vanish_1","walk_1","walk_2"];   // filled in by build.mjs from the files in docs/audio
+const VOICE_IDS = ["KL_1","KL_2","K_1","K_2","K_3","ball_3","big_1","big_2","bunt_1","bunt_2","change_1","change_2","change_3","chg_1","chg_2","crit_1","crit_2","double_1","double_2","dp_1","dp_2","dp_3","err_2","first_1","first_2","first_3","foul_1","foul_2","foul_3","fout_1","fout_2","gou_1","gou_2","gou_3","gout_1","gout_3","hitBig_1","hitBig_2","hitBig_3","hit_1","hit_2","hit_3","hr2_1","hr3_1","hr4_1","hr_1","hr_2","hr_3","lefty_1","lefty_2","lout_1","miss_1","miss_2","miss_3","pick_1","pick_2","pitch_1","pitch_2","pitch_3","play_2","play_3","relief_1","relief_2","sac_1","sac_2","single_1","single_2","single_3","squeeze_1","squeeze_2","starP_1","starP_2","star_1","star_2","stealX_1","stealX_2","steal_1","steal_2","strike_1","strike_2","strike_3","strike_4","vanish_1","walk_1","walk_2"];   // filled in by build.mjs from the files in docs/audio
 function cmtPreload() {
   if (cmt.pre) return; cmt.pre = {};
   VOICE_IDS.forEach(id => {
@@ -2553,7 +2558,9 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/エラー/.test(t)) key = 'err';
   else if (/ツーベース/.test(t)) key = 'double';
   else if (/ヒット/.test(t)) key = 'single';
-  else if (/ゴロアウト|内野フライ|ポップ/.test(t)) key = 'gout';
+  else if (/内野フライ|ポップ/.test(t)) key = 'pout';
+  else if (/ライナー/.test(t)) key = 'lout';
+  else if (/ゴロ/.test(t)) key = 'gout';
   else if (/アウト/.test(t)) key = 'fout';
   else if (/フォアボール|四球|ボール4/.test(t)) key = 'walk';
   else if (/ファウル/.test(t)) key = 'foul';
@@ -2567,6 +2574,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   if (key === 'relief' && /サウスポー/.test(s || '')) key = 'lefty';
   if (key === 'change' && twoTeam() && G.inning === (G.maxHalf || 6) + 1) key = 'extra';
   if (/^会心/.test(s || '') && !/^hr/.test(key)) key = 'crit';
+  if (/^スーパープレー/.test(s || '') && !/^hr/.test(key) && key !== 'crit') key = 'super';
   if (!key || !LINES[key]) return;
   if (pts && !/^hr/.test(key)) extra = ' ' + pts + '点が入りました！';
   if (/ピッチャー交代/.test(t) && s) extra = ' ' + s.split('（')[0];
@@ -2600,9 +2608,17 @@ function makePlay(c, C, now) {
   let bi = 0, bd = 1e9;
   FPOS.forEach((f, i) => { const q = Math.hypot(f[0] - L.x, f[1] - L.z); if (q < bd) { bd = q; bi = i; } });
   const fr = isOut ? 1 : hr ? 0.35 : foul ? 0.6 : rnd(0.55, 0.8);
+  /* スーパープレー：強い当たりのアウトで、たまに野手が飛びつく／跳ぶ（見た目だけ。結果は変えない） */
+  let sp = null, endY = caught ? 1.35 : BALL_R;
+  if (isOut && !foul && !c.bunt && !c.popup && c.res !== 'ポップフライ' && Math.random() < 0.5) {
+    if (grounder && c.ev >= 110) sp = 'dive';
+    else if (caught && c.launch < 24 && c.ev >= 115) { sp = 'dive'; endY = 0.5; }
+    else if (caught && Math.hypot(L.x, L.z) >= 62) { sp = 'jump'; endY = 2.3; }
+  }
   return {
-    start: now, T, S0, L, h, grounder, caught, hr, foul, bi, fr, landed: false, hd: V(hx, 0, hz),
-    endY: caught ? 1.35 : BALL_R, dist: Math.hypot(L.x, L.z),
+    start: now, T, S0, L, h, grounder, caught, hr, foul, bi, fr, landed: false, hd: V(hx, 0, hz), sp,
+    spYaw: Math.atan2(L.x - FPOS[bi][0], L.z - FPOS[bi][1]),
+    endY, dist: Math.hypot(L.x, L.z),
     roll: V(hx, 0, hz).multiplyScalar(hr || caught || foul ? 0 : clamp(dd * 0.12, 2, 10)), n: 0
   };
 }
@@ -2660,7 +2676,7 @@ function pitcherK(now) {
 function updateFielders(now, k) {
   const ready = phase === 'fly' || phase === 'deliver' || (phase === 'wait' && k > 0.6) ? 1 : 0.3;
   fielderF.forEach((f, i) => {
-    let x = FPOS[i][0], z = FPOS[i][1], yaw = Math.atan2(-x, -z), mv = 0, reach = 0, rd = ready;
+    let x = FPOS[i][0], z = FPOS[i][1], yaw = Math.atan2(-x, -z), mv = 0, reach = 0, rd = ready, spU = null;
     if (play) {
       rd = 0.5;
       if (play.bi === i) {
@@ -2670,6 +2686,7 @@ function updateFielders(now, k) {
         if (u > 0 && pr < 1) { mv = 1; yaw = Math.atan2(play.L.x - FPOS[i][0], play.L.z - FPOS[i][1]); }
         else yaw = Math.atan2(ballMesh.position.x - x, ballMesh.position.z - z);
         if (play.caught) reach = clamp((u - 0.7) / 0.3, 0, 1);
+        if (play.sp) { spU = u; yaw = play.spYaw; if (play.sp === 'jump') reach = clamp((u - 0.75) / 0.2, 0, 1); }
       } else if (play.cover && play.cover[i]) {
         const c = play.cover[i], k = clamp((now - play.start) / 1.0, 0, 1);
         x = lerp(FPOS[i][0], c.x - 0.6, k); z = lerp(FPOS[i][1], c.z + 0.6, k);
@@ -2677,8 +2694,27 @@ function updateFielders(now, k) {
         else yaw = Math.atan2(ballMesh.position.x - x, ballMesh.position.z - z);
       } else yaw = Math.atan2(ballMesh.position.x - x, ballMesh.position.z - z);
     }
-    poseFig(f, squashJ(fielderJ(x, z, yaw, now * 11 + i * 1.7, mv, rd, reach), 0), yaw, yaw);
+    let J = squashJ(fielderJ(x, z, yaw, now * 11 + i * 1.7, mv, rd, reach), 0);
+    if (spU !== null) J = superPose(J, play.sp, spU, x, z, yaw);
+    poseFig(f, J, yaw, yaw);
   });
+}
+/* スーパープレーの体の動き。dive = 前に飛びつく（足元を軸に前へ倒す）、jump = 高く跳ぶ */
+const _sq = new THREE.Quaternion(), _sa = V();
+function superPose(J, kind, u, x, z, yaw) {
+  const a = clamp((u - 0.78) / 0.25, 0, 1), up = 1 - clamp((u - 1.4) / 0.35, 0, 1);
+  if (a <= 0 || up <= 0) return J;
+  const sx = Math.sin(yaw), cz = Math.cos(yaw);
+  let ang = 0, lift = 0, back = 0;
+  if (kind === 'dive') { ang = 1.35 * easeOut(a) * up; lift = 0.12 * Math.sin(Math.PI * a); back = 1.0 * easeOut(a) * up; }
+  else lift = 1.0 * Math.sin(Math.PI * clamp((u - 0.78) / 0.42, 0, 1));
+  _sq.setFromAxisAngle(_sa.set(cz, 0, -sx), ang);
+  for (const k in J) {
+    const p = J[k];
+    p.x -= x; p.z -= z; p.applyQuaternion(_sq);
+    p.x += x - sx * back; p.z += z - cz * back; p.y += lift;
+  }
+  return J;
 }
 /* runners on base run to the next base until the result is shown, then snap to the new bases */
 const NEXT_BASE = [[0, -38.8], [-19.4, -19.4], [0, 0]];
@@ -2784,11 +2820,18 @@ function playShot(p, now) {
   const pts = [p.S0, mid, V(p.L.x + p.roll.x, 0.5, p.L.z + p.roll.z)];
   if (p.throws) p.throws.forEach(t => pts.push(t.to));
   p.shot = frameShot(pts, now + 0.35);                             // let the swing finish in the catcher view, then cut
+  if (p.sp) {                                                      // スーパープレー：野手に寄る
+    let hx = p.L.x - FPOS[p.bi][0], hz = p.L.z - FPOS[p.bi][1]; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+    const sd = (Math.hypot(p.L.x - hz * 6, p.L.z + hx * 6 + 30) < Math.hypot(p.L.x + hz * 6, p.L.z - hx * 6 + 30)) ? 1 : -1;
+    const pos = V(p.L.x - hz * 6.5 * sd + hx * 3, 2.0, p.L.z + hx * 6.5 * sd + hz * 3);
+    p.spShot = { pos, look: V(p.L.x, 0.9, p.L.z), fov: 42, at: now + p.T * 0.58, until: now + p.T * 1.5 };
+  }
 }
 let camShot = null;
 function updateCamera(now, dt) {
   let shot = null;
-  if (play && play.shot && now >= play.shot.at) shot = play.shot;
+  if (play && play.spShot && now >= play.spShot.at && now < play.spShot.until) shot = play.spShot;
+  else if (play && play.shot && now >= play.shot.at) shot = play.shot;
   else if (camShot && now >= camShot.at) shot = camShot;
   if (shot) { camPos.copy(shot.pos); camLook.copy(shot.look); camFov = shot.fov; }
   else { camPos.copy(CAM_HOME); camLook.copy(homeLook()); camFov = homeFov; }

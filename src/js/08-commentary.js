@@ -29,7 +29,9 @@ const LINES = {
   hr3: ['入ったー！3ランホームラン！'],
   hr4: ['満塁ホームラン！グランドスラム！'],
   gout: ['ゴロです。一塁へ送ってアウト。', '内野ゴロ、アウト。', 'しっかり処理しました。'],
-  fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。', 'ライナー！捕られました！'],
+  fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。'],
+  lout: ['ライナー！捕られました！'],
+  pout: ['内野フライ！捕りました、アウト。', '高く上がった！しっかり捕ってアウト。'],
   dp: ['ゲッツー！助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
   err: ['エラー！ボールがこぼれた！', 'ああっと、エラーです！'],
   steal: ['スタートを切った！盗塁成功！', '盗塁セーフ！いい走りです！'],
@@ -47,14 +49,15 @@ const LINES = {
   lefty: ['サウスポーの登場です！', '左腕がマウンドに上がります！'],
   crit: ['会心の一振り！', '会心の当たりだ！'],
   vanish: ['出た！消える魔球！', 'ボールが消えた！'],
+  super: ['すごい！スーパープレー！', 'なんという守備だ！飛びつきました！'],
   extra: ['延長戦に突入です！', '決着は延長へ！'],
   dice: ['さあ、運命のサイコロです！', 'サイコロ！何が出るか！'],
-  dice1: ['残念、はずれです！'],
-  dice2: ['ミートアップ！次のバッターに注目！'],
-  dice3: ['パワーアップ！一発あるか！'],
-  dice4: ['ランナー一塁から始まります！'],
-  dice5: ['1点ボーナス！'],
-  dice6: ['なんと2点ボーナス！大きい！']
+  dice1: ['大凶です！いきなり2アウト！'],
+  dice2: ['凶です…1アウトからのスタート。'],
+  dice3: ['パワーもミートも大幅アップ！一発あるか！'],
+  dice4: ['ノーアウト一・二塁のチャンス！'],
+  dice5: ['2点ボーナス！'],
+  dice6: ['なんと4点ボーナス！大当たりだ！']
 };
 
 function cmtRand() { cmt.s = (cmt.s * 1664525 + 1013904223) >>> 0; return cmt.s / 4294967296; }
@@ -140,7 +143,9 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/エラー/.test(t)) key = 'err';
   else if (/ツーベース/.test(t)) key = 'double';
   else if (/ヒット/.test(t)) key = 'single';
-  else if (/ゴロアウト|内野フライ|ポップ/.test(t)) key = 'gout';
+  else if (/内野フライ|ポップ/.test(t)) key = 'pout';
+  else if (/ライナー/.test(t)) key = 'lout';
+  else if (/ゴロ/.test(t)) key = 'gout';
   else if (/アウト/.test(t)) key = 'fout';
   else if (/フォアボール|四球|ボール4/.test(t)) key = 'walk';
   else if (/ファウル/.test(t)) key = 'foul';
@@ -154,6 +159,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   if (key === 'relief' && /サウスポー/.test(s || '')) key = 'lefty';
   if (key === 'change' && twoTeam() && G.inning === (G.maxHalf || 6) + 1) key = 'extra';
   if (/^会心/.test(s || '') && !/^hr/.test(key)) key = 'crit';
+  if (/^スーパープレー/.test(s || '') && !/^hr/.test(key) && key !== 'crit') key = 'super';
   if (!key || !LINES[key]) return;
   if (pts && !/^hr/.test(key)) extra = ' ' + pts + '点が入りました！';
   if (/ピッチャー交代/.test(t) && s) extra = ' ' + s.split('（')[0];

@@ -236,12 +236,12 @@ function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0
 
 /* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
 const DICE_FX = {
-  1: () => 'はずれ…',
-  2: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 1, p: 0 }; return '次の打者　ミート+1'; },
-  3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 0, p: 1 }; return '次の打者　パワー+1'; },
-  4: () => { if (G.bases[0]) { G.runs += 1; return '1点ボーナス'; } G.bases[0] = 3; return 'ランナーが1塁に！'; },
-  5: () => { G.runs += 1; return '1点ボーナス！'; },
-  6: () => { G.runs += 2; return '2点ボーナス！！'; }
+  1: () => { G.outs = Math.max(G.outs, 2); return '大凶！ いきなり2アウト…'; },
+  2: () => { G.outs = Math.max(G.outs, 1); return '凶… 1アウトから開始'; },
+  3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 2, p: 2 }; return '次の打者　ミート+2 パワー+2'; },
+  4: () => { G.bases[0] = G.bases[0] || 3; G.bases[1] = G.bases[1] || 3; return 'ノーアウト1・2塁のチャンス！'; },
+  5: () => { G.runs += 2; return '2点ボーナス！！'; },
+  6: () => { G.runs += 4; return '4点ボーナス！！！大当たり'; }
 };
 function rollDie() {
   if (!online) return Math.floor(Math.random() * 6) + 1;
@@ -652,7 +652,9 @@ function resolveCore(c, C) {
         }
         tn = tone(!!play.err);
       }
+      if (play.sp && (play.err || c.bunt || (play.throws && play.throws.length > 1) || play.tag)) { play.sp = null; if (play.caught) play.endY = 1.35; }   // ゲッツー・エラー・犠牲フライでは出さない
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
+      if (play.sp) { sub = 'スーパープレー！ ' + sub; cheer = Math.max(cheer, 1.0); }
       if (c.crit) sub = '会心の一振り！ ' + sub;
       delay = play.throws ? play.T + play.throwEnd : Math.min(play.T, 2.4) * 0.9;
     }

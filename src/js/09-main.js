@@ -22,9 +22,17 @@ function makePlay(c, C, now) {
   let bi = 0, bd = 1e9;
   FPOS.forEach((f, i) => { const q = Math.hypot(f[0] - L.x, f[1] - L.z); if (q < bd) { bd = q; bi = i; } });
   const fr = isOut ? 1 : hr ? 0.35 : foul ? 0.6 : rnd(0.55, 0.8);
+  /* スーパープレー：強い当たりのアウトで、たまに野手が飛びつく／跳ぶ（見た目だけ。結果は変えない） */
+  let sp = null, endY = caught ? 1.35 : BALL_R;
+  if (isOut && !foul && !c.bunt && !c.popup && c.res !== 'ポップフライ' && Math.random() < 0.5) {
+    if (grounder && c.ev >= 110) sp = 'dive';
+    else if (caught && c.launch < 24 && c.ev >= 115) { sp = 'dive'; endY = 0.5; }
+    else if (caught && Math.hypot(L.x, L.z) >= 62) { sp = 'jump'; endY = 2.3; }
+  }
   return {
-    start: now, T, S0, L, h, grounder, caught, hr, foul, bi, fr, landed: false, hd: V(hx, 0, hz),
-    endY: caught ? 1.35 : BALL_R, dist: Math.hypot(L.x, L.z),
+    start: now, T, S0, L, h, grounder, caught, hr, foul, bi, fr, landed: false, hd: V(hx, 0, hz), sp,
+    spYaw: Math.atan2(L.x - FPOS[bi][0], L.z - FPOS[bi][1]),
+    endY, dist: Math.hypot(L.x, L.z),
     roll: V(hx, 0, hz).multiplyScalar(hr || caught || foul ? 0 : clamp(dd * 0.12, 2, 10)), n: 0
   };
 }
@@ -82,7 +90,7 @@ function pitcherK(now) {
 function updateFielders(now, k) {
   const ready = phase === 'fly' || phase === 'deliver' || (phase === 'wait' && k > 0.6) ? 1 : 0.3;
   fielderF.forEach((f, i) => {
-    let x = FPOS[i][0], z = FPOS[i][1], yaw = Math.atan2(-x, -z), mv = 0, reach = 0, rd = ready;
+    let x = FPOS[i][0], z = FPOS[i][1], yaw = Math.atan2(-x, -z), mv = 0, reach = 0, rd = ready, spU = null;
     if (play) {
       rd = 0.5;
       if (play.bi === i) {
@@ -92,6 +100,7 @@ function updateFielders(now, k) {
         if (u > 0 && pr < 1) { mv = 1; yaw = Math.atan2(play.L.x - FPOS[i][0], play.L.z - FPOS[i][1]); }
         else yaw = Math.atan2(ballMesh.position.x - x, ballMesh.position.z - z);
         if (play.caught) reach = clamp((u - 0.7) / 0.3, 0, 1);
+        if (play.sp) { spU = u; yaw = play.spYaw; if (play.sp === 'jump') reach = clamp((u - 0.75) / 0.2, 0, 1); }
       } else if (play.cover && play.cover[i]) {
         const c = play.cover[i], k = clamp((now - play.start) / 1.0, 0, 1);
         x = lerp(FPOS[i][0], c.x - 0.6, k); z = lerp(FPOS[i][1], c.z + 0.6, k);
@@ -99,8 +108,27 @@ function updateFielders(now, k) {
         else yaw = Math.atan2(ballMesh.position.x - x, ballMesh.position.z - z);
       } else yaw = Math.atan2(ballMesh.position.x - x, ballMesh.position.z - z);
     }
-    poseFig(f, squashJ(fielderJ(x, z, yaw, now * 11 + i * 1.7, mv, rd, reach), 0), yaw, yaw);
+    let J = squashJ(fielderJ(x, z, yaw, now * 11 + i * 1.7, mv, rd, reach), 0);
+    if (spU !== null) J = superPose(J, play.sp, spU, x, z, yaw);
+    poseFig(f, J, yaw, yaw);
   });
+}
+/* スーパープレーの体の動き。dive = 前に飛びつく（足元を軸に前へ倒す）、jump = 高く跳ぶ */
+const _sq = new THREE.Quaternion(), _sa = V();
+function superPose(J, kind, u, x, z, yaw) {
+  const a = clamp((u - 0.78) / 0.25, 0, 1), up = 1 - clamp((u - 1.4) / 0.35, 0, 1);
+  if (a <= 0 || up <= 0) return J;
+  const sx = Math.sin(yaw), cz = Math.cos(yaw);
+  let ang = 0, lift = 0, back = 0;
+  if (kind === 'dive') { ang = 1.35 * easeOut(a) * up; lift = 0.12 * Math.sin(Math.PI * a); back = 1.0 * easeOut(a) * up; }
+  else lift = 1.0 * Math.sin(Math.PI * clamp((u - 0.78) / 0.42, 0, 1));
+  _sq.setFromAxisAngle(_sa.set(cz, 0, -sx), ang);
+  for (const k in J) {
+    const p = J[k];
+    p.x -= x; p.z -= z; p.applyQuaternion(_sq);
+    p.x += x - sx * back; p.z += z - cz * back; p.y += lift;
+  }
+  return J;
 }
 /* runners on base run to the next base until the result is shown, then snap to the new bases */
 const NEXT_BASE = [[0, -38.8], [-19.4, -19.4], [0, 0]];
@@ -206,11 +234,18 @@ function playShot(p, now) {
   const pts = [p.S0, mid, V(p.L.x + p.roll.x, 0.5, p.L.z + p.roll.z)];
   if (p.throws) p.throws.forEach(t => pts.push(t.to));
   p.shot = frameShot(pts, now + 0.35);                             // let the swing finish in the catcher view, then cut
+  if (p.sp) {                                                      // スーパープレー：野手に寄る
+    let hx = p.L.x - FPOS[p.bi][0], hz = p.L.z - FPOS[p.bi][1]; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+    const sd = (Math.hypot(p.L.x - hz * 6, p.L.z + hx * 6 + 30) < Math.hypot(p.L.x + hz * 6, p.L.z - hx * 6 + 30)) ? 1 : -1;
+    const pos = V(p.L.x - hz * 6.5 * sd + hx * 3, 2.0, p.L.z + hx * 6.5 * sd + hz * 3);
+    p.spShot = { pos, look: V(p.L.x, 0.9, p.L.z), fov: 42, at: now + p.T * 0.58, until: now + p.T * 1.5 };
+  }
 }
 let camShot = null;
 function updateCamera(now, dt) {
   let shot = null;
-  if (play && play.shot && now >= play.shot.at) shot = play.shot;
+  if (play && play.spShot && now >= play.spShot.at && now < play.spShot.until) shot = play.spShot;
+  else if (play && play.shot && now >= play.shot.at) shot = play.shot;
   else if (camShot && now >= camShot.at) shot = camShot;
   if (shot) { camPos.copy(shot.pos); camLook.copy(shot.look); camFov = shot.fov; }
   else { camPos.copy(CAM_HOME); camLook.copy(homeLook()); camFov = homeFov; }

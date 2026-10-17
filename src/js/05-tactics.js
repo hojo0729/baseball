@@ -100,17 +100,17 @@ function buntResult(c, B, squeeze) {
   const bsp = curBatter().sp;
   if (c.popup) return { t: out('バント失敗（小フライ）'), good: false };
   if (squeeze) {
-    if (Math.random() < 0.15) { const t = advance(1, 'スクイズ成功！ 内野安打'); G.hits--; return { t, good: true }; }
+    if (Math.random() < 0.06) { const t = advance(1, 'スクイズ成功！ 内野安打'); G.hits--; return { t, good: true }; }
     endPA(); G.outs++;
     G.bases = [0, B[0], B[1]]; G.runs++;
     return { t: 'スクイズ成功！ 1点', good: true, thr: [1] };
   }
   const r = Math.random();
   if (!(B[0] || B[1] || B[2])) {
-    if (r < 0.3) return { t: advance(1, 'バントヒット'), good: true };
+    if (r < 0.08) return { t: advance(1, 'バントヒット'), good: true };
     return { t: out('バントアウト'), good: false, thr: [1] };
   }
-  if (r < 0.12) return { t: advance(1, 'バントヒット'), good: true };
+  if (r < 0.04) return { t: advance(1, 'バントヒット'), good: true };
   const chain = B[0] ? (B[1] ? (B[2] ? 2 : 1) : 0) : -1;       // highest base in the forced chain
   if (r < 0.27 && chain >= 0) {                                 // lead forced runner is cut down
     endPA(); G.outs++;
@@ -152,17 +152,17 @@ function tryCpuPickoff(now) {
   if (G.pickPa !== G.pa) { G.pickPa = G.pa; G.pickN = 0; }
   if (G.pickN >= 2 || Math.random() > (runSign() ? 0.3 : 0.15)) return false;
   G.pickN++;
-  startPickoff(now, Math.random() < (sign === 'steal' || sign === 'run' ? 0.3 : 0.05));
+  startPickoff(now, runSign() && Math.random() < 0.3);   // 走る指示を出していないときは刺されない
   return true;
 }
 function userPickoff() {
   if (mode !== 'pit' || phase !== 'ready' || !(G.bases[0] || G.bases[1])) return;
   if (online) {   // the pitcher's device decides and tells the batter's device
-    const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = Math.random() < (planned ? 0.4 : 0.07);
+    const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = planned && Math.random() < 0.4;   // 走る気配がないときは刺せない
     startPickoff(now_(), out); send('pick', { out }); return;
   }
   const planned = cpuStealPlan;
-  startPickoff(now_(), Math.random() < (planned ? 0.4 : 0.07));
+  startPickoff(now_(), planned && Math.random() < 0.4);
   if (planned && Math.random() < 0.5) cpuStealPlan = false;     // the runner gets scared off
 }
 function stepPickoff(now) {
