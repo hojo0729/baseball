@@ -55,8 +55,9 @@ git add -A && git commit && git push    # docs/ もコミットする（GitHub P
 推し順：遊び方ガイド → ペナントレース。
 
 ## 9. GitHub ユーザー名の変更（完了）
-旧 `saboten-apps` から `saboten-apps` に変更済み。Pages の URL は `https://saboten-apps.github.io/baseball/`。旧 URL は見られず、PWA は入れ直しになる。
+ユーザー名は `saboten-apps` に変更済み。Pages の URL は `https://saboten-apps.github.io/baseball/`。旧 URL は見られず、PWA は入れ直しになる。
 URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node build.mjs` で `docs/` と `dist/` を作り直す。
+履歴も書き換えて、旧ユーザー名は作者名・メール・ファイル内容のどこにも残していない。旧名をコード・文書・コミットメッセージに書かないこと。
 
 ## 10. 進め方の約束
 - 依頼の意図が曖昧なときは、短く確認してよい。ただし、大きな機能は先に方針を一言伝える。
