@@ -170,6 +170,7 @@ function makeFig(o) {
   const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
   const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
   add(SPH, 'LINE', hs, 1.055);
+  f.cheeks = [-1, 1].map(s => { const m = add(SPH, 'HEAD', h, 0.12, 0.11, 0.12); m.position.set(0.138 * s, -0.05, 0.05); return m; });
   f.muz = add(SPH, 'MUZ', h, 0.115, 0.085, 0.09); f.muz.position.set(0, -0.065, 0.165);
   if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
   f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.066, 0.085, 0.03); m.position.set(0.088 * s, -0.004, 0.19); m.rotation.z = 0.42 * s; return m; });
@@ -192,15 +193,15 @@ function makeFig(o) {
     if (!o.lite) { const i = add(SPH, 'EARIN', e, 0.6, 0.75, 0.6); i.position.set(0, 0, 0.55); }
     return e;
   });
-  if (o.helmet) { add(HELG, 'CAP', h, 0.255).position.y = 0.05; }                    // 帽子を少し上げて、大きな目が隠れないようにする
-  else add(CAPG, 'CAP', h, 0.245).position.y = 0.07;
-  const brim = add(BRIM, 'CAP', h, 0.15, 0.014, 0.15); brim.position.set(0, 0.08, 0.19);
-  f.ua = [add(cylGeo(0.085, 0.078), 'JERSEY'), add(cylGeo(0.085, 0.078), 'JERSEY')];
-  f.fa = [add(cylGeo(0.074, 0.066), 'LIMB'), add(cylGeo(0.074, 0.066), 'LIMB')];
+  if (o.helmet) { add(HELG, 'CAP', h, 0.258).position.set(0, 0.065, -0.01); }                    // 帽子を少し上げて、大きな目が隠れないようにする
+  else add(CAPG, 'CAP', h, 0.248).position.set(0, 0.08, -0.01);
+  const brim = add(BRIM, 'CAP', h, 0.155, 0.015, 0.155); brim.position.set(0, 0.09, 0.185); brim.rotation.x = 0.1;
+  f.ua = [add(cylGeo(0.096, 0.088), 'JERSEY'), add(cylGeo(0.096, 0.088), 'JERSEY')];
+  f.fa = [add(cylGeo(0.085, 0.075), 'LIMB'), add(cylGeo(0.085, 0.075), 'LIMB')];
   f.ej = o.lite ? null : [add(SPH, 'LIMB'), add(SPH, 'LIMB')];
   f.paw = [add(SPH, 'PAW'), add(SPH, 'PAW')];
-  f.th = [add(cylGeo(0.11, 0.098), 'PANTS'), add(cylGeo(0.11, 0.098), 'PANTS')];
-  f.sh = [add(cylGeo(0.09, 0.082), 'SOCK'), add(cylGeo(0.09, 0.082), 'SOCK')];
+  f.th = [add(cylGeo(0.122, 0.108), 'PANTS'), add(cylGeo(0.122, 0.108), 'PANTS')];
+  f.sh = [add(cylGeo(0.10, 0.088), 'SOCK'), add(cylGeo(0.10, 0.088), 'SOCK')];
   f.kj = o.lite ? null : [add(SPH, 'PANTS'), add(SPH, 'PANTS')];
   f.shoe = [add(SPH, 'SHOE'), add(SPH, 'SHOE')];
   f.curl = add(CURL, 'TAIL'); f.longT = add(LONGT, 'TAIL'); f.ball = add(SPH, 'TAIL');
@@ -220,7 +221,7 @@ function setTeam(f, team) {
   f.panda = sp === 'panda';
   f.patch.forEach(p => { p.visible = f.panda; });
   f.ex = null; setFace(f, 'normal');
-  f.curl.visible = S.tail === 'curl'; f.longT.visible = S.tail === 'long'; f.ball.visible = S.tail === 'ball' || S.tail === 'fluff';
+  f.curl.visible = S.tail === 'curl'; f.longT.visible = S.tail === 'long'; f.ball.visible = S.tail === 'fluff' || S.tail === 'ball';
 }
 
 /* 表情の切り替え。まばたきは見た目だけなので専用の乱数を使う（withSeed中でもずれない） */
@@ -234,17 +235,34 @@ function faceFor(f, ex, now) {
 }
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
-const SQ = 0.72, LEG_SQ = 0.5, HIP_H = 0.9, HEAD_K = 1.42;   // 脚はより短く、頭は大きく
+const SQ = 0.68, LEG_SQ = 0.44, HIP_H = 0.9, HEAD_K = 1.74;   // 2頭身黄金比：頭を大きく、手足を短くコンパクトに
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
+  const pelvis = J.pelvis, neck = J.neck;
   for (const k in J) {
     const p = J[k].clone();
     if (!(keepHands && (k === 'hL' || k === 'hR'))) p.y = sqY(p.y, base);
+    // 肩・腕を胴体の中心軸（neck）に寄せてマスコット体型にする
+    if (k === 'sL' || k === 'sR') {
+      p.x = neck.x + (p.x - neck.x) * 0.72;
+      p.z = neck.z + (p.z - neck.z) * 0.72;
+    } else if (!keepHands && (k === 'eL' || k === 'eR' || k === 'hL' || k === 'hR')) {
+      p.x = neck.x + (p.x - neck.x) * 0.75;
+      p.z = neck.z + (p.z - neck.z) * 0.75;
+    }
+    // 股関節・膝・足を胴体（pelvis）の下に寄せて短足マスコット化
+    if (k === 'hipL' || k === 'hipR') {
+      p.x = pelvis.x + (p.x - pelvis.x) * 0.74;
+      p.z = pelvis.z + (p.z - pelvis.z) * 0.74;
+    } else if (k === 'kL' || k === 'kR' || k === 'fL' || k === 'fR') {
+      p.x = pelvis.x + (p.x - pelvis.x) * 0.76;
+      p.z = pelvis.z + (p.z - pelvis.z) * 0.76;
+    }
     o[k] = p;
   }
   const up = o.head.clone().sub(o.neck).normalize();
-  o.head = o.neck.clone().addScaledVector(up, 0.27);
+  o.head = o.neck.clone().addScaledVector(up, 0.32);
   return o;
 }
 function seg(m, a, b, w = 1) {
@@ -260,20 +278,20 @@ function poseFig(f, J, yaw, headYaw) {
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
   f.body.position.addVectors(J.pelvis, J.neck).multiplyScalar(0.5);
   f.body.quaternion.setFromUnitVectors(_Y, _d.multiplyScalar(1 / L));
-  f.body.scale.set(0.25 * bk, L * 0.66, 0.23 * bk);
+  f.body.scale.set(0.31 * bk, L * 0.62, 0.29 * bk);
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
-  f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(0.98 * bk, 0.035, 0.94 * bk);
+  f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(1.15 * bk, 0.038, 1.10 * bk);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
   seg(f.ua[0], J.sL, J.eL, bk); seg(f.fa[0], J.eL, J.hL);
   seg(f.ua[1], J.sR, J.eR, bk); seg(f.fa[1], J.eR, J.hR);
-  if (f.ej) { dot(f.ej[0], J.eL, 0.078); dot(f.ej[1], J.eR, 0.078); }
-  dot(f.paw[0], J.hL, 0.085); dot(f.paw[1], J.hR, 0.085);
+  if (f.ej) { dot(f.ej[0], J.eL, 0.086); dot(f.ej[1], J.eR, 0.086); }
+  dot(f.paw[0], J.hL, 0.096); dot(f.paw[1], J.hR, 0.096);
   [[J.hipL, J.kL, J.fL, 0], [J.hipR, J.kR, J.fR, 1]].forEach(([hp, kn, ft, i]) => {
     seg(f.th[i], hp, kn, bk);
     _a.copy(ft); _a.y += 0.07; seg(f.sh[i], kn, _a);
-    if (f.kj) dot(f.kj[i], kn, 0.1);
+    if (f.kj) dot(f.kj[i], kn, 0.11);
     f.shoe[i].position.set(ft.x + Math.sin(yaw) * 0.03, ft.y + 0.055, ft.z + Math.cos(yaw) * 0.03);
-    f.shoe[i].scale.set(0.1, 0.075, 0.135); f.shoe[i].rotation.set(0, yaw, 0);
+    f.shoe[i].scale.set(0.118, 0.082, 0.148); f.shoe[i].rotation.set(0, yaw, 0);
   });
   _b.set(-Math.sin(yaw), 0, -Math.cos(yaw));
   _a.copy(J.pelvis).addScaledVector(_b, 0.2); _a.y += 0.06;

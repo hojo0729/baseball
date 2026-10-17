@@ -318,7 +318,8 @@ function update(now, dt) {
   }
   poseFig(pitcherF, pj, pyaw, pyaw);
   refreshShown();
-  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
+  const bHeadYaw = shownLeft ? Math.PI * 1.25 : Math.PI * 0.75;
+  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, bHeadYaw);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
