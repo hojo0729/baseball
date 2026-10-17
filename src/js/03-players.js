@@ -27,14 +27,16 @@ const SPECIES = {
   panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014, bulk: 1.07 },
   neko:  { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', NOSE: '#d96b78', CHEST: '#fff6ea', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94 },
   usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013, bulk: 0.93 },
-  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 }
+  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 },
+  human: { HEAD: '#fad9be', MUZ: '#fad9be', EARC: '#fad9be', EARIN: '#fad9be', LIMB: '#fad9be', PAW: '#fad9be', TAIL: '#fad9be', PATCH: '#fad9be', NOSE: '#df9c82', CHEST: '#fad9be', ear: 'none', muzS: [0.06, 0.04, 0.04], tail: 'none', hl: 0.012, bulk: 1.04 }
 };
 const UNIFORM = {
   home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true },
   away: { species: 'panda', JERSEY: '#24467d', PANTS: '#dde2ea', CAP: '#162845', SOCK: '#162845' },
   neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#2e1f4a', SOCK: '#2e1f4a', pin: true },
   usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f' },
-  kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' }
+  kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' },
+  human: { species: 'human', JERSEY: '#16181f', PANTS: '#2a2d36', CAP: '#0e1014', SOCK: '#2b78dc' }
 };
 const MATS = {};
 for (const team in UNIFORM) {
@@ -48,6 +50,7 @@ const COMMON = {
   EYE: toon('#1b1a1f'), NOSE: toon('#2a1d19'), SHOE: toon('#1e2026'), GLOVE: toon('#8a5428'),
   HL: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
   TOOTH: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+  HAIR: toon('#1e1a18'),
   BLUSH: new THREE.MeshBasicMaterial({ color: '#ff7f8f', transparent: true, opacity: 0.62, depthWrite: false }),
   LINE: new THREE.MeshBasicMaterial({ color: '#3a2a24', side: THREE.BackSide }),      // 輪郭線（裏面を少し大きく描く）
   MOUTH: new THREE.MeshBasicMaterial({ color: '#3a2420' })
@@ -76,6 +79,21 @@ function drawFace(ex, sp) {
   c.lineCap = c.lineJoin = 'round';
   const dot = (x, y, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); };
   // どうぶつ別のベース模様（麻呂眉・額のトラ縞・猫ひげ・柴の裏白）
+  if (sp === 'human') {
+    sides.forEach(s => {
+      dot(X(s * EA), Y(EY), 24, 28, ink);
+      dot(X(s * EA) + 5 * s, Y(EY) - 8, 7, 7, '#ffffff');
+      c.strokeStyle = '#221915'; c.lineWidth = 6.5; c.beginPath();
+      c.moveTo(X(s * 0.2), Y(EY) - 38); c.lineTo(X(s * 0.52), Y(EY) - 44); c.stroke();
+    });
+    if (ex === 'blink') { sides.forEach(s => arc(s, false)); }
+    else if (ex === 'joy' || ex === 'smile') { sides.forEach(s => arc(s, true)); }
+    else if (ex === 'shout') {
+      sides.forEach(s => { const x = X(s * EA), y = Y(EY); c.strokeStyle = line; c.lineWidth = 8; c.beginPath();
+        c.moveTo(x - s * 20, y - 20); c.lineTo(x + s * 16, y); c.lineTo(x - s * 20, y + 20); c.stroke(); });
+    }
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 2; return t;
+  }
   if (sp === 'shiba') {
     sides.forEach(s => {
       dot(X(s * 0.62), Y(2.03), 28, 14, 'rgba(255,246,232,0.88)');
@@ -193,6 +211,7 @@ function makeFig(o) {
     if (!o.lite) { const i = add(SPH, 'EARIN', e, 0.6, 0.75, 0.6); i.position.set(0, 0, 0.55); }
     return e;
   });
+  f.hair = [-1, 1].map(s => { const m = add(SPH, 'HAIR', h, 0.052, 0.11, 0.07); m.position.set(0.185 * s, 0.03, 0.04); m.visible = false; return m; });
   if (o.helmet) { add(HELG, 'CAP', h, 0.258).position.set(0, 0.065, -0.01); }                    // 帽子を少し上げて、大きな目が隠れないようにする
   else add(CAPG, 'CAP', h, 0.248).position.set(0, 0.08, -0.01);
   const brim = add(BRIM, 'CAP', h, 0.155, 0.015, 0.155); brim.position.set(0, 0.09, 0.185); brim.rotation.x = 0.1;
@@ -213,7 +232,9 @@ function setTeam(f, team) {
   const sp = UNIFORM[team].species, M = MATS[team], S = SPECIES[sp];
   f.team = team; f.sp = sp;
   f.parts.forEach(m => { const r = m.userData.role; m.material = M[r] || COMMON[r]; });
-  if (f.muz && S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]);
+  if (f.muz) { f.muz.visible = sp !== 'human'; if (S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]); }
+  if (f.cheeks) f.cheeks.forEach(m => { m.visible = sp !== 'human'; });
+  if (f.hair) f.hair.forEach(m => { m.visible = sp === 'human'; });
   if (f.chest) f.chest.visible = sp === 'kuma' || sp === 'shiba';
   f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; if (S.earS) e.scale.set(S.earS[0], S.earS[1], 0.05); });
   f.longEar.forEach(e => { e.visible = S.ear === 'long'; });

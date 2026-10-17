@@ -25,9 +25,8 @@ function withSeed(seed, fn) {
 }
 
 const battingSide = () => (G.inning % 2 === 1 ? 'away' : 'home');   // top half: guest (pandas) bat, bottom: host (shibas)
-/* two-team games (online, or the 9-inning CPU match) keep a running score per side */
-const twoTeam = () => online || !!match;
-function scoreBook() { return online ? onl.score : match ? match.score : { home: 0, away: 0 }; }
+const twoTeam = () => online || !!match || !!(story && story.inn);
+function scoreBook() { return online ? onl.score : match ? match.score : (story && story.score ? story.score : { home: 0, away: 0 }); }
 function onlineScore() {
   const b = scoreBook(), s = { home: b.home, away: b.away };
   if (G) s[battingSide()] += G.runs;                                // runs of the half in progress (banked at each change)

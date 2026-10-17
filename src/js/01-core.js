@@ -417,7 +417,8 @@ function hud() {
     $('#inn').textContent = inningLabel();
     const tag = t => '<i style="background:' + TEAM_COL[t][0] + '"></i>' + ROSTER[t].name.slice(0, 2);
     if (online) { $('#slab').innerHTML = tag('home') + ' - ' + tag('away'); $('#runs').textContent = sc.home + '-' + sc.away; }
-    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').innerHTML = tag(match.mine) + ' - ' + tag(match.opp); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    else if (match) { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').innerHTML = tag(match.mine) + ' - ' + tag(match.opp); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    else if (story && story.inn) { $('#slab').innerHTML = tag('home') + ' - ' + tag(story.opp); $('#runs').textContent = sc.home + '-' + sc.away; }
   }
   updateRunners();
   updateGoal();
@@ -449,6 +450,7 @@ function endInning(label) {
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
   if (G.inning > last) G.over = !twoTeam() || sb.home !== sb.away;   // two-team games: extra innings until one side pulls ahead
   if (match && G.inning > 24) G.over = true;                          // CPU match: a tie after the 12th is a draw
+  if (story && story.inn && G.inning > (story.maxInn || 7) * 2) G.over = true; // ストーリー第5話：延長7回終了
   if (twoTeam() && G.inning >= last && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // home leads going into the last bottom half
   return label + ' / チェンジ';
 }
@@ -846,7 +848,10 @@ function afterResult() {
   applyEject();
   if (online) { onlineAfterResult(); return; }
   if (match) { matchAfterResult(); return; }
-  if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }
+  if (story) {
+    if (story.inn) { storyAfterResult(); return; }
+    const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; }
+  }
   if (G.over) { showOver(); return; }
   const dd = applyInningDice();
   clearPlay();

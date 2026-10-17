@@ -718,7 +718,8 @@ function hud() {
     $('#inn').textContent = inningLabel();
     const tag = t => '<i style="background:' + TEAM_COL[t][0] + '"></i>' + ROSTER[t].name.slice(0, 2);
     if (online) { $('#slab').innerHTML = tag('home') + ' - ' + tag('away'); $('#runs').textContent = sc.home + '-' + sc.away; }
-    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').innerHTML = tag(match.mine) + ' - ' + tag(match.opp); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    else if (match) { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').innerHTML = tag(match.mine) + ' - ' + tag(match.opp); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    else if (story && story.inn) { $('#slab').innerHTML = tag('home') + ' - ' + tag(story.opp); $('#runs').textContent = sc.home + '-' + sc.away; }
   }
   updateRunners();
   updateGoal();
@@ -750,6 +751,7 @@ function endInning(label) {
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
   if (G.inning > last) G.over = !twoTeam() || sb.home !== sb.away;   // two-team games: extra innings until one side pulls ahead
   if (match && G.inning > 24) G.over = true;                          // CPU match: a tie after the 12th is a draw
+  if (story && story.inn && G.inning > (story.maxInn || 7) * 2) G.over = true; // ストーリー第5話：延長7回終了
   if (twoTeam() && G.inning >= last && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // home leads going into the last bottom half
   return label + ' / チェンジ';
 }
@@ -1147,7 +1149,10 @@ function afterResult() {
   applyEject();
   if (online) { onlineAfterResult(); return; }
   if (match) { matchAfterResult(); return; }
-  if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }
+  if (story) {
+    if (story.inn) { storyAfterResult(); return; }
+    const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; }
+  }
   if (G.over) { showOver(); return; }
   const dd = applyInningDice();
   clearPlay();
@@ -1578,14 +1583,16 @@ const SPECIES = {
   panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014, bulk: 1.07 },
   neko:  { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', NOSE: '#d96b78', CHEST: '#fff6ea', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94 },
   usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013, bulk: 0.93 },
-  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 }
+  kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 },
+  human: { HEAD: '#fad9be', MUZ: '#fad9be', EARC: '#fad9be', EARIN: '#fad9be', LIMB: '#fad9be', PAW: '#fad9be', TAIL: '#fad9be', PATCH: '#fad9be', NOSE: '#df9c82', CHEST: '#fad9be', ear: 'none', muzS: [0.06, 0.04, 0.04], tail: 'none', hl: 0.012, bulk: 1.04 }
 };
 const UNIFORM = {
   home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true },
   away: { species: 'panda', JERSEY: '#24467d', PANTS: '#dde2ea', CAP: '#162845', SOCK: '#162845' },
   neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#2e1f4a', SOCK: '#2e1f4a', pin: true },
   usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f' },
-  kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' }
+  kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' },
+  human: { species: 'human', JERSEY: '#16181f', PANTS: '#2a2d36', CAP: '#0e1014', SOCK: '#2b78dc' }
 };
 const MATS = {};
 for (const team in UNIFORM) {
@@ -1599,6 +1606,7 @@ const COMMON = {
   EYE: toon('#1b1a1f'), NOSE: toon('#2a1d19'), SHOE: toon('#1e2026'), GLOVE: toon('#8a5428'),
   HL: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
   TOOTH: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+  HAIR: toon('#1e1a18'),
   BLUSH: new THREE.MeshBasicMaterial({ color: '#ff7f8f', transparent: true, opacity: 0.62, depthWrite: false }),
   LINE: new THREE.MeshBasicMaterial({ color: '#3a2a24', side: THREE.BackSide }),      // 輪郭線（裏面を少し大きく描く）
   MOUTH: new THREE.MeshBasicMaterial({ color: '#3a2420' })
@@ -1627,6 +1635,21 @@ function drawFace(ex, sp) {
   c.lineCap = c.lineJoin = 'round';
   const dot = (x, y, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); };
   // どうぶつ別のベース模様（麻呂眉・額のトラ縞・猫ひげ・柴の裏白）
+  if (sp === 'human') {
+    sides.forEach(s => {
+      dot(X(s * EA), Y(EY), 24, 28, ink);
+      dot(X(s * EA) + 5 * s, Y(EY) - 8, 7, 7, '#ffffff');
+      c.strokeStyle = '#221915'; c.lineWidth = 6.5; c.beginPath();
+      c.moveTo(X(s * 0.2), Y(EY) - 38); c.lineTo(X(s * 0.52), Y(EY) - 44); c.stroke();
+    });
+    if (ex === 'blink') { sides.forEach(s => arc(s, false)); }
+    else if (ex === 'joy' || ex === 'smile') { sides.forEach(s => arc(s, true)); }
+    else if (ex === 'shout') {
+      sides.forEach(s => { const x = X(s * EA), y = Y(EY); c.strokeStyle = line; c.lineWidth = 8; c.beginPath();
+        c.moveTo(x - s * 20, y - 20); c.lineTo(x + s * 16, y); c.lineTo(x - s * 20, y + 20); c.stroke(); });
+    }
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 2; return t;
+  }
   if (sp === 'shiba') {
     sides.forEach(s => {
       dot(X(s * 0.62), Y(2.03), 28, 14, 'rgba(255,246,232,0.88)');
@@ -1744,6 +1767,7 @@ function makeFig(o) {
     if (!o.lite) { const i = add(SPH, 'EARIN', e, 0.6, 0.75, 0.6); i.position.set(0, 0, 0.55); }
     return e;
   });
+  f.hair = [-1, 1].map(s => { const m = add(SPH, 'HAIR', h, 0.052, 0.11, 0.07); m.position.set(0.185 * s, 0.03, 0.04); m.visible = false; return m; });
   if (o.helmet) { add(HELG, 'CAP', h, 0.258).position.set(0, 0.065, -0.01); }                    // 帽子を少し上げて、大きな目が隠れないようにする
   else add(CAPG, 'CAP', h, 0.248).position.set(0, 0.08, -0.01);
   const brim = add(BRIM, 'CAP', h, 0.155, 0.015, 0.155); brim.position.set(0, 0.09, 0.185); brim.rotation.x = 0.1;
@@ -1764,7 +1788,9 @@ function setTeam(f, team) {
   const sp = UNIFORM[team].species, M = MATS[team], S = SPECIES[sp];
   f.team = team; f.sp = sp;
   f.parts.forEach(m => { const r = m.userData.role; m.material = M[r] || COMMON[r]; });
-  if (f.muz && S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]);
+  if (f.muz) { f.muz.visible = sp !== 'human'; if (S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]); }
+  if (f.cheeks) f.cheeks.forEach(m => { m.visible = sp !== 'human'; });
+  if (f.hair) f.hair.forEach(m => { m.visible = sp === 'human'; });
   if (f.chest) f.chest.visible = sp === 'kuma' || sp === 'shiba';
   f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; if (S.earS) e.scale.set(S.earS[0], S.earS[1], 0.05); });
   f.longEar.forEach(e => { e.visible = S.ear === 'long'; });
@@ -2033,13 +2059,38 @@ const STAGES = [
       ['コタロウ（柴犬）', '3回までに3点取れば 逆転だ。変化球を よく見ていこう！']],
     win: [['ウサミ（うさぎ）', 'ぴょ…逆転されちゃった…'], ['コタロウ（柴犬）', '逆転勝ち！ いよいよ決勝だ！']],
     lose: [['ウサミ（うさぎ）', 'ぴょーん、わたしの勝ち〜'], ['コタロウ（柴犬）', '曲がる方向を 読んでいこう…！']] },
-  { short: '最終話', title: '最終話 剛腕ヒグマ', opp: 'kuma', team: 'ヒグマーズ', mode: 'bat', runs: 2,
+  { short: '第4話', title: '第4話 剛腕ヒグマ', opp: 'kuma', team: 'ヒグマーズ', mode: 'bat', runs: 2,
     pitcher: { speed: 3, mix: { gou: 24, str: 10, frk: 10, sli: 8 } },
     intro: [['ヒグマ（くま）', '…オレの剛速球は 160キロを超える。'],
       ['コタロウ（柴犬）', 'は、速い…！ でも 巨大バットなら 当てられるはず！'],
       ['ヒグマ（くま）', '…2点。取れるものなら 取ってみろ。']],
-    win: [['ヒグマ（くま）', '…見事だ。優勝は おまえたちのものだ。'], ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！']],
-    lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] }
+    win: [['ヒグマ（くま）', '…見事だ。どうぶつリーグ優勝は おまえたちのものだ。'],
+      ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！'],
+      ['エリート幹部（人間）', '…フッ、ずいぶんと楽しそうだな、家畜どもが。']],
+    lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] },
+  { short: '第5話', title: '最終話 審判の日 人間たちの野球', opp: 'human', team: 'ヒューマンズ', mode: 'bat', inn: 5, maxInn: 7,
+    pitcher: { speed: 4, mix: { str: 20, sli: 16, frk: 14, gou: 12, cut: 10 } },
+    intro: [
+      ['エリート幹部（人間）', '…フッ、ずいぶんと楽しそうだな、動物どもが。'],
+      ['コタロウ（柴犬）', 'だ、誰だ！？ 人間がどうしてスタジアムに…？'],
+      ['エリート幹部（人間）', 'お前たちがなぜ動物の姿をしているか、本当に知らないのか？'],
+      ['ヒグマ（くま）', '…思い出したぞ！ オレたちはかつて、野球の審判に負けて動物にされた人間だった！'],
+      ['パン太（パンダ）', 'なんじゃと…！？ わしらは…人間じゃったのか…！'],
+      ['エリート幹部（人間）', 'このリーグは敗残者の隔離施設。だが、我ら人間に5回で勝てば…全員『人間』に戻してやろう。'],
+      ['ミケ（ネコ）', '負けたら…一生この毛皮のままニャの…！？'],
+      ['コタロウ（柴犬）', 'みんな！ 人間の姿と自由を取り戻すために…オールスターで絶対に勝つぞ！']
+    ],
+    win: [
+      ['エリート幹部（人間）', 'バカな…動物どもに…我々人間が敗れるなど…！'],
+      ['コタロウ（柴犬）', '勝った…勝ったぞ！ あれ…体が光って…毛皮が…！？'],
+      ['ミケ（ネコ）', '手が…人間の手になってるニャ…ううん、なってるよ！'],
+      ['ヒグマ（くま）', '戻れたんだ…オレたちは、人間だ！'],
+      ['コタロウ（柴犬）', 'ありがとう、みんな！ ぼくたちの本当の自由だ！']
+    ],
+    lose: [
+      ['エリート幹部（人間）', '所詮は動物。永遠にその毛皮の中で暮らすがいい。'],
+      ['コタロウ（柴犬）', 'くっ…ここで諦めるわけにはいかない…もう一度だ！']
+    ] }
 ];
 let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null, ovAction5 = null, ovAction6 = null;
 function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
@@ -2047,11 +2098,12 @@ function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n
 
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
 /* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
-const helpersOn = () => !online && !match;
+const helpersOn = () => !online && !match && !(story && story.inn);
 function giantActive() { return helpersOn() && mode === 'bat' && !!G && G.pa % 3 === 2; }
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
+  if (st.inn) return st.team + 'との審判の5回勝負。勝って人間の姿と自由を取り戻そう！（同点なら7回まで延長）';
   if (st.mode === 'pit') return st.team + '打線を、3回1失点以内に抑えよう。'.replace('1', st.max);
   return st.oppRuns ? st.team + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
     : st.team + 'から、3回までに' + st.runs + '点取ろう。';
@@ -2066,7 +2118,14 @@ function updateGoal() {
   }
   if (match) { el.innerHTML = 'CPU対戦 vs ' + ROSTER[match.opp].name + '（' + DIFF[diffLv].name + '）・' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>' + rosterLines(); return; }
   let s = '';
-  if (story) s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
+  if (story) {
+    if (story.inn) {
+      s += story.short + ' vs ' + ROSTER[story.opp].name + '（5回戦・延長7回まで）　' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>';
+      el.innerHTML = s + rosterLines();
+      return;
+    }
+    s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
+  }
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
   else s += n === 0 ? '<span class="hot">ラッキーボール発動中！</span>' : 'ラッキーボールまで あと' + n + '人';
@@ -2086,6 +2145,19 @@ function teamIcon(team) {
   cv.width = cv.height = 72;
   const g = cv.getContext('2d');
   g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = '#2b1d16'; g.lineWidth = 2.4;
+  if (sp === 'human') {
+    g.fillStyle = S.HEAD; g.beginPath(); g.ellipse(36, 42, 20, 18, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#1c1b18'; g.beginPath(); g.ellipse(36, 26, 20, 10, 0, Math.PI, Math.PI * 2); g.fill();
+    [-1, 1].forEach(s => {
+      g.fillStyle = '#1b1a1f'; g.beginPath(); g.ellipse(36 + s * 9, 41, 3.2, 3.5, 0, 0, 7); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(36 + s * 9 - 1, 39.5, 1.3, 0, 7); g.fill();
+      g.strokeStyle = '#221915'; g.lineWidth = 1.8; g.beginPath();
+      g.moveTo(36 + s * 4.5, 36); g.lineTo(36 + s * 13, 35.5); g.stroke();
+    });
+    g.strokeStyle = '#6a4232'; g.lineWidth = 1.6; g.beginPath();
+    g.moveTo(33, 49); g.lineTo(39, 49); g.stroke();
+    return (ICON_URL[team] = cv.toDataURL());
+  }
   [-1, 1].forEach(s => {
     g.save(); g.translate(36 + s * (S.ear === 'long' ? 11 : 17), S.ear === 'long' ? 17 : 22);
     if (S.ear === 'cone') {
@@ -2145,6 +2217,7 @@ function teamIcon(team) {
 }
 function spkTeam(spk) {
   if (!spk) return null;
+  if (spk.includes('人')) return 'human';
   if (spk.includes('柴')) return 'home';
   if (spk.includes('パンダ')) return 'away';
   if (spk.includes('ネコ')) return 'neko';
@@ -2268,7 +2341,7 @@ function showCpuMenu() {
 }
 /* 自分のチームを選ぶ（相手はほかの4チームからランダム）→ CPUの強さ → 試合開始 */
 const TEAM_ORDER = ['home', 'away', 'neko', 'usagi', 'kuma'];
-const TEAM_COL = { home: ['#d0452a', '柴'], away: ['#2f5aa0', 'パ'], neko: ['#7a56b5', '猫'], usagi: ['#2f9a6c', '兎'], kuma: ['#b8901f', '熊'] };
+const TEAM_COL = { home: ['#d0452a', '柴'], away: ['#2f5aa0', 'パ'], neko: ['#7a56b5', '猫'], usagi: ['#2f9a6c', '兎'], kuma: ['#b8901f', '熊'], human: ['#1e2530', '人'] };
 function pickTeam(side, page) {
   const go = t => () => chooseDiff(() => startMatch(side, t));
   const ts = page ? TEAM_ORDER.slice(3) : TEAM_ORDER.slice(0, 3), o = { title: 'チームをえらぶ',
@@ -2345,14 +2418,55 @@ function startStory() {
 function showStage(i) {
   match = null;
   story = STAGES[i];
-  mode = story.mode;
+  if (story.inn) {
+    story.score = { home: 0, away: 0 };
+    story.half = 0;
+    mode = 'bat';
+  } else {
+    mode = story.mode;
+  }
   $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
   $('.seg').hidden = true; $('#menuBtn').hidden = false;
   $('#pitches').hidden = mode !== 'pit';
-  setTeams(); newGame(); idle(); resize();
+  setTeams(); newGame();
+  if (story.inn) G.maxHalf = story.inn * 2;
+  idle(); resize();
   dialog(story.intro, () => overlay({ title: story.title, text: goalLong(story), b1: ['プレイボール', startGame], b2: ['メニュー', showMenu] }));
 }
+function storyAfterResult() {
+  const sb = onlineScore();
+  if (G.inning >= G.maxHalf && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // サヨナラ
+  if (story.maxInn && G.inning > story.maxInn * 2) G.over = true;
+  if (G.over) { storyEnd(sb.home > sb.away); return; }
+  clearPlay();
+  let wait = rnd(1.6, 2.2);
+  if (G.inning !== story.half) {                     // チェンジ：攻守交代
+    story.half = G.inning;
+    mode = battingSide() === 'home' ? 'bat' : 'pit';
+    $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
+    $('#pitches').hidden = mode !== 'pit';
+    setTeams(); resize(); hud();
+    const dd = applyInningDice();
+    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備'), 'n');
+    if (dd) { setTimeout(() => showDiceBanner(dd), 1600); wait += 3.5; } else wait += 0.8;
+  }
+  phase = mode === 'bat' ? 'wait' : 'ready';
+  nextAt = now_() + wait;
+  if (mode === 'bat' && stealers().length) nextAt += 1.2;
+  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < cpuStealChance();
+  cpuBuntPlan = mode === 'pit' && !cpuStealPlan && (G.bases[0] || G.bases[1]) && G.outs === 0 && Math.random() < 0.3;
+  cpuRelief();
+  updateGoal(); announceChance();
+  setHint(mode === 'bat' ? '投手が投げたら、ボールが通る位置をタップして打つ' : '弾く向きで球種が決まる。指を離した位置がコース、弾く速さが球速');
+}
 function storyCheck() {
+  if (story.inn) {
+    if (G.over) {
+      const sb = onlineScore();
+      return sb.home > sb.away ? 'clear' : 'fail';
+    }
+    return null;
+  }
   if (story.mode === 'bat') { if (G.runs >= story.runs) return 'clear'; if (G.over) return 'fail'; }
   else { if (G.runs > story.max) return 'fail'; if (G.over) return 'clear'; }
   return null;
@@ -2363,8 +2477,12 @@ function storyEnd(win) {
   dialog(win ? st.win : st.lose, () => {
     if (!win) { overlay({ title: '敗北…', text: goalLong(st), b1: ['もう一度', startGame], b2: ['メニュー', showMenu] }); return; }
     saveProgress(Math.max(loadProgress(), i + 1));
-    if (i + 1 >= STAGES.length) overlay({ title: '優勝！', text: 'しばいぬズ、どうぶつリーグ制覇。おめでとう！', b1: ['メニューへ', showMenu] });
-    else overlay({ title: 'ステージクリア', text: st.title + ' クリア！', b1: ['次の話へ', () => showStage(i + 1)], b2: ['メニュー', showMenu] });
+    if (i + 1 >= STAGES.length) {
+      celebrate(now_() + 0.2, 7);
+      overlay({ clear: true, title: '完全勝利！', text: '人間チームに勝利し、全員が人間の姿と自由を取り戻した！\n真・どうぶつリーグ 完結。おめでとう！', b1: ['メニューへ', showMenu] });
+    } else {
+      overlay({ title: 'ステージクリア', text: st.title + ' クリア！', b1: ['次の話へ', () => showStage(i + 1)], b2: ['メニュー', showMenu] });
+    }
   });
 }
 
@@ -2776,9 +2894,8 @@ function withSeed(seed, fn) {
 }
 
 const battingSide = () => (G.inning % 2 === 1 ? 'away' : 'home');   // top half: guest (pandas) bat, bottom: host (shibas)
-/* two-team games (online, or the 9-inning CPU match) keep a running score per side */
-const twoTeam = () => online || !!match;
-function scoreBook() { return online ? onl.score : match ? match.score : { home: 0, away: 0 }; }
+const twoTeam = () => online || !!match || !!(story && story.inn);
+function scoreBook() { return online ? onl.score : match ? match.score : (story && story.score ? story.score : { home: 0, away: 0 }); }
 function onlineScore() {
   const b = scoreBook(), s = { home: b.home, away: b.away };
   if (G) s[battingSide()] += G.runs;                                // runs of the half in progress (banked at each change)
@@ -3034,7 +3151,10 @@ const ROSTER = {
     pit: [['ウサミ', 3, 4, 5, 80, '', ['str','chg','two','cur']], ['ムーン', 3, 3, 4, 45, 'L', ['str','cut','sht']], ['ラパン', 3, 4, 5, 35, '', ['str','frk','sli','chg','snk']]] },
   kuma: { name: 'ヒグマーズ', run: [3, 3, 2, 1, 1, 2, 2, 2, 3], arm: 5, closer: 2, ph: ['キンタロウ', 3, 6, '', 1],
     bat: [['コグマ', 3, 3], ['ツキノワ', 3, 4, 'L'], ['グリズ', 4, 7, 'S*'], ['ベア', 3, 5], ['ヒグ太', 2, 5], ['クマ吉', 3, 4], ['マロン', 2, 4], ['ハニー', 3, 3], ['ドングリ', 2, 3]],
-    pit: [['ヒグマ', 5, 3, 3, 90, '', ['str','gou','sht','snk']], ['シロクマ', 4, 3, 3, 45, 'L', ['str','cut','sli','cur']], ['ポーラ', 4, 4, 4, 35, '', ['str','frk','knk','chg']]] }
+    pit: [['ヒグマ', 5, 3, 3, 90, '', ['str','gou','sht','snk']], ['シロクマ', 4, 3, 3, 45, 'L', ['str','cut','sli','cur']], ['ポーラ', 4, 4, 4, 35, '', ['str','frk','knk','chg']]] },
+  human: { name: 'ヒューマンズ', run: [4, 4, 3, 3, 2, 3, 4, 4, 3], arm: 5, closer: 2, ph: ['エージェント', 5, 6, 'L', 3],
+    bat: [['コード01', 4, 3, 'L'], ['コード02', 4, 4], ['コード03', 4, 5, 'S'], ['アルファ', 5, 7, 'R*'], ['ベータ', 4, 5], ['ガンマ', 3, 4, 'L'], ['デルタ', 3, 3], ['エプシロン', 4, 2], ['ゼータ', 3, 3]],
+    pit: [['ディレクター', 5, 4, 4, 90, '', ['str','sli','frk','gou','cut']], ['マネージャー', 4, 4, 4, 50, 'L', ['str','chg','snk','cur']], ['エグゼクティブ', 5, 5, 5, 40, '*', ALL_PITCHES]] }
 };
 /* どうぶつ固有スキル：チーム（どうぶつ）ごとの特性。ストーリーでは使わない */
 const TRAIT = {
@@ -3042,7 +3162,8 @@ const TRAIT = {
   away: { n: '笹パワー', d: '打球が強い（+8km/h）' },
   neko: { n: '猫の身のこなし', d: '盗塁が決まりやすく、ファインプレーも出やすい' },
   usagi: { n: 'ぴょんぴょん', d: '内野ゴロがときどき内野安打になる' },
-  kuma: { n: '重い剛腕', d: '投げる球が重く、打たれても打球が弱い' }
+  kuma: { n: '重い剛腕', d: '投げる球が重く、打たれても打球が弱い' },
+  human: { n: '完全統制', d: '制球と守備に狂いがない' }
 };
 function trT(which) { return G && !story && opt('trait') ? teamsNow()[which] : null; }
 const GRADE = ['', 'E', 'D', 'C', 'B', 'A', 'S', 'S'];
@@ -3052,6 +3173,10 @@ const handOf = x => (x || 'R').replace('*', '') || 'R', isStar = x => /\*/.test(
 function teamsNow() {
   if (match && G) { const bat = battingSide() === match.side ? match.mine : match.opp; return { bat, fld: bat === match.mine ? match.opp : match.mine }; }
   if (online && G) { const bat = battingSide() === 'home' ? 'home' : 'away'; return { bat, fld: bat === 'home' ? 'away' : 'home' }; }
+  if (story && story.inn && G) {
+    const bat = battingSide() === 'home' ? 'home' : story.opp;
+    return { bat, fld: bat === 'home' ? story.opp : 'home' };
+  }
   const opp = story ? story.opp : 'away';
   return mode === 'bat' ? { bat: 'home', fld: opp } : { bat: opp, fld: 'home' };
 }
@@ -3060,8 +3185,15 @@ function teamState(t) {
   if (!G.teams[t]) G.teams[t] = { order: 0, pit: 0, sta: ROSTER[t].pit[0][4] };
   return G.teams[t];
 }
+const ALL_STAR_BAT = [
+  ['マメ（柴）', 5, 2, 'L', 5], ['ミケ（猫）', 5, 5, 'S*', 4], ['ソウタ（柴）', 5, 7, 'L*', 4],
+  ['ダイパン（パ）', 4, 7, 'R*', 3], ['グリズ（熊）', 4, 7, 'S*', 2], ['ウサミ（兎）', 4, 3, 'L', 5],
+  ['ハチ（柴）', 4, 3, 'S', 4], ['ボス（猫）', 5, 5, 'L', 3], ['ピョン（兎）', 4, 2, 'S', 5]
+];
 function curBatter() {
-  const t = teamsNow().bat, s = teamState(t), slot = s.order % 9, sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
+  const t = teamsNow().bat, s = teamState(t), slot = s.order % 9;
+  let sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
+  if (story && story.inn && t === 'home' && !sub) b = ALL_STAR_BAT[slot];
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
   const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
   const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1
