@@ -158,9 +158,16 @@ function poseFig(f, J, yaw, headYaw) {
 /* ---- right-handed batter ---- */
 /* left-handed hitters: everything is planned in right-handed space and mirrored (x -> -x) at the end */
 const mirX = v => V(-v.x, v.y, v.z);
+/* the batter in the box is held fixed from the pitch until the play is over: the plate appearance ends at contact,
+   and the next hitter (maybe left-handed, maybe a star) must not appear while the ball is still in the air */
+let shownLeft = false, shownStar = false;
+function refreshShown() {
+  if (!G || !(phase === 'idle' || phase === 'wait' || phase === 'ready' || phase === 'deliver')) return;
+  const B = curBatter(); shownLeft = B.side === 'L'; shownStar = B.star;
+}
 function mirrorJ(J) { const o = {}; for (const k in J) o[k] = mirX(J[k]); return o; }
 function makeSwingPlan(C) {
-  if (leftBat()) C = mirX(C);
+  if (shownLeft) C = mirX(C);
   const hy = clamp(C.y + 0.12, 0.8, 1.3), dy = C.y - hy, hl = Math.sqrt(Math.max(0.05, 0.62 * 0.62 - dy * dy));
   const Gc = V(clamp(C.x - hl, X0 + 0.12, X0 + 0.62), hy, 0.02);
   const dc = C.clone().sub(Gc); dc.z = 0; dc.normalize();
@@ -206,7 +213,7 @@ function batterJ(now, k) {
   const hF = G.clone().addScaledVector(dir, 0.04), hB = G.clone().addScaledVector(dir, 0.12);
   const eF = sF.clone().lerp(hF, 0.5).add(V(0.02, -0.12, -0.04)), eB = sB.clone().lerp(hB, 0.5).add(V(0, -0.13, 0.06));
   const J = { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB };
-  return leftBat() ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
+  return shownLeft ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
 }
 
 /* ---- pitcher (built right-handed, mirrored for a lefty). k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
@@ -296,7 +303,7 @@ const batAura = new THREE.Sprite(auraMat()), pitAura = new THREE.Sprite(auraMat(
 scene.add(batAura, pitAura);
 let starBatOn = null;
 function updateStars(now, bj, pj) {
-  const on = !!G && phase !== 'idle', bs = on && curBatter().star, ps = on && curPitcher().star, pulse = 0.5 + 0.2 * Math.sin(now * 4);
+  const on = !!G && phase !== 'idle', bs = on && shownStar, ps = on && curPitcher().star, pulse = 0.5 + 0.2 * Math.sin(now * 4);
   batAura.visible = bs; pitAura.visible = ps;
   if (bs) { batAura.position.copy(bj.J.pelvis); batAura.position.y += 0.15; batAura.position.z -= 0.3; batAura.scale.setScalar(2.6); batAura.material.opacity = pulse; }
   if (ps) { pitAura.position.copy(pj.pelvis); pitAura.position.z -= 0.4; pitAura.scale.setScalar(2.4); pitAura.material.opacity = pulse * 0.9; }

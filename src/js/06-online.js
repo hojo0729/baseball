@@ -226,13 +226,13 @@ function showOnlineOver() {
 /* ---- sharing: send the game link, or an invite link that opens straight into a room ---- */
 function inviteUrl(code) { return PAGES_URL + '?room=' + code; }
 async function shareLink(text, url) {
-  try { if (navigator.share) { await navigator.share({ title: 'ナイター対決', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { if (navigator.share) { await navigator.share({ title: 'どうぶつリーグ', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   let copied = false;
   try { await navigator.clipboard.writeText(text + '\n' + url); copied = true; } catch (e) {}
   $('#od').textContent = copied ? 'リンクをコピーしました。LINE などに貼って送ってください。' : url;
 }
-function shareGame() { shareLink('どうぶつたちの野球ゲーム「ナイター対決」で遊ぼう！', PAGES_URL); }
-function shareRoom(code) { shareLink('ナイター対決で対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
+function shareGame() { shareLink('どうぶつたちの野球ゲーム「どうぶつリーグ」で遊ぼう！', PAGES_URL); }
+function shareRoom(code) { shareLink('どうぶつリーグで対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
 /* opened from an invite link (?room=1234): go straight into that room */
 function inviteBoot() {
   let code = '';

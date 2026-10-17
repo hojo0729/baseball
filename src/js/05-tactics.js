@@ -127,7 +127,7 @@ function buntGrip() {
   let C = V(0, ZY0 + 0.05, 0.05);
   if (mode === 'bat' && swing && swing.bunt) C = swing.C.clone();
   else if (mode === 'pit' && ball && ball.cpu && ball.cpu.buntC) C = ball.cpu.buntC.clone();
-  if (leftBat()) C.x = -C.x;                                    // planned in right-handed space; batterJ mirrors it back
+  if (shownLeft) C.x = -C.x;                                    // planned in right-handed space; batterJ mirrors it back
   const dir = V(1, 0.1, -0.08).normalize();
   const G0 = C.addScaledVector(dir, -0.42); G0.z = 0.05;
   return { G: G0, dir };

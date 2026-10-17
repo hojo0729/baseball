@@ -223,7 +223,8 @@ function updateCamera(now, dt) {
 function update(now, dt) {
   const k = pitcherK(now);
   const pj = squashJ(pitcherJ(k), MOUND_Y); poseFig(pitcherF, pj, 0, 0);
-  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), leftBat() ? -Math.PI / 2 : Math.PI / 2, Math.PI);
+  refreshShown();
+  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;

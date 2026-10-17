@@ -30,24 +30,24 @@ const standalone = `<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ナイター対決">
+<meta name="apple-mobile-web-app-title" content="どうぶつリーグ">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="description" content="どうぶつたちが戦う3D野球。スマホで遊べて、友達とネット対戦もできる無料ゲーム。">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="ナイター対決">
-<meta property="og:title" content="ナイター対決 - どうぶつたちの3D野球">
+<meta property="og:site_name" content="どうぶつリーグ">
+<meta property="og:title" content="どうぶつリーグ - みんなで遊べる3D野球">
 <meta property="og:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta property="og:url" content="https://saboten-apps.github.io/baseball/">
 <meta property="og:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ナイター対決 - どうぶつたちの3D野球">
+<meta name="twitter:title" content="どうぶつリーグ - みんなで遊べる3D野球">
 <meta name="twitter:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta name="twitter:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
-<title>ナイター対決</title>
+<title>どうぶつリーグ</title>
 <link rel="stylesheet" href="${FONTS}">
 <style>
 html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
@@ -61,14 +61,14 @@ ${body}${scripts}<script>if ('serviceWorker' in navigator && (location.protocol 
 `;
 
 const artifact = `<meta name="claude:viewport-fit-sides" content="cover">
-<title>ナイター対決</title>
+<title>どうぶつリーグ</title>
 <link rel="stylesheet" href="${FONTS}">
 <style>
 ${css}</style>
 ${body}${scriptsFor(jsFor([]))}`;
 
 const manifest = {
-  name: 'ナイター対決', short_name: 'ナイター対決', description: 'どうぶつたちの3D野球アクション', lang: 'ja',
+  name: 'どうぶつリーグ', short_name: 'どうぶつリーグ', description: 'どうぶつたちの3D野球アクション', lang: 'ja',
   start_url: './', scope: './', display: 'standalone', orientation: 'portrait', background_color: '#0a1815', theme_color: '#0a1815',
   icons: [
     { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

@@ -1,5 +1,5 @@
 // ※ このファイルは実況セリフ（src/js/08-commentary.js の LINES）を埋め込んで作ったもの。セリフを変えたら作り直す。
-// ナイター対決：VOICEVOX で実況の声をまとめて作るスクリプト（Node.js 18 以上）
+// どうぶつリーグ：VOICEVOX で実況の声をまとめて作るスクリプト（Node.js 18 以上）
 // 1) VOICEVOX を起動しておく  2) このファイルを置いたフォルダで実行
 //   声の聞き比べ:  node voicevox-make.mjs sample
 //   全部作る:      node voicevox-make.mjs all 番号   （番号は sample で選んだ声。例: node voicevox-make.mjs all 70）

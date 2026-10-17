@@ -172,19 +172,55 @@ function applyInningDice() {
   hud();
   return { v, text };
 }
-let diceTimer = 0;
+/* the die: a CSS 3D cube that tumbles in, bounces and lands on the rolled face (display only) */
+const PIPS = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+const FACE_AT = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(90deg)', 4: 'rotateY(-90deg)', 2: 'rotateX(90deg)', 5: 'rotateX(-90deg)' };
+const FACE_UP = { 1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0], 5: [90, 0] };   // cube rotation that brings a face to the front
+let diceEl = null, diceHide = 0, diceRoll = 0;
+function diceDom() {
+  if (diceEl) return diceEl;
+  const w = document.createElement('div'); w.className = 'dice-wrap';
+  w.innerHTML = '<div class="dice-sh"></div><div class="dice-roll"><div class="dice-tilt"><div class="dice">' +
+    [1, 2, 3, 4, 5, 6].map(n => '<div class="f" style="transform:' + FACE_AT[n] + ' translateZ(34px)">' +
+      PIPS[n].map(c => '<i class="' + (n === 1 ? 'red' : '') + '" style="grid-area:' + Math.ceil(c / 3) + '/' + ((c - 1) % 3 + 1) + '"></i>').join('') + '</div>').join('') +
+    '</div></div></div>';
+  $('#stage').appendChild(w);
+  return (diceEl = w);
+}
 function showDiceBanner(d) {
-  clearInterval(diceTimer);
-  showBanner('サイコロ！', '', 'g');
-  let n = 0;
-  diceTimer = setInterval(() => {
-    n++;
-    if (n < 7) { $('#bt').textContent = 'サイコロ… ' + (1 + Math.floor(Math.random() * 6)); return; }   // display only
-    clearInterval(diceTimer);
-    $('#bt').textContent = '出た目 ' + d.v + '！';
-    $('#bs').textContent = d.text;
+  const w = diceDom(), roll = w.querySelector('.dice-roll'), cube = w.querySelector('.dice'), sh = w.querySelector('.dice-sh');
+  clearTimeout(diceHide); w.classList.add('on');
+  const my = ++diceRoll;                                // a newer roll cancels this one's landing and hiding
+  try { w.getAnimations({ subtree: true }).forEach(a => a.cancel()); } catch (e) {}   // drop the last roll's finished animations
+  const [fx, fy] = FACE_UP[d.v], T = 1500;
+  const rot = (x, y, z) => 'rotateX(' + x + 'deg) rotateY(' + y + 'deg) rotateZ(' + z + 'deg)';
+  try {
+    roll.animate([
+      { transform: 'translate(-150px,-130px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translate(-70px,0)', offset: 0.38, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translate(-30px,-46px)', offset: 0.56, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translate(-8px,0)', offset: 0.74, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translate(-2px,-12px)', offset: 0.85, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translate(0,0)' }
+    ], { duration: T, fill: 'forwards' });
+    cube.animate([
+      { transform: rot(fx + 40, fy - 30, 25) },
+      { transform: rot(fx + 520, fy + 610, 200), offset: 0.38 },
+      { transform: rot(fx + 690, fy + 790, 300), offset: 0.74 },
+      { transform: rot(fx + 720, fy + 720, 360) }
+    ], { duration: T, fill: 'forwards', easing: 'cubic-bezier(.2,.6,.3,1)' });
+    sh.animate([{ transform: 'scale(.35)', opacity: 0.2 }, { transform: 'scale(1)', opacity: 0.6, offset: 0.38 }, { transform: 'scale(.7)', opacity: 0.4, offset: 0.56 },
+      { transform: 'scale(1)', opacity: 0.6 }], { duration: T, fill: 'forwards' });
+  } catch (e) {}
+  sfx.pop(); setTimeout(() => sfx.pop(), T * 0.38); setTimeout(() => sfx.pop(), T * 0.74);
+  say(cmtLine('dice'), 1);
+  setTimeout(() => {                                   // landed: show what it means
+    if (my !== diceRoll) return;
+    showBanner('出た目 ' + d.v + '！', d.text, d.v === 1 ? 'n' : 'g');
     say(cmtLine('dice' + d.v), 2);
-  }, 90);
+    if (d.v >= 5) sfx.cheer(1);
+    diceHide = setTimeout(() => { if (my === diceRoll) w.classList.remove('on'); }, 1800);
+  }, T + 80);
 }
 
 function dots(id, n, on) {

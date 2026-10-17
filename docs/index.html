@@ -7,24 +7,24 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ナイター対決">
+<meta name="apple-mobile-web-app-title" content="どうぶつリーグ">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="description" content="どうぶつたちが戦う3D野球。スマホで遊べて、友達とネット対戦もできる無料ゲーム。">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="ナイター対決">
-<meta property="og:title" content="ナイター対決 - どうぶつたちの3D野球">
+<meta property="og:site_name" content="どうぶつリーグ">
+<meta property="og:title" content="どうぶつリーグ - みんなで遊べる3D野球">
 <meta property="og:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta property="og:url" content="https://saboten-apps.github.io/baseball/">
 <meta property="og:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ナイター対決 - どうぶつたちの3D野球">
+<meta name="twitter:title" content="どうぶつリーグ - みんなで遊べる3D野球">
 <meta name="twitter:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta name="twitter:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
-<title>ナイター対決</title>
+<title>どうぶつリーグ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
 <style>
 html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
@@ -140,6 +140,17 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #bgmBtn { position: absolute; top: 84px; right: 12px; z-index: 5; font: 700 11px var(--f-body); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; min-height: 30px; }
 #bgmBtn.off { opacity: .55; }
 #cmtBtn { position: absolute; top: 10px; right: 12px; z-index: 5; font: 700 11px var(--f-body); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; min-height: 30px; }
+
+/* rolling die */
+.dice-wrap { position: absolute; left: 50%; top: 22%; width: 68px; height: 68px; margin-left: -34px; perspective: 520px; pointer-events: none; z-index: 6; opacity: 0; transition: opacity .25s; }
+.dice-wrap.on { opacity: 1; }
+.dice-sh { position: absolute; left: 4px; right: 4px; bottom: -16px; height: 12px; border-radius: 50%; background: rgba(0, 0, 0, .7); filter: blur(4px); }
+.dice-roll, .dice-tilt, .dice { position: absolute; inset: 0; transform-style: preserve-3d; }
+.dice-tilt { transform: rotateX(-22deg) rotateY(24deg); }
+.dice .f { position: absolute; inset: 0; box-sizing: border-box; padding: 9px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  background: linear-gradient(145deg, #fffdf6, #ece4d2); border: 1px solid #cfc3a8; border-radius: 12px; box-shadow: inset 0 0 8px rgba(0, 0, 0, .12); backface-visibility: hidden; }
+.dice .f i { width: 11px; height: 11px; border-radius: 50%; background: #1d1d22; place-self: center; box-shadow: inset 0 1px 1px rgba(255, 255, 255, .25); }
+.dice .f i.red { width: 17px; height: 17px; background: #d0302a; }
 </style>
 </head>
 <body>
@@ -370,19 +381,55 @@ function applyInningDice() {
   hud();
   return { v, text };
 }
-let diceTimer = 0;
+/* the die: a CSS 3D cube that tumbles in, bounces and lands on the rolled face (display only) */
+const PIPS = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+const FACE_AT = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(90deg)', 4: 'rotateY(-90deg)', 2: 'rotateX(90deg)', 5: 'rotateX(-90deg)' };
+const FACE_UP = { 1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0], 5: [90, 0] };   // cube rotation that brings a face to the front
+let diceEl = null, diceHide = 0, diceRoll = 0;
+function diceDom() {
+  if (diceEl) return diceEl;
+  const w = document.createElement('div'); w.className = 'dice-wrap';
+  w.innerHTML = '<div class="dice-sh"></div><div class="dice-roll"><div class="dice-tilt"><div class="dice">' +
+    [1, 2, 3, 4, 5, 6].map(n => '<div class="f" style="transform:' + FACE_AT[n] + ' translateZ(34px)">' +
+      PIPS[n].map(c => '<i class="' + (n === 1 ? 'red' : '') + '" style="grid-area:' + Math.ceil(c / 3) + '/' + ((c - 1) % 3 + 1) + '"></i>').join('') + '</div>').join('') +
+    '</div></div></div>';
+  $('#stage').appendChild(w);
+  return (diceEl = w);
+}
 function showDiceBanner(d) {
-  clearInterval(diceTimer);
-  showBanner('サイコロ！', '', 'g');
-  let n = 0;
-  diceTimer = setInterval(() => {
-    n++;
-    if (n < 7) { $('#bt').textContent = 'サイコロ… ' + (1 + Math.floor(Math.random() * 6)); return; }   // display only
-    clearInterval(diceTimer);
-    $('#bt').textContent = '出た目 ' + d.v + '！';
-    $('#bs').textContent = d.text;
+  const w = diceDom(), roll = w.querySelector('.dice-roll'), cube = w.querySelector('.dice'), sh = w.querySelector('.dice-sh');
+  clearTimeout(diceHide); w.classList.add('on');
+  const my = ++diceRoll;                                // a newer roll cancels this one's landing and hiding
+  try { w.getAnimations({ subtree: true }).forEach(a => a.cancel()); } catch (e) {}   // drop the last roll's finished animations
+  const [fx, fy] = FACE_UP[d.v], T = 1500;
+  const rot = (x, y, z) => 'rotateX(' + x + 'deg) rotateY(' + y + 'deg) rotateZ(' + z + 'deg)';
+  try {
+    roll.animate([
+      { transform: 'translate(-150px,-130px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translate(-70px,0)', offset: 0.38, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translate(-30px,-46px)', offset: 0.56, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translate(-8px,0)', offset: 0.74, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translate(-2px,-12px)', offset: 0.85, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translate(0,0)' }
+    ], { duration: T, fill: 'forwards' });
+    cube.animate([
+      { transform: rot(fx + 40, fy - 30, 25) },
+      { transform: rot(fx + 520, fy + 610, 200), offset: 0.38 },
+      { transform: rot(fx + 690, fy + 790, 300), offset: 0.74 },
+      { transform: rot(fx + 720, fy + 720, 360) }
+    ], { duration: T, fill: 'forwards', easing: 'cubic-bezier(.2,.6,.3,1)' });
+    sh.animate([{ transform: 'scale(.35)', opacity: 0.2 }, { transform: 'scale(1)', opacity: 0.6, offset: 0.38 }, { transform: 'scale(.7)', opacity: 0.4, offset: 0.56 },
+      { transform: 'scale(1)', opacity: 0.6 }], { duration: T, fill: 'forwards' });
+  } catch (e) {}
+  sfx.pop(); setTimeout(() => sfx.pop(), T * 0.38); setTimeout(() => sfx.pop(), T * 0.74);
+  say(cmtLine('dice'), 1);
+  setTimeout(() => {                                   // landed: show what it means
+    if (my !== diceRoll) return;
+    showBanner('出た目 ' + d.v + '！', d.text, d.v === 1 ? 'n' : 'g');
     say(cmtLine('dice' + d.v), 2);
-  }, 90);
+    if (d.v >= 5) sfx.cheer(1);
+    diceHide = setTimeout(() => { if (my === diceRoll) w.classList.remove('on'); }, 1800);
+  }, T + 80);
 }
 
 function dots(id, n, on) {
@@ -1203,9 +1250,16 @@ function poseFig(f, J, yaw, headYaw) {
 /* ---- right-handed batter ---- */
 /* left-handed hitters: everything is planned in right-handed space and mirrored (x -> -x) at the end */
 const mirX = v => V(-v.x, v.y, v.z);
+/* the batter in the box is held fixed from the pitch until the play is over: the plate appearance ends at contact,
+   and the next hitter (maybe left-handed, maybe a star) must not appear while the ball is still in the air */
+let shownLeft = false, shownStar = false;
+function refreshShown() {
+  if (!G || !(phase === 'idle' || phase === 'wait' || phase === 'ready' || phase === 'deliver')) return;
+  const B = curBatter(); shownLeft = B.side === 'L'; shownStar = B.star;
+}
 function mirrorJ(J) { const o = {}; for (const k in J) o[k] = mirX(J[k]); return o; }
 function makeSwingPlan(C) {
-  if (leftBat()) C = mirX(C);
+  if (shownLeft) C = mirX(C);
   const hy = clamp(C.y + 0.12, 0.8, 1.3), dy = C.y - hy, hl = Math.sqrt(Math.max(0.05, 0.62 * 0.62 - dy * dy));
   const Gc = V(clamp(C.x - hl, X0 + 0.12, X0 + 0.62), hy, 0.02);
   const dc = C.clone().sub(Gc); dc.z = 0; dc.normalize();
@@ -1251,7 +1305,7 @@ function batterJ(now, k) {
   const hF = G.clone().addScaledVector(dir, 0.04), hB = G.clone().addScaledVector(dir, 0.12);
   const eF = sF.clone().lerp(hF, 0.5).add(V(0.02, -0.12, -0.04)), eB = sB.clone().lerp(hB, 0.5).add(V(0, -0.13, 0.06));
   const J = { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB };
-  return leftBat() ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
+  return shownLeft ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
 }
 
 /* ---- pitcher (built right-handed, mirrored for a lefty). k: 0 set, 0-0.35 leg lift, 0.35-1 stride and arm, 1 release, 1-1.35 follow-through ---- */
@@ -1341,7 +1395,7 @@ const batAura = new THREE.Sprite(auraMat()), pitAura = new THREE.Sprite(auraMat(
 scene.add(batAura, pitAura);
 let starBatOn = null;
 function updateStars(now, bj, pj) {
-  const on = !!G && phase !== 'idle', bs = on && curBatter().star, ps = on && curPitcher().star, pulse = 0.5 + 0.2 * Math.sin(now * 4);
+  const on = !!G && phase !== 'idle', bs = on && shownStar, ps = on && curPitcher().star, pulse = 0.5 + 0.2 * Math.sin(now * 4);
   batAura.visible = bs; pitAura.visible = ps;
   if (bs) { batAura.position.copy(bj.J.pelvis); batAura.position.y += 0.15; batAura.position.z -= 0.3; batAura.scale.setScalar(2.6); batAura.material.opacity = pulse; }
   if (ps) { pitAura.position.copy(pj.pelvis); pitAura.position.z -= 0.4; pitAura.scale.setScalar(2.4); pitAura.material.opacity = pulse * 0.9; }
@@ -1621,7 +1675,7 @@ function buntGrip() {
   let C = V(0, ZY0 + 0.05, 0.05);
   if (mode === 'bat' && swing && swing.bunt) C = swing.C.clone();
   else if (mode === 'pit' && ball && ball.cpu && ball.cpu.buntC) C = ball.cpu.buntC.clone();
-  if (leftBat()) C.x = -C.x;                                    // planned in right-handed space; batterJ mirrors it back
+  if (shownLeft) C.x = -C.x;                                    // planned in right-handed space; batterJ mirrors it back
   const dir = V(1, 0.1, -0.08).normalize();
   const G0 = C.addScaledVector(dir, -0.42); G0.z = 0.05;
   return { G: G0, dir };
@@ -1972,13 +2026,13 @@ function showOnlineOver() {
 /* ---- sharing: send the game link, or an invite link that opens straight into a room ---- */
 function inviteUrl(code) { return PAGES_URL + '?room=' + code; }
 async function shareLink(text, url) {
-  try { if (navigator.share) { await navigator.share({ title: 'ナイター対決', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { if (navigator.share) { await navigator.share({ title: 'どうぶつリーグ', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   let copied = false;
   try { await navigator.clipboard.writeText(text + '\n' + url); copied = true; } catch (e) {}
   $('#od').textContent = copied ? 'リンクをコピーしました。LINE などに貼って送ってください。' : url;
 }
-function shareGame() { shareLink('どうぶつたちの野球ゲーム「ナイター対決」で遊ぼう！', PAGES_URL); }
-function shareRoom(code) { shareLink('ナイター対決で対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
+function shareGame() { shareLink('どうぶつたちの野球ゲーム「どうぶつリーグ」で遊ぼう！', PAGES_URL); }
+function shareRoom(code) { shareLink('どうぶつリーグで対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
 /* opened from an invite link (?room=1234): go straight into that room */
 function inviteBoot() {
   let code = '';
@@ -2488,7 +2542,8 @@ function updateCamera(now, dt) {
 function update(now, dt) {
   const k = pitcherK(now);
   const pj = squashJ(pitcherJ(k), MOUND_Y); poseFig(pitcherF, pj, 0, 0);
-  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), leftBat() ? -Math.PI / 2 : Math.PI / 2, Math.PI);
+  refreshShown();
+  const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
