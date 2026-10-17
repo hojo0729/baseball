@@ -14,5 +14,5 @@ let bad=0;m.forEach(t=>{try{new Function(t.replace(/<\/?script>/g,''))}catch(e){
 process.exit(bad)" || ok=0; done
 [ $ok = 1 ] && echo "✓ docs/index.html の構文OK"
 if git grep -qi "hojo0729" -- . ':!tools/check.sh'; then echo "✗ 旧ユーザー名が残っている"; ok=0; else echo "✓ 旧ユーザー名なし"; fi
-if git grep -n "Math.random" -- src/js/08-commentary.js | grep -v "/\*\|^[0-9]*: *\*\|^[0-9]*: *//" | grep -q .; then echo "! 08-commentary.js に Math.random（実況は専用乱数を使う）"; fi
+if git grep -n "Math.random" -- src/js/08-commentary.js | grep -v "使うと\|/\*\|^[0-9]*: *//" | grep -q .; then echo "! 08-commentary.js に Math.random（実況は専用乱数を使う）"; fi
 [ $ok = 1 ] && echo "完了。あとは tools/test/README.md のテスト（thr.js / hbp.js、オンラインなら tac7.js）を必要に応じて" || exit 1
