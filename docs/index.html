@@ -1425,7 +1425,7 @@ const STAGES = [
   { short: '第2話', title: '第2話 ネコの猛打', opp: 'neko', team: 'ニャンキーズ', mode: 'pit', max: 1, batSkill: 0.85,
     intro: [['ミケ（ネコ）', 'ニャハハ！ ぼくらニャンキーズは 打ちまくるよ！'],
       ['コタロウ（柴犬）', '今日はぼくがマウンドだ。3回を1失点以内に抑える！'],
-      ['コタロウ（柴犬）', '弾く向きで球種が変わる。3人に1人は 魔球も投げられるぞ。']],
+      ['コタロウ（柴犬）', '弾く向きで球種が変わる。3人に1人は ラッキーボールで打たれにくくなるぞ。']],
     win: [['ミケ（ネコ）', 'ニャ…ニャんで打てないの…'], ['コタロウ（柴犬）', 'ナイスピッチング！ 次はうさぎチームだ。']],
     lose: [['ミケ（ネコ）', 'ニャハハ！ 打ち放題だニャ！'], ['コタロウ（柴犬）', '配球を変えて、もう一回！']] },
   { short: '第3話', title: '第3話 逆転のうさぎ戦', opp: 'usagi', team: 'ラビッツ', mode: 'bat', runs: 3, oppRuns: 2,
@@ -1447,8 +1447,10 @@ function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
-function giantActive() { return mode === 'bat' && !!G && G.pa % 3 === 2; }
-function magicActive() { return mode === 'pit' && !!G && G.pa % 3 === 2; }
+/* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
+const helpersOn = () => !online && !match;
+function giantActive() { return helpersOn() && mode === 'bat' && !!G && G.pa % 3 === 2; }
+function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
   if (st.mode === 'pit') return st.team + '打線を、3回1失点以内に抑えよう。'.replace('1', st.max);
@@ -1463,17 +1465,18 @@ function updateGoal() {
       + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '') + '<br>' + rosterLines();
     return;
   }
+  if (match) { el.innerHTML = 'CPU対戦 vs ' + ROSTER[match.opp].name + '・' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>' + rosterLines(); return; }
   let s = '';
   if (story) s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
-  else s += n === 0 ? '<span class="hot">魔球モード発動中！</span>' : '魔球まで あと' + n + '人';
+  else s += n === 0 ? '<span class="hot">ラッキーボール発動中！</span>' : 'ラッキーボールまで あと' + n + '人';
   el.innerHTML = s + '<br>' + rosterLines();
 }
 function announceChance() {
   if (!G || G.lastAnn === G.pa || starCheck()) return;
   if (giantActive()) { G.lastAnn = G.pa; showBanner('巨大バット！', '当たる範囲が大きくなる', 'g'); }
-  else if (magicActive()) { G.lastAnn = G.pa; showBanner('魔球モード！', 'この打者には打たれにくい', 'g'); }
+  else if (magicActive()) { G.lastAnn = G.pa; showBanner('ラッキーボール！', 'この打者には打たれにくい', 'g'); }
 }
 
 /* ---- overlay helpers ---- */
@@ -2266,7 +2269,7 @@ const LINES = {
   change: ['スリーアウト、チェンジです。', 'ここでチェンジ。', '攻守交代です。'],
   relief: ['ピッチャー交代です。', 'ここでマウンドを譲ります。'],
   big: ['巨大バット登場！当たる範囲が大きいぞ！', '来ました、巨大バット！'],
-  magic: ['魔球モード発動！打てるのか！', '魔球です！'],
+  magic: ['ラッキーボール発動！打たれにくいぞ！', 'ラッキーボールです！'],
   star: ['スーパースター登場！球場がわいています！', '来ました！二刀流のスーパースター！'],
   starP: ['二刀流スターがマウンドへ！', 'スター登板です！'],
   lefty: ['サウスポーの登場です！', '左腕がマウンドに上がります！'],
@@ -2298,7 +2301,7 @@ function showCmtText(text) {
 }
 /* 録音ファイル docs/audio/<id>.mp3 があればそれを再生する（無ければ字幕だけ）。
    id は LINES の key_番号（例 hr_2）。ファイル一覧は tools/export-voice-script.mjs で出せる。 */
-const VOICE_IDS = ["KL_1","KL_2","K_1","K_2","K_3","ball_3","big_1","big_2","bunt_1","bunt_2","change_1","change_2","change_3","chg_1","chg_2","crit_1","crit_2","double_1","double_2","dp_1","dp_2","dp_3","err_2","first_1","first_2","first_3","foul_1","foul_2","foul_3","fout_1","fout_2","fout_3","gou_1","gou_2","gou_3","gout_1","gout_3","hitBig_1","hitBig_2","hitBig_3","hit_1","hit_2","hit_3","hr2_1","hr3_1","hr4_1","hr_1","hr_2","hr_3","lefty_1","lefty_2","magic_1","magic_2","miss_1","miss_2","miss_3","pick_1","pick_2","pitch_1","pitch_2","pitch_3","play_2","play_3","relief_1","relief_2","sac_1","sac_2","single_1","single_2","single_3","squeeze_1","squeeze_2","starP_1","starP_2","star_1","star_2","stealX_1","stealX_2","steal_1","steal_2","strike_1","strike_2","strike_3","strike_4","vanish_1","walk_1","walk_2"];   // filled in by build.mjs from the files in docs/audio
+const VOICE_IDS = ["KL_1","KL_2","K_1","K_2","K_3","ball_3","big_1","big_2","bunt_1","bunt_2","change_1","change_2","change_3","chg_1","chg_2","crit_1","crit_2","double_1","double_2","dp_1","dp_2","dp_3","err_2","first_1","first_2","first_3","foul_1","foul_2","foul_3","fout_1","fout_2","fout_3","gou_1","gou_2","gou_3","gout_1","gout_3","hitBig_1","hitBig_2","hitBig_3","hit_1","hit_2","hit_3","hr2_1","hr3_1","hr4_1","hr_1","hr_2","hr_3","lefty_1","lefty_2","miss_1","miss_2","miss_3","pick_1","pick_2","pitch_1","pitch_2","pitch_3","play_2","play_3","relief_1","relief_2","sac_1","sac_2","single_1","single_2","single_3","squeeze_1","squeeze_2","starP_1","starP_2","star_1","star_2","stealX_1","stealX_2","steal_1","steal_2","strike_1","strike_2","strike_3","strike_4","vanish_1","walk_1","walk_2"];   // filled in by build.mjs from the files in docs/audio
 function cmtPreload() {
   if (cmt.pre) return; cmt.pre = {};
   VOICE_IDS.forEach(id => {
@@ -2375,7 +2378,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/^チェンジ/.test(t)) key = 'change';
   else if (/ピッチャー交代/.test(t)) key = 'relief';
   else if (/巨大バット/.test(t)) key = 'big';
-  else if (/魔球/.test(t)) key = 'magic';
+  else if (/ラッキーボール/.test(t)) key = 'magic';
   if (key === 'relief' && /サウスポー/.test(s || '')) key = 'lefty';
   if (key === 'change' && twoTeam() && G.inning === (G.maxHalf || 6) + 1) key = 'extra';
   if (/^会心/.test(s || '') && !/^hr/.test(key)) key = 'crit';

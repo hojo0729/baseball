@@ -11,7 +11,7 @@ const STAGES = [
   { short: '第2話', title: '第2話 ネコの猛打', opp: 'neko', team: 'ニャンキーズ', mode: 'pit', max: 1, batSkill: 0.85,
     intro: [['ミケ（ネコ）', 'ニャハハ！ ぼくらニャンキーズは 打ちまくるよ！'],
       ['コタロウ（柴犬）', '今日はぼくがマウンドだ。3回を1失点以内に抑える！'],
-      ['コタロウ（柴犬）', '弾く向きで球種が変わる。3人に1人は 魔球も投げられるぞ。']],
+      ['コタロウ（柴犬）', '弾く向きで球種が変わる。3人に1人は ラッキーボールで打たれにくくなるぞ。']],
     win: [['ミケ（ネコ）', 'ニャ…ニャんで打てないの…'], ['コタロウ（柴犬）', 'ナイスピッチング！ 次はうさぎチームだ。']],
     lose: [['ミケ（ネコ）', 'ニャハハ！ 打ち放題だニャ！'], ['コタロウ（柴犬）', '配球を変えて、もう一回！']] },
   { short: '第3話', title: '第3話 逆転のうさぎ戦', opp: 'usagi', team: 'ラビッツ', mode: 'bat', runs: 3, oppRuns: 2,
@@ -33,8 +33,10 @@ function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem
 function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
 
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
-function giantActive() { return mode === 'bat' && !!G && G.pa % 3 === 2; }
-function magicActive() { return mode === 'pit' && !!G && G.pa % 3 === 2; }
+/* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
+const helpersOn = () => !online && !match;
+function giantActive() { return helpersOn() && mode === 'bat' && !!G && G.pa % 3 === 2; }
+function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
   if (st.mode === 'pit') return st.team + '打線を、3回1失点以内に抑えよう。'.replace('1', st.max);
@@ -49,17 +51,18 @@ function updateGoal() {
       + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '') + '<br>' + rosterLines();
     return;
   }
+  if (match) { el.innerHTML = 'CPU対戦 vs ' + ROSTER[match.opp].name + '・' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>' + rosterLines(); return; }
   let s = '';
   if (story) s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
-  else s += n === 0 ? '<span class="hot">魔球モード発動中！</span>' : '魔球まで あと' + n + '人';
+  else s += n === 0 ? '<span class="hot">ラッキーボール発動中！</span>' : 'ラッキーボールまで あと' + n + '人';
   el.innerHTML = s + '<br>' + rosterLines();
 }
 function announceChance() {
   if (!G || G.lastAnn === G.pa || starCheck()) return;
   if (giantActive()) { G.lastAnn = G.pa; showBanner('巨大バット！', '当たる範囲が大きくなる', 'g'); }
-  else if (magicActive()) { G.lastAnn = G.pa; showBanner('魔球モード！', 'この打者には打たれにくい', 'g'); }
+  else if (magicActive()) { G.lastAnn = G.pa; showBanner('ラッキーボール！', 'この打者には打たれにくい', 'g'); }
 }
 
 /* ---- overlay helpers ---- */

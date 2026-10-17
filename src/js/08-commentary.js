@@ -41,7 +41,7 @@ const LINES = {
   change: ['スリーアウト、チェンジです。', 'ここでチェンジ。', '攻守交代です。'],
   relief: ['ピッチャー交代です。', 'ここでマウンドを譲ります。'],
   big: ['巨大バット登場！当たる範囲が大きいぞ！', '来ました、巨大バット！'],
-  magic: ['魔球モード発動！打てるのか！', '魔球です！'],
+  magic: ['ラッキーボール発動！打たれにくいぞ！', 'ラッキーボールです！'],
   star: ['スーパースター登場！球場がわいています！', '来ました！二刀流のスーパースター！'],
   starP: ['二刀流スターがマウンドへ！', 'スター登板です！'],
   lefty: ['サウスポーの登場です！', '左腕がマウンドに上がります！'],
@@ -150,7 +150,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/^チェンジ/.test(t)) key = 'change';
   else if (/ピッチャー交代/.test(t)) key = 'relief';
   else if (/巨大バット/.test(t)) key = 'big';
-  else if (/魔球/.test(t)) key = 'magic';
+  else if (/ラッキーボール/.test(t)) key = 'magic';
   if (key === 'relief' && /サウスポー/.test(s || '')) key = 'lefty';
   if (key === 'change' && twoTeam() && G.inning === (G.maxHalf || 6) + 1) key = 'extra';
   if (/^会心/.test(s || '') && !/^hr/.test(key)) key = 'crit';
