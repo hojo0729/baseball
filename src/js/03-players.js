@@ -79,21 +79,6 @@ function drawFace(ex, sp) {
   c.lineCap = c.lineJoin = 'round';
   const dot = (x, y, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); };
   // どうぶつ別のベース模様（麻呂眉・額のトラ縞・猫ひげ・柴の裏白）
-  if (sp === 'human') {
-    sides.forEach(s => {
-      dot(X(s * EA), Y(EY), 24, 28, ink);
-      dot(X(s * EA) + 5 * s, Y(EY) - 8, 7, 7, '#ffffff');
-      c.strokeStyle = '#221915'; c.lineWidth = 6.5; c.beginPath();
-      c.moveTo(X(s * 0.2), Y(EY) - 38); c.lineTo(X(s * 0.52), Y(EY) - 44); c.stroke();
-    });
-    if (ex === 'blink') { sides.forEach(s => arc(s, false)); }
-    else if (ex === 'joy' || ex === 'smile') { sides.forEach(s => arc(s, true)); }
-    else if (ex === 'shout') {
-      sides.forEach(s => { const x = X(s * EA), y = Y(EY); c.strokeStyle = line; c.lineWidth = 8; c.beginPath();
-        c.moveTo(x - s * 20, y - 20); c.lineTo(x + s * 16, y); c.lineTo(x - s * 20, y + 20); c.stroke(); });
-    }
-    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 2; return t;
-  }
   if (sp === 'shiba') {
     sides.forEach(s => {
       dot(X(s * 0.62), Y(2.03), 28, 14, 'rgba(255,246,232,0.88)');
@@ -107,8 +92,10 @@ function drawFace(ex, sp) {
       [0, 1].forEach(j => { c.beginPath(); c.moveTo(X(s * 0.48), Y(1.87 + j * 0.09)); c.lineTo(X(s * 0.72), Y(1.84 + j * 0.12)); c.stroke(); });
     });
   }
+  const hasBrow = sp === 'kuma' || sp === 'human';
   const eye = (s, rx, ry, sparkle) => {
     const x = X(s * EA), y = Y(EY);
+    if (sp === 'human') { rx *= 0.85; ry *= 0.82; }
     if (sp === 'usagi') {
       ry += 2;
       c.strokeStyle = line; c.lineWidth = 4.5; c.beginPath();
@@ -127,13 +114,14 @@ function drawFace(ex, sp) {
   };
   const brow = (s, inner, outer, w0) => {        // inner/outer = まゆの内側・外側の高さ（上が小さい）
     const x = X(s * EA), y = Y(EY);
-    c.strokeStyle = sp === 'kuma' ? '#24140e' : '#3a2620'; c.lineWidth = w0 || (sp === 'kuma' ? 9.5 : 7); c.beginPath();
+    c.strokeStyle = sp === 'kuma' ? '#24140e' : sp === 'human' ? '#221915' : '#3a2620';
+    c.lineWidth = w0 || (sp === 'kuma' ? 9.5 : sp === 'human' ? 7.5 : 7); c.beginPath();
     c.moveTo(x - s * 24, y - inner); c.lineTo(x + s * 24, y - outer); c.stroke();
   };
-  const blush = k => sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)'));
-  if (ex === 'normal') { sides.forEach(s => { eye(s, 28, 34); if (sp === 'kuma') brow(s, 44, 50, 9); }); blush(1); }
-  else if (ex === 'smile') { sides.forEach(s => { eye(s, 28, 34, true); if (sp === 'kuma') brow(s, 46, 50, 8.5); }); blush(1.25); }
-  else if (ex === 'blink') { sides.forEach(s => { arc(s, false); if (sp === 'kuma') brow(s, 45, 50, 8.5); }); blush(1); }
+  const blush = k => { if (sp !== 'human') sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)')); };
+  if (ex === 'normal') { sides.forEach(s => { eye(s, 28, 34); if (hasBrow) brow(s, 42, 50); }); blush(1); }
+  else if (ex === 'smile') { sides.forEach(s => { eye(s, 28, 34, true); if (hasBrow) brow(s, 44, 50); }); blush(1.25); }
+  else if (ex === 'blink') { sides.forEach(s => { arc(s, false); if (hasBrow) brow(s, 43, 50); }); blush(1); }
   else if (ex === 'joy') { sides.forEach(s => arc(s, true)); blush(1.3); }
   else if (ex === 'focus') { sides.forEach(s => { eye(s, 26, 29); brow(s, 42, 54); }); blush(0.8); }
   else if (ex === 'shout') {
@@ -256,7 +244,7 @@ function faceFor(f, ex, now) {
 }
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
-const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 1.48;   // 自然で引き締まった二頭身ちびキャラ
+const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 1.35;   // 自然で引き締まった二頭身ちびキャラ
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
@@ -332,6 +320,7 @@ let shownLeft = false, shownStar = false;
 function refreshShown() {
   if (!G || !(phase === 'idle' || phase === 'wait' || phase === 'ready' || phase === 'deliver')) return;
   const B = curBatter(); shownLeft = B.side === 'L'; shownStar = B.star;
+  if (B.team && batterF.team !== B.team) setTeam(batterF, B.team);
   batterF.star = !!shownStar; pitcherF.star = !!curPitcher().star;
 }
 function mirrorJ(J) { const o = {}; for (const k in J) o[k] = mirX(J[k]); return o; }
@@ -341,8 +330,8 @@ function makeSwingPlan(C) {
   const Gc = V(clamp(C.x - hl, X0 + 0.12, X0 + 0.62), hy, 0.02);
   const dc = C.clone().sub(Gc); dc.z = 0; dc.normalize();
   return [
-    { t: 0, G: V(X0 + 0.24, 1.0, 0.26), d: V(0.12, 0.85, 0.5).normalize(), th: -0.2 },
-    { t: 0.05, G: V(X0 + 0.24, hy + 0.12, 0.14), d: V(0.15, 0.2, 1).normalize(), th: 0.3 },
+    { t: 0, G: V(X0 + 0.34, 0.88, 0.24), d: V(0.12, 0.85, 0.5).normalize(), th: -0.2 },
+    { t: 0.05, G: V(X0 + 0.30, hy + 0.08, 0.14), d: V(0.15, 0.2, 1).normalize(), th: 0.3 },
     { t: SWING_LEAD, G: Gc, d: dc, th: 0.95 },
     { t: 0.17, G: V(X0 + 0.38, hy + 0.1, -0.24), d: V(0, 0.15, -1).normalize(), th: 1.45 },
     { t: 0.34, G: V(X0 + 0.2, 1.12, -0.12), d: V(-0.7, 0.4, 0.55).normalize(), th: 1.8 }
@@ -382,7 +371,7 @@ function batterJ(now, k) {
   const sw = batAnim && now >= batAnim.t0 ? now - batAnim.t0 : -1;
   if (sw < 0) {
     const w = Math.sin(now * 3) * 0.03 * (k < 0.35 ? 1 : 0);
-    G = V(X0 + 0.24, 1.0 + w * 0.3, 0.26); dir = V(0.12 + w, 0.85, 0.5).normalize();
+    G = V(X0 + 0.34, 0.88 + w * 0.3, 0.24); dir = V(0.12 + w, 0.85, 0.5).normalize();
     fi = k < 0.35 ? 0 : k <= 1 ? BAT_F.stride + (BAT_F.land - BAT_F.stride) * (k - 0.35) / 0.65 : BAT_F.land;   // 投手に合わせて足を上げて踏み込む
   } else {
     ({ G, dir } = swingAt(sw, batAnim.plan));

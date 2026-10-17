@@ -376,22 +376,27 @@ function startStory() {
   let i = loadProgress(); if (i >= STAGES.length) i = 0;
   showStage(i);
 }
+function storyRole() {
+  story.half = G.inning;
+  mode = battingSide() === 'home' ? 'bat' : 'pit';
+  $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
+  $('#pitches').hidden = mode !== 'pit';
+  setTeams(); resize(); hud();
+}
 function showStage(i) {
   match = null;
   story = STAGES[i];
+  $('.seg').hidden = true; $('#menuBtn').hidden = false;
+  newGame();
   if (story.inn) {
-    story.score = { home: 0, away: 0 };
-    story.half = 0;
-    mode = 'bat';
+    storyRole();
   } else {
     mode = story.mode;
+    $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
+    $('#pitches').hidden = mode !== 'pit';
+    setTeams(); resize(); hud();
   }
-  $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
-  $('.seg').hidden = true; $('#menuBtn').hidden = false;
-  $('#pitches').hidden = mode !== 'pit';
-  setTeams(); newGame();
-  if (story.inn) G.maxHalf = story.inn * 2;
-  idle(); resize();
+  idle();
   dialog(story.intro, () => overlay({ title: story.title, text: goalLong(story), b1: ['プレイボール', startGame], b2: ['メニュー', showMenu] }));
 }
 function storyAfterResult() {
@@ -402,11 +407,7 @@ function storyAfterResult() {
   clearPlay();
   let wait = rnd(1.6, 2.2);
   if (G.inning !== story.half) {                     // チェンジ：攻守交代
-    story.half = G.inning;
-    mode = battingSide() === 'home' ? 'bat' : 'pit';
-    $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
-    $('#pitches').hidden = mode !== 'pit';
-    setTeams(); resize(); hud();
+    storyRole();
     const dd = applyInningDice();
     showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備'), 'n');
     if (dd) { setTimeout(() => showDiceBanner(dd), 1600); wait += 3.5; } else wait += 0.8;

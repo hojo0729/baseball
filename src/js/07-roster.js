@@ -57,9 +57,9 @@ function teamState(t) {
   return G.teams[t];
 }
 const ALL_STAR_BAT = [
-  ['マメ（柴）', 5, 2, 'L', 5], ['ミケ（猫）', 5, 5, 'S*', 4], ['ソウタ（柴）', 5, 7, 'L*', 4],
-  ['ダイパン（パ）', 4, 7, 'R*', 3], ['グリズ（熊）', 4, 7, 'S*', 2], ['ウサミ（兎）', 4, 3, 'L', 5],
-  ['ハチ（柴）', 4, 3, 'S', 4], ['ボス（猫）', 5, 5, 'L', 3], ['ピョン（兎）', 4, 2, 'S', 5]
+  ['マメ（柴）', 5, 2, 'L', 5, 'home'], ['ミケ（猫）', 5, 5, 'S*', 4, 'neko'], ['ソウタ（柴）', 5, 7, 'L*', 4, 'home'],
+  ['ダイパン（パ）', 4, 7, 'R*', 3, 'away'], ['グリズ（熊）', 4, 7, 'S*', 2, 'kuma'], ['ウサミ（兎）', 4, 3, 'L', 5, 'usagi'],
+  ['ハチ（柴）', 4, 3, 'S', 4, 'home'], ['ボス（猫）', 5, 5, 'L', 3, 'neko'], ['ピョン（兎）', 4, 2, 'S', 5, 'usagi']
 ];
 function curBatter() {
   const t = teamsNow().bat, s = teamState(t), slot = s.order % 9;
@@ -68,7 +68,7 @@ function curBatter() {
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
   const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
   const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1
-  return { slot: slot + 1, name: b[0], m: clamp(b[1] + bn.m, 1, 6), p: clamp(b[2] + bn.p, 1, 6), sp: sub ? b[4] : (ROSTER[t].run[slot] || 3), hand, side, star: isStar(b[3]), ph: sub };
+  return { slot: slot + 1, name: b[0], m: clamp(b[1] + bn.m, 1, 6), p: clamp(b[2] + bn.p, 1, 6), sp: b[4] || ROSTER[t].run[slot] || 3, hand, side, star: isStar(b[3]), ph: sub, team: b[5] || t };
 }
 function curPitcher() {
   const t = teamsNow().fld, s = teamState(t), p = ROSTER[t].pit[s.pit];
