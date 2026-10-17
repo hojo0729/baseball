@@ -87,8 +87,28 @@ function pitcherK(now) {
   if ((phase === 'fly' || phase === 'result') && ball) return 1 + clamp((now - ball.start) / 0.5, 0, 1) * 0.35;
   return 0;
 }
+/* 乱闘：全員が本塁へ集まる（近づく0→1、もみ合い1、離れる1→0）。煙のかたまりは絵のスプライト */
+function brawlK(now) {
+  if (!brawl) return 0;
+  if (now > brawl.end) { brawl = null; return 0; }
+  return Math.min(clamp((now - brawl.at) / 0.9, 0, 1), clamp((brawl.end - now) / 0.7, 0, 1));
+}
+const brawlCloud = (() => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const c = cv.getContext('2d'); c.lineWidth = 6; c.strokeStyle = '#3a2a24'; c.lineJoin = 'round';
+  const puff = (x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.stroke(); };
+  [[128, 150, 70, '#f2efe6'], [70, 130, 48, '#e7e3d8'], [190, 135, 50, '#e7e3d8'], [100, 85, 44, '#f6f3ea'], [160, 85, 42, '#f6f3ea'], [128, 110, 52, '#fffdf6']].forEach(a => puff(...a));
+  const star = (x, y, R, col) => { c.fillStyle = col; c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? R * 0.45 : R, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } c.closePath(); c.fill(); c.stroke(); };
+  star(52, 48, 26, '#ffd23f'); star(190, 208, 24, '#ff9a3c'); star(60, 200, 20, '#ffd23f');
+  c.strokeStyle = '#d6322a'; c.lineWidth = 9; c.lineCap = 'round';                                      // 怒りマーク
+  for (let q = 0; q < 4; q++) { c.beginPath(); c.arc(200 + [1, -1, -1, 1][q] * 13, 60 + [1, 1, -1, -1][q] * 13, 11, q * Math.PI / 2 + Math.PI, q * Math.PI / 2 + Math.PI * 1.5); c.stroke(); }
+  const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false }));
+  sp.visible = false; scene.add(sp); return sp;
+})();
 /* 野手の表情：打球を追うとき・捕ったとき・ホームランを見上げるとき */
 function fielderFace(i, k) {
+  if (brawlK(now_()) > 0) return 'shout';
   if (!play) return 'normal';
   if (play.hr) return 'wow';
   if (play.foul) return 'normal';
@@ -101,14 +121,23 @@ function fielderFace(i, k) {
   return 'normal';
 }
 function updateFaces(now, k) {
-  const hit = play && play.hr;
-  faceFor(pitcherF, (phase === 'deliver' && k > 0.45) || (phase === 'fly' && ball && now - ball.start < 0.45) ? 'shout' : hit ? 'sad' : 'normal', now);
-  faceFor(batterF, hit ? 'joy' : (phase === 'deliver' || phase === 'fly') ? 'focus' : 'normal', now);
+  const hit = play && play.hr, fight = brawlK(now) > 0, hbp = now < hbpUntil;
+  faceFor(pitcherF, fight ? 'shout' : hbp ? 'wow' : (phase === 'deliver' && k > 0.45) || (phase === 'fly' && ball && now - ball.start < 0.45) ? 'shout' : hit ? 'sad' : 'normal', now);
+  faceFor(batterF, fight ? 'shout' : hbp ? 'sad' : hit ? 'joy' : (phase === 'deliver' || phase === 'fly') ? 'focus' : 'normal', now);
+  brawlCloud.visible = fight;
+  if (fight) { brawlCloud.material.rotation = Math.sin(now * 9) * 0.15; const s = 3.4 + Math.sin(now * 21) * 0.3; brawlCloud.scale.set(s, s, 1); brawlCloud.position.set(Math.sin(now * 17) * 0.12, 1.2 + Math.sin(now * 13) * 0.1, -0.8); }
 }
 function updateFielders(now, k) {
   const ready = phase === 'fly' || phase === 'deliver' || (phase === 'wait' && k > 0.6) ? 1 : 0.3;
   fielderF.forEach((f, i) => {
     let x = FPOS[i][0], z = FPOS[i][1], yaw = Math.atan2(-x, -z), mv = 0, reach = 0, rd = ready, spU = null;
+    const bk = brawlK(now);
+    if (bk > 0) {                                              // 乱闘：みんな本塁に集まってもみ合う
+      const a = i / FPOS.length * 6.283 + 0.4, r = 1.1 + 0.45 * (i % 3), tx = Math.sin(a) * r, tz = -0.8 + Math.cos(a) * r, e = easeOut(bk);
+      x = lerp(x, tx, e); z = lerp(z, tz, e);
+      yaw = Math.atan2(-x, -0.8 - z); mv = bk < 1 ? 1 : 0; rd = 1;
+      if (bk >= 1) { reach = 0.5 + 0.5 * Math.sin(now * 16 + i * 1.7); x += Math.sin(now * 13 + i * 2.1) * 0.1; z += Math.cos(now * 11 + i) * 0.1; }
+    } else
     if (play) {
       rd = 0.5;
       if (play.bi === i) {
@@ -267,6 +296,7 @@ let camShot = null;
 function updateCamera(now, dt) {
   let shot = null;
   if (play && play.spShot && now >= play.spShot.at && now < play.spShot.until) shot = play.spShot;
+  else if (brawl && now >= brawl.at - 0.3 && now < brawl.end) shot = brawl.shot;
   else if (play && play.shot && now >= play.shot.at) shot = play.shot;
   else if (camShot && now >= camShot.at) shot = camShot;
   if (shot) { camPos.copy(shot.pos); camLook.copy(shot.look); camFov = shot.fov; }
@@ -482,6 +512,8 @@ function frame() {
     if (ball) ball.start += d;
     if (play) { play.start += d; if (play.shot) play.shot.at += d; }
     if (pendBanner) pendBanner.at += d;
+    if (brawl) { brawl.at += d; brawl.end += d; brawl.shot.at += d; }
+    hbpUntil += d;
     if (batAnim) batAnim.t0 += d;
     if (swing) swing.time += d;
   }

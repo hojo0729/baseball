@@ -244,6 +244,8 @@ const sfx = {
   slide(delay) { playRec(sfxRnd() < 0.5 ? 'slide1' : 'slide2', 0.8, delay); },
   pop() { burst(240, 0.09, 0.2, 'triangle'); noise(0.07, 0.3, 900, 0.05); },
   swish() { noise(0.16, 0.14, 1800, 0.5); },
+  thud() { burst(150, 0.18, 0.35, 'sine'); noise(0.12, 0.3, 300, 0.02); },                  // デッドボールが体に当たる鈍い音
+  boo() { noise(1.6, 0.1, 380, 0.3); },
   cheer(k) { noise(0.9 + k * 0.7, 0.05 + k * 0.05, 700, 0.35); }
 };
 
@@ -268,6 +270,7 @@ let G = null;
 let phase = 'idle';            // idle | wait | deliver | fly | result
 let ball = null, swing = null, play = null, batAnim = null, pending = null, flick = null, aim = null;
 let nextAt = 0, deliverStart = 0, shakeUntil = 0, shakeAmp = 0, pendBanner = null;
+let hbpUntil = 0, brawl = null;      // デッドボール直後の表情 / 乱闘の演出 { at, end, shot }
 const OPT = { dice: true, hap: true, trait: true, skill: true };   // 設定：ギミックのオン・オフ
 try { Object.assign(OPT, JSON.parse(localStorage.getItem('yakyu-opts') || '{}')); } catch (e) {}
 function saveOpt() { try { localStorage.setItem('yakyu-opts', JSON.stringify(OPT)); } catch (e) {} }
@@ -490,6 +493,26 @@ function walk() {
   B[0] = bsp;
   return 'フォアボール';
 }
+/* デッドボール：投球が打者の体の位置（打者側の外へ大きく外れたコース）に来たら当たる。見逃したときだけ */
+function hbpCheck() {
+  if (steal || curBunt || !ball) return false;
+  const inside = (shownLeft ? 1 : -1) * ball.T[0];            // 打者の体に近づく向きがプラス
+  if (inside < 1.6) return false;
+  return Math.random() < clamp((inside - 1.55) / 0.45, 0.35, 1);
+}
+function hitByPitch() {
+  const bsp = curBatter().sp;
+  endPA();
+  const B = G.bases;
+  if (B[0]) { if (B[1]) { if (B[2]) G.runs++; B[2] = B[1]; } B[1] = B[0]; }
+  B[0] = bsp;
+  return 'デッドボール';
+}
+function applyEject() {                                        // 乱闘の後、その投手は退場して交代
+  if (!G || !G.eject) return;
+  const t = G.eject; G.eject = null;
+  relieve(t);
+}
 function advance(n, label) {
   const bsp = curBatter().sp;
   endPA();
@@ -619,7 +642,9 @@ function cpuPitch() {
   }
   else { tx = rnd(-1.5, 1.5); ty = rnd(-1.4, 1.5); }
   const bonus = story && story.pitcher ? story.pitcher.speed : 0;
-  const P = curPitcher(), wild = Math.max(0.02, 0.06 + (3 - P.c) * 0.05 + P.fatigue * 0.3 + LV.wild);
+  const P = curPitcher();
+  if (Math.random() < 0.008 + P.fatigue * 0.04 + Math.max(0, LV.wild) * 0.05) tx = (shownLeft ? 1 : -1) * rnd(1.75, 2.05);   // すっぽ抜けて打者の体の近くへ
+  const wild = Math.max(0.02, 0.06 + (3 - P.c) * 0.05 + P.fatigue * 0.3 + LV.wild);
   tx += gauss() * Math.max(0, wild); ty += gauss() * Math.max(0, wild);
   launchBall({ key, speed: clamp(rnd(T.min, T.max) + bonus + LV.spd + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx, ty });
 }
@@ -692,7 +717,21 @@ function resolveCore(c, C) {
   const info = TYPES[ball.key].name + ' ' + Math.round(ball.speed) + 'km/h';
   let t = '', sub = info, tn = 'n', delay = 0, cheer = 0;
   play = null;
-  if (c.kind === 'take' || c.kind === 'miss') {
+  if (c.kind === 'take' && c.hbp) {                          // デッドボール：打者が一塁へ。同じ投手が2個目を当てたら乱闘
+    ball.mitt = true; sfx.thud(); hbpUntil = now + 1.8;
+    const P = curPitcher(), key = P.team + ':' + P.name;
+    G.hbp = G.hbp || {}; G.hbp[key] = (G.hbp[key] || 0) + 1;
+    t = hitByPitch(); tn = tone(true); sub = info;
+    if (G.hbp[key] >= 2) {
+      G.hbp[key] = 0; t = '乱闘！'; sub = 'デッドボール2個目　両軍がベンチから飛び出す';
+      if (!story) { G.eject = P.team; sub += '　' + P.name + ' 退場'; }
+      brawl = { at: now + 0.9, end: now + 4.6, shot: frameShot([V(-4, 1, 3), V(4, 1, 3), V(0, 2.5, -7)], now + 0.9) };
+      sfx.boo(); cheer = 0;
+    }
+    ghostOn = true; ghostRing.position.set(ball.tgt.x, ball.tgt.y, 0.005);
+    delay = 0.35; nextAt = now + (brawl && brawl.at > now ? 5.2 : 2.2);
+  }
+  else if (c.kind === 'take' || c.kind === 'miss') {
     if (!ball.mitt) sfx.mitt(ball.speed);
     const st = settleSteal(c, now);
     if (st && st.ended) { t = st.label; tn = tone(false); sub = info; }
@@ -786,13 +825,13 @@ function stepFly(now) {
       const c = contact((big ? dt * 0.7 : dt) * (ball.vn ? 1.6 : 1), d, swing.y - ball.T[1], ball.speed, big, swing.crit);
       c.crit = !!swing.crit;
       resolve(c, swing.C);
-    } else if (!swing && now >= arr + 0.2) resolve({ kind: 'take' });
+    } else if (!swing && now >= arr + 0.2) resolve({ kind: 'take', hbp: hbpCheck() });
   } else if (online) stepFlyOnline(now);
   else {
     const k = ball.cpu;
     if (now >= arr + 0.02 + (k.swing ? Math.max(0, k.dt) : 0)) {
       if (k.swing) resolve(curBunt ? buntContact(k.d * 0.8, k.vy * 0.3) : contact(k.dt, k.d, k.vy, ball.speed, false, false, cpuLv().pow - Math.max(0, Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) - 1) * 45), ball.tgt);
-      else resolve({ kind: 'take' });
+      else resolve({ kind: 'take', hbp: hbpCheck() });
     }
   }
 }
@@ -803,6 +842,7 @@ function clearPlay() {
 }
 function afterResult() {
   flushBanner();
+  applyEject();
   if (online) { onlineAfterResult(); return; }
   if (match) { matchAfterResult(); return; }
   if (story) { const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; } }

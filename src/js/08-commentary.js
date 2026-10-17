@@ -34,6 +34,8 @@ const LINES = {
   pout: ['内野フライ！捕りました、アウト。', '高く上がった！しっかり捕ってアウト。'],
   force: ['フォースプレー！アウトです！', 'いい判断！しっかり送球してアウト。', 'そっちを選びました！アウト！'],
   allsafe: ['間に合わなかった！オールセーフ！', 'セーフ！ランナーが溜まります。'],
+  hbp: ['デッドボール！当たってしまいました！', 'ああっ、デッドボール！大丈夫でしょうか。'],
+  brawl: ['乱闘です！ベンチから選手が飛び出した！', '二つ目のデッドボール！乱闘になりました！'],
   dp: ['ゲッツー！助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
   err: ['エラー！ボールがこぼれた！', 'ああっと、エラーです！'],
   steal: ['スタートを切った！盗塁成功！', '盗塁セーフ！いい走りです！'],
@@ -136,6 +138,8 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/ホームラン/.test(t)) key = pts >= 2 ? 'hr' + pts : 'hr';
   else if (/見逃し三振/.test(t)) key = 'KL';
   else if (/三振/.test(t)) key = 'K';
+  else if (/乱闘/.test(t)) key = 'brawl';
+  else if (/デッドボール/.test(t)) key = 'hbp';
   else if (/ゲッツー/.test(t)) key = 'dp';
   else if (/フォースアウト|タッチアウト/.test(t)) key = 'force';
   else if (/オールセーフ|ホームでセーフ/.test(t)) key = 'allsafe';

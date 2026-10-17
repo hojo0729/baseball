@@ -105,7 +105,7 @@ function dialog(lines, done) {
   };
   step();
 }
-function idle() { clearPlay(); phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
+function idle() { clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
