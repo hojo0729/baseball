@@ -74,7 +74,14 @@ export async function launchBrowser() {
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: 'chrome' })
   };
   const b = await chromium.launch(launchOpts);
-  const patchPage = page => {
+  // 外部への通信（フォント・CDN）はスタブで返す：オフライン・制限のある環境でも、同じ結果になるように
+  const stubExternal = page => page.route('**/*', r => {
+    const u = r.request().url();
+    if (/^(http:\/\/(localhost|127\.0\.0\.1)[:/]|data:|blob:)/.test(u)) return r.continue();
+    return r.fulfill({ status: 200, contentType: /css/.test(u) ? 'text/css' : 'application/javascript', body: '' });
+  });
+  const patchPage = async page => {
+    await stubExternal(page);
     page.click = async sel => {
       const done = await page.evaluate(s => {
         const el = document.querySelector(s);
@@ -100,12 +107,12 @@ export async function launchBrowser() {
     return page;
   };
   const origNewPage = b.newPage.bind(b);
-  b.newPage = async (...args) => patchPage(await origNewPage(...args));
+  b.newPage = async (...args) => await patchPage(await origNewPage(...args));
   const origNewContext = b.newContext.bind(b);
   b.newContext = async (...args) => {
     const ctx = await origNewContext(...args);
     const ctxNewPage = ctx.newPage.bind(ctx);
-    ctx.newPage = async (...pArgs) => patchPage(await ctxNewPage(...pArgs));
+    ctx.newPage = async (...pArgs) => await patchPage(await ctxNewPage(...pArgs));
     return ctx;
   };
   const origClose = b.close.bind(b);

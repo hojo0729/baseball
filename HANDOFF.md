@@ -95,6 +95,7 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 - 締めるときにやること：`main` への直接 push を禁止（ブランチ保護）、PR 経由に、CI（check とスモークテスト）の成功を必須に、PR テンプレート、判定・オンラインの変更は別のAIがレビューしてからマージ、実機確認のチェックリスト。
 
 ### 作業ログ（新しいものを上に1行ずつ。AIも Take も書く）
+- 2026-10-18 Claude：Gemini のテスト環境（check.mjs / smoke.mjs）を Linux でも検証。外部通信（フォント・CDN）をスタブにして、制限のある環境でも同じ結果になるよう `lib.mjs` を修正。`__pycache__` をコミット対象から外した。気づき：テスト用の `page.click` は JS の click で押すため、ボタンが他の要素に隠れていても通る（見た目の重なりは検知できない）。
 - 2026-10-18 Gemini（Antigravity）：Node.js v24＋Chromeのみで動く開発用テスト基盤（`package.json`、`tools/test/make-test-page.mjs`、`tools/test/lib.mjs`、`tools/test/smoke.mjs`、`tools/check.mjs`、`.githooks/pre-push`）を整備。
 - 2026-10-18 Gemini（Antigravity）：頭部スケールHEAD_Kを1.74→1.48に縮小、ほっぺ張り出しと首の高さを自然なちびキャラバランスに再調整。
 - 2026-10-18 Gemini（Antigravity）：ストーリーモード最終章・第5話「審判の日 人間たちの野球」を追加（ディストピア設定、5回戦・延長7回まで、ヒューマンズチームと人間3Dモデル・顔アイコン、動物オールスター打線、真エンディング）。実機未確認：第5話の通し試合展開とエンディング演出。

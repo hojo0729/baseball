@@ -2,3 +2,5 @@ dist/
 node_modules/
 .DS_Store
 voice-script.csv
+__pycache__/
+*.pyc
