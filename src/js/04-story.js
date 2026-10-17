@@ -66,8 +66,87 @@ function announceChance() {
 }
 
 /* ---- overlay helpers ---- */
+const ICON_URL = {};
+function teamIcon(team) {
+  if (ICON_URL[team]) return ICON_URL[team];
+  const sp = UNIFORM[team].species, S = SPECIES[sp], cv = document.createElement('canvas');
+  cv.width = cv.height = 72;
+  const g = cv.getContext('2d');
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = '#2b1d16'; g.lineWidth = 2.4;
+  [-1, 1].forEach(s => {
+    g.save(); g.translate(36 + s * (S.ear === 'long' ? 11 : 17), S.ear === 'long' ? 17 : 22);
+    if (S.ear === 'cone') {
+      g.rotate(s * 0.32);
+      g.fillStyle = S.EARC; g.beginPath(); g.moveTo(-9, 10); g.lineTo(0, -12); g.lineTo(9, 10); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = S.EARIN; g.beginPath(); g.moveTo(-5, 7); g.lineTo(0, -6); g.lineTo(5, 7); g.closePath(); g.fill();
+    } else if (S.ear === 'long') {
+      g.rotate(s * 0.14);
+      g.fillStyle = S.EARC; g.beginPath(); g.ellipse(0, 0, 6.2, 15, 0, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = S.EARIN; g.beginPath(); g.ellipse(0, 1, 3.4, 10.5, 0, 0, 7); g.fill();
+    } else {
+      g.fillStyle = S.EARC; g.beginPath(); g.arc(0, 0, 9.5, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = S.EARIN; g.beginPath(); g.arc(0, 0, 5.2, 0, 7); g.fill();
+    }
+    g.restore();
+  });
+  g.fillStyle = S.HEAD; g.beginPath(); g.ellipse(36, 43, 21, 18.5, 0, 0, 7); g.fill(); g.stroke();
+  if (sp === 'shiba') {
+    g.fillStyle = S.MUZ;
+    g.beginPath(); g.ellipse(25, 48, 8.5, 7, -0.2, 0, 7); g.ellipse(47, 48, 8.5, 7, 0.2, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(27, 33.5, 3.2, 1.9, -0.15, 0, 7); g.ellipse(45, 33.5, 3.2, 1.9, 0.15, 0, 7); g.fill();
+  }
+  if (sp === 'panda') {
+    g.fillStyle = S.PATCH;
+    [-1, 1].forEach(s => { g.beginPath(); g.ellipse(36 + s * 9.5, 41.5, 6, 7.5, s * 0.35, 0, 7); g.fill(); });
+  }
+  if (sp === 'neko') {
+    g.fillStyle = '#8c5220';
+    [-5, 0, 5].forEach((dx, i) => { g.beginPath(); g.ellipse(36 + dx, 28.5 + (i === 1 ? 1 : 0), 1.4, 4, 0, 0, 7); g.fill(); });
+  }
+  g.fillStyle = S.MUZ; g.beginPath(); g.ellipse(36, 47.5, sp === 'kuma' ? 9.5 : 8, 6.2, 0, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,110,125,0.5)';
+  [-1, 1].forEach(s => { g.beginPath(); g.ellipse(36 + s * 14.5, 46.5, 3.8, 2.3, 0, 0, 7); g.fill(); });
+  if (sp === 'kuma') {
+    g.strokeStyle = '#3a2010'; g.lineWidth = 2.8;
+    [-1, 1].forEach(s => { g.beginPath(); g.moveTo(36 + s * 5.5, 34.5); g.lineTo(36 + s * 13.5, 33); g.stroke(); });
+  }
+  if (sp === 'neko') {
+    g.strokeStyle = '#5a3b22'; g.lineWidth = 1.6;
+    [-1, 1].forEach(s => {
+      g.beginPath(); g.moveTo(36 + s * 13, 45); g.lineTo(36 + s * 20, 44);
+      g.moveTo(36 + s * 13, 48); g.lineTo(36 + s * 20, 48.5); g.stroke();
+    });
+  }
+  [-1, 1].forEach(s => {
+    g.fillStyle = '#1b1a1f'; g.beginPath(); g.ellipse(36 + s * 9.5, 41, 3.3, 3.8, 0, 0, 7); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(36 + s * 9.5 - 1.1, 39.5, 1.35, 0, 7); g.fill();
+  });
+  if (sp === 'usagi') {
+    g.fillStyle = '#ffffff'; g.fillRect(34.3, 49.2, 3.4, 3.2);
+  }
+  g.strokeStyle = '#2b1d16'; g.lineWidth = 1.8;
+  g.beginPath(); g.arc(33.4, 48.2, 2.6, 0.1, Math.PI - 0.1); g.stroke();
+  g.beginPath(); g.arc(38.6, 48.2, 2.6, 0.1, Math.PI - 0.1); g.stroke();
+  g.fillStyle = S.NOSE; g.beginPath(); g.ellipse(36, 45, 3.1, 2.2, 0, 0, 7); g.fill();
+  return (ICON_URL[team] = cv.toDataURL());
+}
+function spkTeam(spk) {
+  if (!spk) return null;
+  if (spk.includes('柴')) return 'home';
+  if (spk.includes('パンダ')) return 'away';
+  if (spk.includes('ネコ')) return 'neko';
+  if (spk.includes('うさぎ')) return 'usagi';
+  if (spk.includes('くま')) return 'kuma';
+  return null;
+}
 function overlay(o) {
-  $('#ospk').textContent = o.spk || '';
+  const spkEl = $('#ospk'), st = spkTeam(o.spk);
+  spkEl.textContent = '';
+  if (o.spk) {
+    if (st) { const im = new Image(); im.className = 'av'; im.src = teamIcon(st); spkEl.appendChild(im); spkEl.style.background = TEAM_COL[st][0]; }
+    else spkEl.style.background = '';
+    spkEl.appendChild(document.createTextNode(o.spk));
+  }
   $('#ot').textContent = o.title || ''; $('#ot').hidden = !o.title;
   $('#od').textContent = o.text || '';
   $('#overlay').classList.toggle('dlg', !!o.dlg);
@@ -76,15 +155,20 @@ function overlay(o) {
   $('#overlay').classList.toggle('cred', !!o.cred);
   $('#goBtn').classList.toggle('plain', !!o.plain);
   const bd = $('#obadge'); bd.hidden = !o.logo;
-  if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのバッジ
-    const i = document.createElement('i'); i.textContent = TEAM_COL[t][1]; i.style.background = TEAM_COL[t][0]; bd.appendChild(i);
+  if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのどうぶつ顔バッジ
+    const i = document.createElement('i'); i.style.background = TEAM_COL[t][0];
+    const im = new Image(); im.src = teamIcon(t); im.alt = TEAM_COL[t][1]; i.appendChild(im);
+    bd.appendChild(i);
   });
-  /* label 'name\nsmall text' -> two lines. optional 3rd item: team key for a color stripe */
+  /* label 'name\nsmall text' -> two lines. optional 3rd item: team key for a color stripe & animal icon */
   const setB = (el, b) => {
     el.hidden = !b; if (!b) return;
     const [main, sub] = b[0].split('\n');
-    el.textContent = main;
-    if (sub) { const s = document.createElement('small'); s.textContent = sub; el.appendChild(s); }
+    el.textContent = '';
+    if (b[2]) { const im = new Image(); im.className = 'av'; im.src = teamIcon(b[2]); el.appendChild(im); }
+    const wrap = document.createElement('span'); wrap.textContent = main;
+    if (sub) { const s = document.createElement('small'); s.textContent = sub; wrap.appendChild(s); }
+    el.appendChild(wrap);
     el.style.setProperty('--tc', b[2] ? TEAM_COL[b[2]][0] : 'transparent');
     el.classList.toggle('team', !!b[2]);
   };
