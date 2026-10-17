@@ -127,7 +127,7 @@ function fadeStop(n, fade) {
 }
 function wantTheme() {
   if (!G || phase === 'idle') return 'a';
-  if ((G.bases[1] || G.bases[2]) && bgmRec.chance) return 'chance';   // チャンステーマ
+  if (mode === 'bat' && (G.bases[1] || G.bases[2]) && bgmRec.chance) return 'chance';   // 攻撃で得点圏（2・3塁）にランナー → チャンステーマ
   return mode === 'bat' || !bgmRec.b ? 'a' : 'b';                      // 攻撃中は王道ブラス、守備中はマーチ
 }
 function bgmFileTick() {
