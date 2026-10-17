@@ -347,6 +347,9 @@ function setAim(x, y) {
   const p = screenToZone(x, y); if (!p) return;
   p.x = clamp(p.x, -ZW * 2, ZW * 2); p.y = clamp(p.y, ZY0 - ZH * 2, ZY0 + ZH * 2);
   aim = p;
+  const inside = (shownLeft ? 1 : -1) * p.x / ZW;                 // 打者の体に当たるコースなら、狙いの輪が赤くなる
+  const ac2 = mode === 'pit' && inside >= HBP_EDGE ? '#ff4a3c' : '#f4c95a';
+  aimRing.material.color.set(ac2); aimRing.children.forEach(m => m.material.color.set(ac2));
 }
 cv.addEventListener('pointerdown', e => {
   e.preventDefault(); audioInit();

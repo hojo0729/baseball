@@ -494,11 +494,12 @@ function walk() {
   return 'フォアボール';
 }
 /* デッドボール：投球が打者の体の位置（打者側の外へ大きく外れたコース）に来たら当たる。見逃したときだけ */
+const HBP_EDGE = 1.35;                                          // これより打者側に外れた球は体に当たりうる（1.0 がゾーンの端、打者の体は約1.6〜）
 function hbpCheck() {
   if (steal || curBunt || !ball) return false;
   const inside = (shownLeft ? 1 : -1) * ball.T[0];            // 打者の体に近づく向きがプラス
-  if (inside < 1.6) return false;
-  return Math.random() < clamp((inside - 1.55) / 0.45, 0.35, 1);
+  if (inside < HBP_EDGE) return false;
+  return Math.random() < clamp((inside - 1.2) / 0.5, 0.3, 1);
 }
 function hitByPitch() {
   const bsp = curBatter().sp;
