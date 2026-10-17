@@ -212,9 +212,10 @@ function showMatchOver() {
   overlay({ clear: me > cpu, title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: ROSTER[match.mine].name + ' ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
     b1: ['もう一度', showCpuMenu], b2: ['メニュー', showMenu] });
 }
-/* the menu button during a CPU match: the game stops while the sheet is open */
+/* the menu button during an offline game: the game stops while the sheet is open */
 function matchPause() {
-  overlay({ title: '試合中', text: inningLabel() + '　' + $('#slab').textContent + '　' + $('#runs').textContent,
+  const info = story ? story.short + '　' + $('#inn').textContent : twoTeam() ? inningLabel() : $('#inn').textContent;
+  overlay({ title: '試合中', text: info + '　' + $('#slab').textContent + '　' + $('#runs').textContent,
     b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', showMenu] });
 }
 function startStory() {

@@ -481,7 +481,7 @@ $('#go4').addEventListener('click', () => { audioInit(); if (ovAction4) ovAction
 $('#go5').addEventListener('click', () => { audioInit(); if (ovAction5) ovAction5(); });
 $('#go6').addEventListener('click', () => { audioInit(); if (ovAction6) ovAction6(); });
 $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter' && ovAction) ovAction(); });
-$('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else if (match && G && !G.over) matchPause(); else showMenu(); });
+$('#menuBtn').addEventListener('click', () => { if (online && onl.started) onlinePause(); else if (G && !G.over && phase !== 'idle') matchPause(); else showMenu(); });
 $('#cmtBtn').addEventListener('click', () => setCmtMode((cmt.mode + 1) % 3));
 $('#cmtBtn').textContent = CMT_LABEL[cmt.mode];
 function bgmLabel() { const on = bgmWanted(), b = $('#bgmBtn'); b.textContent = '♪ 応援 ' + (on ? 'オン' : 'オフ'); b.classList.toggle('off', !on); }
@@ -512,8 +512,8 @@ function frame() {
       perfN = 0; perfSum = 0;
     }
   }
-  // CPU match: the game holds still while the menu sheet is open, then picks up where it was
-  if (match && !$('#overlay').hidden && phase !== 'idle') {
+  // offline game: the game holds still while the menu sheet is open, then picks up where it was
+  if (!online && !$('#overlay').hidden && phase !== 'idle') {
     if (!pausedAt) pausedAt = now;
     renderer.render(scene, camera); requestAnimationFrame(frame); return;
   }
