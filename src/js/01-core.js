@@ -240,8 +240,8 @@ const DICE_FX = {
   2: () => { G.outs = Math.max(G.outs, 1); return '凶… 1アウトから開始'; },
   3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 2, p: 2 }; return '次の打者　ミート+2 パワー+2'; },
   4: () => { G.bases[0] = G.bases[0] || 3; G.bases[1] = G.bases[1] || 3; return 'ノーアウト1・2塁のチャンス！'; },
-  5: () => { G.runs += 2; return '2点ボーナス！！'; },
-  6: () => { G.runs += 4; return '4点ボーナス！！！大当たり'; }
+  5: () => { G.bases = [3, 3, 3]; return 'ノーアウト満塁のチャンス！！'; },
+  6: () => { G.bases = [3, 3, 3]; G.bonus = { inn: G.inning, pa: G.pa, m: 2, p: 2 }; return '満塁＋次の打者 大幅パワーアップ！！！大当たり'; }
 };
 function rollDie() {
   if (!online) return Math.floor(Math.random() * 6) + 1;

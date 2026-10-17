@@ -449,8 +449,8 @@ const DICE_FX = {
   2: () => { G.outs = Math.max(G.outs, 1); return '凶… 1アウトから開始'; },
   3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 2, p: 2 }; return '次の打者　ミート+2 パワー+2'; },
   4: () => { G.bases[0] = G.bases[0] || 3; G.bases[1] = G.bases[1] || 3; return 'ノーアウト1・2塁のチャンス！'; },
-  5: () => { G.runs += 2; return '2点ボーナス！！'; },
-  6: () => { G.runs += 4; return '4点ボーナス！！！大当たり'; }
+  5: () => { G.bases = [3, 3, 3]; return 'ノーアウト満塁のチャンス！！'; },
+  6: () => { G.bases = [3, 3, 3]; G.bonus = { inn: G.inning, pa: G.pa, m: 2, p: 2 }; return '満塁＋次の打者 大幅パワーアップ！！！大当たり'; }
 };
 function rollDie() {
   if (!online) return Math.floor(Math.random() * 6) + 1;
@@ -2471,8 +2471,8 @@ const LINES = {
   dice2: ['凶です…1アウトからのスタート。'],
   dice3: ['パワーもミートも大幅アップ！一発あるか！'],
   dice4: ['ノーアウト一・二塁のチャンス！'],
-  dice5: ['2点ボーナス！'],
-  dice6: ['なんと4点ボーナス！大当たりだ！']
+  dice5: ['ノーアウト満塁！大チャンスです！'],
+  dice6: ['満塁で打者も絶好調！大当たりだ！']
 };
 
 function cmtRand() { cmt.s = (cmt.s * 1664525 + 1013904223) >>> 0; return cmt.s / 4294967296; }
