@@ -23,6 +23,8 @@ function stealers() {
   return r;
 }
 /* a runner is put out without ending the plate appearance */
+/* how often a CPU runner goes: fast runners steal more */
+function cpuStealChance() { const st = stealers(); return st.length ? 0.06 + (G.bases[st[0]] || 3) * 0.055 : 0; }
 function runnerOut(i) {
   G.bases[i] = 0; G.outs++;
   if (G.outs >= 3) { G.b = 0; G.s = 0; return true; }
@@ -55,7 +57,7 @@ function settleSteal(c, now) {
   if (!s) return null;
   if (c.kind !== 'take' && c.kind !== 'miss') return null;      // ball in play or foul: the play takes over
   if (s.squeeze) {                                             // missed squeeze: runner hung out at the plate
-    const safe = Math.random() < 0.1;
+    const safe = Math.random() < 0.05 + ((G.bases[2] || 3) - 3) * 0.03;   // a fast runner sometimes beats the tag
     s.throw = null; s.arrive = now + 0.5; s.runEnd = now + 0.4;
     stealAnim = s; G.bases[2] = 0;
     let ended = false;
@@ -64,15 +66,19 @@ function settleSteal(c, now) {
     if (ended) label = endInning(label);
     return { label, safe, ended, arrive: s.arrive };
   }
-  let p = 0.62 + (128 - ball.speed) / 100 * 0.7 + TYPES[ball.key].hard * 0.08 - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0);
-  p = clamp(p, 0.3, 0.9);
+  // 盗塁の成否: 球の速さと変化（捕りにくさ）、走者の足、キャッチャーの肩、コース（低めは送球が遅れる）
+  const rs = G.bases[s.lead] || 3, arm = ROSTER[teamsNow().fld].arm || 3, ly = ball.T[1];
+  let p = 0.62 + (128 - ball.speed) / 100 * 0.7 + TYPES[ball.key].hard * 0.08
+    + (rs - 3) * 0.08 - (arm - 3) * 0.06 + (ly > 0.6 ? 0.04 : ly < -0.6 ? -0.03 : 0)
+    - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0);
+  p = clamp(p, 0.15, 0.95);
   const safe = Math.random() < p, tgt = s.lead + 2;              // first -> 2B, second -> 3B
   const from = V(0, 1.2, 0.8), to = BASE_PT[tgt], t0 = now + 0.15, dur = from.distanceTo(to) / 33;
   s.throw = { from, to, t0, dur };
   s.arrive = t0 + dur; s.runEnd = s.arrive + (safe ? -0.25 : 0.35);
   stealAnim = s;
-  const nb = G.bases.slice();
-  s.run.forEach(i => { nb[i] = 0; if (i !== s.lead || safe) nb[i + 1] = 1; });
+  const nb = G.bases.slice(), B0 = G.bases.slice();
+  s.run.forEach(i => { nb[i] = 0; if (i !== s.lead || safe) nb[i + 1] = B0[i] || 3; });
   G.bases = nb;
   let ended = false;
   if (!safe) { G.outs++; if (G.outs >= 3) { G.b = 0; G.s = 0; ended = true; } }
@@ -91,6 +97,7 @@ function buntContact(d, vy) {
 }
 /* returns { t: result text, good: good for the batting side, thr: bases the defense throws to } */
 function buntResult(c, B, squeeze) {
+  const bsp = curBatter().sp;
   if (c.popup) return { t: out('バント失敗（小フライ）'), good: false };
   if (squeeze) {
     if (Math.random() < 0.15) { const t = advance(1, 'スクイズ成功！ 内野安打'); G.hits--; return { t, good: true }; }
@@ -108,15 +115,15 @@ function buntResult(c, B, squeeze) {
   if (r < 0.27 && chain >= 0) {                                 // lead forced runner is cut down
     endPA(); G.outs++;
     if (G.outs >= 3) return { t: endInning('バント失敗（封殺）'), good: false, thr: chain < 2 ? [chain + 2] : null };
-    const nb = [1, 0, 0];
-    for (let i = 0; i < 3; i++) { if (!B[i] || i === chain) continue; if (i < chain) nb[i + 1] = 1; else nb[i] = 1; }
+    const nb = [bsp, 0, 0];
+    for (let i = 0; i < 3; i++) { if (!B[i] || i === chain) continue; if (i < chain) nb[i + 1] = B[i]; else nb[i] = B[i]; }
     G.bases = nb;
     return { t: 'バント失敗（封殺）', good: false, thr: chain < 2 ? [chain + 2] : null };
   }
   endPA(); G.outs++;
   if (G.outs >= 3) return { t: endInning('送りバント'), good: false, thr: [1] };
   const sc = B[1] && B[2] ? 1 : 0;
-  G.bases = [0, B[0], B[1] || B[2] ? 1 : 0]; G.runs += sc;
+  G.bases = [0, B[0], B[1] || B[2] || 0]; G.runs += sc;
   return { t: '送りバント成功' + (sc ? ' 1点' : ''), good: true, thr: [1] };
 }
 function isBunting() {
@@ -211,16 +218,18 @@ function actOptions() {
   if (mode === 'bat') {
     if (phase === 'wait') {
       const st = stealers().length;
-      if (st) o.push(['steal', st > 1 ? 'ダブルスチール' : '盗塁'], ['run', 'エンドラン']);
+      if (st) o.push(['steal', (st > 1 ? 'ダブルスチール' : '盗塁') + ' 走' + GRADE[G.bases[stealers()[0]] || 3]], ['run', 'エンドラン']);
       o.push(['bunt', 'バント']);
       if (G.bases[2] && G.outs < 2) o.push(['squeeze', 'スクイズ']);
     }
     if ((phase === 'wait' || (phase === 'fly' && ball && !ball.done && !swing)) && G.skill.crit > 0) o.push(['crit', '会心の一振り ' + G.skill.crit]);
+    const ph = phOption(); if (ph) o.push(ph);
     return o;
   }
   if (phase === 'ready') {
     if (G.bases[0] || G.bases[1]) o.push(['pick', '牽制する']);
     if (G.skill.vn > 0) o.push(['vn', '消える魔球 ' + G.skill.vn]);
+    const cl = closerOption(); if (cl) o.push(cl);
     const rl = reliefOption(); if (rl) o.push(rl);
   }
   return o;
@@ -244,6 +253,8 @@ $('#acts').addEventListener('click', e => {
   const k = b.dataset.k;
   if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
+  else if (k === 'closer') userCloser();
+  else if (k === 'ph') userPinch();
   else if (k === 'crit') critArm = !critArm;
   else if (k === 'vn') vanishArm = !vanishArm;
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }

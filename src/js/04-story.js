@@ -159,7 +159,7 @@ function matchAfterResult() {
   phase = mode === 'bat' ? 'wait' : 'ready';
   nextAt = now_() + wait;
   if (mode === 'bat' && stealers().length) nextAt += 1.2;
-  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < 0.25;
+  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < cpuStealChance();
   cpuBuntPlan = mode === 'pit' && !cpuStealPlan && (G.bases[0] || G.bases[1]) && G.outs === 0 && Math.random() < 0.3;
   cpuRelief();
   updateGoal(); announceChance();

@@ -128,6 +128,8 @@ function onMsg(m) {
   else if (m.type === 'bye') opponentLeft();
   else if (m.type === 'relief') relieve(teamsNow().fld);
   else if (m.type === 'pick') onPickMsg(m);
+  else if (m.type === 'closer') { const t = teamsNow().fld; relieve(t, ROSTER[t].closer, true); }
+  else if (m.type === 'ph') pinchHit(m.t, m.slot);
   else if (m.type === 'sign') { if (mode === 'pit' && m.n === onl.pn) onl.oppSign = m.s || null; }   // a sign sent after this pitch was thrown is dropped
 }
 

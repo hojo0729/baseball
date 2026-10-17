@@ -239,7 +239,7 @@ const DICE_FX = {
   1: () => 'はずれ…',
   2: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 1, p: 0 }; return '次の打者　ミート+1'; },
   3: () => { G.bonus = { inn: G.inning, pa: G.pa, m: 0, p: 1 }; return '次の打者　パワー+1'; },
-  4: () => { if (G.bases[0]) { G.runs += 1; return '1点ボーナス'; } G.bases[0] = 1; return 'ランナーが1塁に！'; },
+  4: () => { if (G.bases[0]) { G.runs += 1; return '1点ボーナス'; } G.bases[0] = 3; return 'ランナーが1塁に！'; },
   5: () => { G.runs += 1; return '1点ボーナス！'; },
   6: () => { G.runs += 2; return '2点ボーナス！！'; }
 };
@@ -369,7 +369,7 @@ function doublePlay() {
   endPA(); G.outs += 2;
   if (G.outs >= 3) return endInning('ゲッツー');
   const sc = B[2] ? 1 : 0;
-  G.bases = [0, 0, B[1] ? 1 : 0]; G.runs += sc;
+  G.bases = [0, 0, B[1] || 0]; G.runs += sc;
   return 'ゲッツー' + (sc ? ' ' + sc + '点' : '');
 }
 /* ground out: batter out at first, forced runners move up one base */
@@ -378,7 +378,7 @@ function groundOut(label) {
   const res = out(label);
   if (G.outs === 0) return res;              // that out ended the inning
   let sc = 0; const nb = [0, B[1], B[2]];
-  if (B[0]) { if (B[1]) { if (B[2]) sc++; nb[2] = 1; } nb[1] = 1; }
+  if (B[0]) { if (B[1]) { if (B[2]) sc++; nb[2] = B[1]; } nb[1] = B[0]; }
   G.bases = nb; G.runs += sc;
   return res + (B[0] ? ' 進塁' : '') + (sc ? ' ' + sc + '点' : '');
 }
@@ -391,18 +391,21 @@ function sacFly() {
 }
 function strike() { G.s++; if (G.s >= 3) { G.so++; return out('三振'); } return null; }
 function ballCount() { G.b++; return G.b >= 4 ? walk() : null; }
+/* the bases hold each runner's 走力 (1-5), 0 = empty; a batter who reaches takes his own 走力 with him */
 function walk() {
+  const bsp = curBatter().sp;
   endPA();
   const B = G.bases;
-  if (B[0]) { if (B[1]) { if (B[2]) G.runs++; B[2] = 1; } B[1] = 1; }
-  B[0] = 1;
+  if (B[0]) { if (B[1]) { if (B[2]) G.runs++; B[2] = B[1]; } B[1] = B[0]; }
+  B[0] = bsp;
   return 'フォアボール';
 }
 function advance(n, label) {
+  const bsp = curBatter().sp;
   endPA();
   const nb = [0, 0, 0]; let sc = 0;
-  for (let i = 2; i >= 0; i--) if (G.bases[i]) { const p = i + 1 + n; if (p >= 4) sc++; else nb[p - 1] = 1; }
-  if (n >= 4) sc++; else nb[n - 1] = 1;
+  for (let i = 2; i >= 0; i--) if (G.bases[i]) { const p = i + 1 + n; if (p >= 4) sc++; else nb[p - 1] = G.bases[i]; }
+  if (n >= 4) sc++; else nb[n - 1] = bsp;
   G.runs += sc; G.bases = nb; G.hits++;
   if (n === 4) G.hr++;
   return label + (sc ? ' ' + sc + '点' : '');
@@ -628,7 +631,7 @@ function resolveCore(c, C) {
       else if (c.bases > 0) {
         t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
         if (c.bases === 4) bgmHR();
-        if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[1] = 0; G.bases[2] = 1; t += '（エンドランで1塁から3塁へ）'; }
+        if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
       else {
         if (c.res !== 'ポップフライ' && Math.random() < (play.grounder ? 0.07 : 0.05)) {
@@ -638,7 +641,7 @@ function resolveCore(c, C) {
         else if (play.grounder && B0[0] && o0 < 2 && !hr && Math.random() < 0.7) { t = doublePlay(); addThrows(play, [2, 1]); play.run = B0; cheer = mode === 'pit' ? 0.8 : 0; }
         else if (play.grounder) {
           t = groundOut(c.res); addThrows(play, [1]); play.run = B0;
-          if (hr && B0[1] && !B0[0] && G.outs !== 0 && !G.bases[2]) { G.bases[1] = 0; G.bases[2] = 1; t += ' 進塁'; }
+          if (hr && B0[1] && !B0[0] && G.outs !== 0 && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += ' 進塁'; }
         }
         else if (B0[2] && o0 < 2 && c.res === 'フライアウト' && play.dist > 55) { t = sacFly(); play.run = [0, 0, 1]; play.tag = true; }
         else {
@@ -705,7 +708,7 @@ function afterResult() {
   phase = mode === 'bat' ? 'wait' : 'ready';
   nextAt = now_() + rnd(1.6, 2.2);
   if (mode === 'bat' && stealers().length) nextAt += 1.2;      // time to give a steal sign
-  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < 0.25;
+  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < cpuStealChance();
   cpuBuntPlan = mode === 'pit' && !cpuStealPlan && (G.bases[0] || G.bases[1]) && G.outs === 0 && Math.random() < 0.3;
   cpuRelief();
   updateGoal(); announceChance();
