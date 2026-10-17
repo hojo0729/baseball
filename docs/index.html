@@ -289,14 +289,55 @@ function bgmBeatAt(n, t) {
   bgmBrass(mtof(BGM_BASS[k]), t, BGM_BEAT * 0.9, 0.12);
   BGM_MEL.forEach(([s, m, len]) => { if (Math.floor(s) === k) bgmBrass(mtof(m), t + (s - k) * BGM_BEAT, len * BGM_BEAT * 0.9, 0.2); });
 }
+/* recorded cheer music (docs/bgm, made with Lyria): a crowd bed that always runs, plus a music loop that follows the game
+   (your team batting / fielding / runners in scoring position), and a fanfare with a roar on home runs.
+   Until the files load (or where they can't, like the in-Claude preview) the synth rhythm above plays instead. */
+const BGM_FILES = { a: 'bgm/a_normal.mp3', b: 'bgm/b_normal.mp3', chance: 'bgm/c_chance.mp3', crowd: 'bgm/crowd.mp3', hr: 'bgm/hr.mp3' };
+const bgmRec = {};
+let bgmFileReq = false, fileOut = null, musicNow = null, crowdNow = null;
+function bgmLoadFiles() {
+  if (bgmFileReq || !ac || !window.fetch) return; bgmFileReq = true;
+  Object.keys(BGM_FILES).forEach(k => fetch(BGM_FILES[k]).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+    .then(a => new Promise((res, rej) => ac.decodeAudioData(a, res, rej))).then(b => { bgmRec[k] = b; }).catch(() => {}));
+}
+const fileReady = () => !!(bgmRec.a && bgmRec.crowd);
+function loopSrc(buf, vol, fade) {
+  const s = ac.createBufferSource(), g = ac.createGain(), t = ac.currentTime;
+  s.buffer = buf; s.loop = true; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + fade);
+  s.connect(g); g.connect(fileOut); s.start(t); return { s, g, vol };
+}
+function fadeStop(n, fade) {
+  if (!n || !ac) return;
+  const t = ac.currentTime;
+  try { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(n.g.gain.value, t); n.g.gain.linearRampToValueAtTime(0, t + fade); n.s.stop(t + fade + 0.05); } catch (e) {}
+}
+function wantTheme() {
+  if (!G || phase === 'idle') return 'a';
+  if ((G.bases[1] || G.bases[2]) && bgmRec.chance) return 'chance';   // チャンステーマ
+  return mode === 'bat' || !bgmRec.b ? 'a' : 'b';                      // 攻撃中は王道ブラス、守備中はマーチ
+}
+function bgmFileTick() {
+  if (!fileOut) { fileOut = ac.createGain(); fileOut.gain.value = 0.42; fileOut.connect(ac.destination); }
+  if (!crowdNow) crowdNow = loopSrc(bgmRec.crowd, 0.8, 1.5);           // 歓声は多め、ずっと流す
+  const want = wantTheme();
+  if (!musicNow || musicNow.name !== want) { fadeStop(musicNow, 1.2); musicNow = loopSrc(bgmRec[want], 0.55, 1.2); musicNow.name = want; }
+}
+function bgmFileStop() { fadeStop(musicNow, 0.6); fadeStop(crowdNow, 0.6); musicNow = crowdNow = null; }
+function bgmHR() {
+  if (!bgmOn || !ac || !fileOut || !bgmRec.hr) return;
+  const t = ac.currentTime;
+  if (musicNow) { const g = musicNow.g.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.1, t + 0.3); g.linearRampToValueAtTime(musicNow.vol, t + 8); }
+  const s = ac.createBufferSource(); s.buffer = bgmRec.hr; s.connect(fileOut); s.start(t + 0.15);
+}
 function bgmTick() {
   if (!bgmOn || !ac || !bgmGain) return;
+  if (fileReady()) { bgmFileTick(); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
 }
 function bgmStartIfOn() {
   if (!ac || !bgmWanted()) return;
-  bgmInit();
+  bgmInit(); bgmLoadFiles();
   if (!bgmOn) { bgmOn = true; bgmNext = 0; }
 }
 setInterval(bgmTick, 90);
@@ -711,6 +752,7 @@ function resolveCore(c, C) {
       }
       else if (c.bases > 0) {
         t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
+        if (c.bases === 4) bgmHR();
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[1] = 0; G.bases[2] = 1; t += '（エンドランで1塁から3塁へ）'; }
       }
       else {
@@ -2779,7 +2821,7 @@ function bgmLabel() { const on = bgmWanted(), b = $('#bgmBtn'); b.textContent = 
 $('#bgmBtn').addEventListener('click', () => {
   audioInit();
   const on = !bgmWanted(); try { localStorage.setItem('yakyu-bgm', on ? '1' : '0'); } catch (e) {}
-  if (on) bgmStartIfOn(); else bgmOn = false;
+  if (on) bgmStartIfOn(); else { bgmOn = false; bgmFileStop(); }
   bgmLabel();
 });
 bgmLabel();

@@ -2,7 +2,7 @@
 //   docs/index.html  -> standalone page served by GitHub Pages
 //   dist/artifact.html -> body-only variant for previewing inside Claude (its viewer adds <html>/<head>)
 // Usage: node build.mjs
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
+import { statSync, readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
@@ -78,7 +78,9 @@ const manifest = {
 };
 // Service worker: page = network first (so updates arrive), everything else = cache first, filled as it is used.
 // The version changes whenever the page or the voice list changes, which makes browsers replace the old cache.
-const version = createHash('sha1').update(standalone).update(voiceIds.join()).digest('hex').slice(0, 10);
+// the cache name changes whenever the page, the voice clips or the music files change (cached files are served cache-first)
+const mediaSig = ['docs/audio', 'docs/bgm'].filter(d => existsSync(d)).flatMap(d => readdirSync(d).map(f => d + '/' + f + ':' + statSync(d + '/' + f).size)).join();
+const version = createHash('sha1').update(standalone).update(voiceIds.join()).update(mediaSig).digest('hex').slice(0, 10);
 const sw = `const CACHE = 'yakyu-${version}';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', '${THREE_URL}', '${SUPABASE_URL}'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(new Request(u, { mode: u.startsWith('http') ? 'no-cors' : 'same-origin' })).catch(() => {})))).then(() => self.skipWaiting())); });

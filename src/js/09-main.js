@@ -386,7 +386,7 @@ function bgmLabel() { const on = bgmWanted(), b = $('#bgmBtn'); b.textContent = 
 $('#bgmBtn').addEventListener('click', () => {
   audioInit();
   const on = !bgmWanted(); try { localStorage.setItem('yakyu-bgm', on ? '1' : '0'); } catch (e) {}
-  if (on) bgmStartIfOn(); else bgmOn = false;
+  if (on) bgmStartIfOn(); else { bgmOn = false; bgmFileStop(); }
   bgmLabel();
 });
 bgmLabel();
