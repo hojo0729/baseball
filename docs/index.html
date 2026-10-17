@@ -3454,7 +3454,14 @@ function updateCamera(now, dt) {
 }
 function update(now, dt) {
   const k = pitcherK(now);
-  const pj = squashJ(pitcherJ(k), MOUND_Y); poseFig(pitcherF, pj, 0, 0);
+  let pj = squashJ(pitcherJ(k), MOUND_Y), pyaw = 0;
+  const pbk = brawlK(now);
+  if (pbk > 0) {                                                // 乱闘：投手がマウンドから打者に詰め寄る
+    const e = easeOut(pbk), bx = shownLeft ? 0.8 : -0.8, px = lerp(0, bx * 0.55, e), pz = lerp(RUBBER_Z, -1.5, e);
+    pyaw = Math.atan2(bx - px, 0.3 - pz);
+    pj = squashJ(fielderJ(px, pz, pyaw, now * 12, pbk < 1 ? 1 : 0, 1, pbk >= 1 ? 0.5 + 0.5 * Math.sin(now * 17) : 0), 0);
+  }
+  poseFig(pitcherF, pj, pyaw, pyaw);
   refreshShown();
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
