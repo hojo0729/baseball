@@ -352,7 +352,7 @@ function thrResolve(pe, opt, late) {
   endPA();
   const nb = [0, 0, 0]; let sc = 0;
   for (let i = 0; i < 3; i++) if (B[i] && !forced[i] && i !== outIdx) {
-    if (opt.tag && i === 2) sc++;                                 // タッチ失敗：三塁ランナーが生還
+    if ((opt.tag || opt.b !== 4) && i === 2) sc++;                // タッチ失敗または他塁へ送球：三塁ランナーが生還
     else nb[i] = B[i];
   }
   for (let i = 0; i < 3; i++) if (forced[i] && i !== outIdx) { if (i === 2) sc++; else nb[i + 1] = B[i]; }
