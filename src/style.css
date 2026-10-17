@@ -199,3 +199,5 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 .pitches .pg i { font-size: 17px; }
 #obtns .go.plain { font: 700 15px var(--f-body); background: rgba(16, 35, 31, .85); border: 1px solid #36594f; box-shadow: 0 3px 0 rgba(0, 0, 0, .45); letter-spacing: 0; }
 #obtns .go.plain small { color: var(--dim); }
+
+.chip { white-space: pre-line; }

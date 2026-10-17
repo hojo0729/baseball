@@ -230,6 +230,8 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 .pitches .pg i { font-size: 17px; }
 #obtns .go.plain { font: 700 15px var(--f-body); background: rgba(16, 35, 31, .85); border: 1px solid #36594f; box-shadow: 0 3px 0 rgba(0, 0, 0, .45); letter-spacing: 0; }
 #obtns .go.plain small { color: var(--dim); }
+
+.chip { white-space: pre-line; }
 </style>
 </head>
 <body>
@@ -1017,6 +1019,7 @@ function resolveCore(c, C) {
         const r = buntResult(c, B0, !!(sg && sg.squeeze));
         t = r.t; tn = tone(r.good); if (r.thr) addThrows(play, r.thr); if (!c.popup) play.run = B0;
       }
+      else if (c.bases === 1 && thrWanted(c, play, B0, sg)) thrStart(c, play, B0, now);   // ゴロヒット：守備側が送球先を選ぶ（スロー）
       else if (c.bases > 0) {
         t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
         if (c.bases === 4) { bgmHR(); celebrate(now + 0.5, 5); }
@@ -1027,6 +1030,7 @@ function resolveCore(c, C) {
           t = advance(1, 'エラー！'); G.hits--; play.err = true; play.caught = false; play.endY = BALL_R; play.fr = 1;
           play.roll = play.hd.clone().multiplyScalar(play.grounder ? 7 : 3); play.run = B0;
         }
+        else if (thrWanted(c, play, B0, sg)) thrStart(c, play, B0, now);   // ゴロアウト：守備側が送球先を選ぶ（スロー）
         else if (play.grounder && B0[0] && o0 < 2 && !hr && Math.random() < 0.7) { t = doublePlay(); addThrows(play, [2, 1]); play.run = B0; cheer = mode === 'pit' ? 0.8 : 0; }
         else if (play.grounder) {
           t = groundOut(c.res); addThrows(play, [1]); play.run = B0;
@@ -1043,6 +1047,7 @@ function resolveCore(c, C) {
       }
       if (play.sp && (play.err || c.bunt || (play.throws && play.throws.length > 1) || play.tag)) { play.sp = null; if (play.caught) play.endY = 1.35; }   // ゲッツー・エラー・犠牲フライでは出さない
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
+      if (play.pend) play.pend.sub = sub;
       if (play.sp) { sub = 'スーパープレー！' + (trT('fld') === 'neko' ? '（猫の身のこなし）' : '') + ' ' + sub; cheer = Math.max(cheer, 1.0); }
       else if (c.trait && c.bases > 0) sub = c.trait + ' ' + sub;
       if (c.crit) sub = '会心の一振り！ ' + sub;
@@ -1052,8 +1057,9 @@ function resolveCore(c, C) {
     shakeUntil = now + (c.q > 0.6 ? 0.25 : 0.12); shakeAmp = c.q > 0.6 ? 0.03 : 0.012;
     fxFlash = now; flashRing.position.set(C.x, C.y, 0.02);
     nextAt = now + Math.max(2.4, play.T + (play.throwEnd || 0) + 1.7);
+    if (play.pend) nextAt = Infinity;                          // 送球先が決まるまで次へ進まない
   }
-  queueBanner(now + delay, t, sub, tn, cheer);
+  if (!(play && play.pend)) queueBanner(now + delay, t, sub, tn, cheer);
   setHint('');
 }
 function stepFly(now) {
@@ -2305,6 +2311,7 @@ function reliefOption() {
 function armed(k) { return sign === k || (k === 'crit' && critArm) || (k === 'vn' && vanishArm); }
 function actOptions() {
   if (!G) return [];
+  if (play && play.pend) return play.pend.opts.map(x => ['thr' + x.b, x.name + '\n' + x.sub + ' ' + (x.p >= 0.7 ? '◎' : x.p >= 0.5 ? '○' : '△')]);   // スロー中：送球先
   const o = [];
   if (mode === 'bat') {
     if (phase === 'wait') {
@@ -2344,7 +2351,8 @@ $('#acts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   audioInit();
   const k = b.dataset.k;
-  if (k === 'pick') userPickoff();
+  if (/^thr\d$/.test(k)) pickThrow(+k[3], false);
+  else if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
   else if (k === 'closer') userCloser();
   else if (k === 'ph') userPinch();
@@ -2354,6 +2362,85 @@ $('#acts').addEventListener('click', e => {
   else if (k === 'steal' && !online && mode === 'bat' && phase === 'wait') stealPress(now_());
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });
+
+/* ===== 送球先の選択：ゴロでランナーがいるとき、守備側(自分)がスローモーションで投げ先を選ぶ =====
+   ランナー1塁(→2塁フォース/ゲッツー)、3塁(→本塁タッチ)、満塁(→本塁フォース)など。◎○△は成功しやすさ。
+   時間切れ（ボールが野手に届くまで）だと、いちばん確実な塁へ「迷った」分だけ不利に投げる。 */
+function thrWanted(c, p, B0, sg) {
+  return !online && mode === 'pit' && !sg && p.grounder && !c.bunt && c.kind === 'play' && c.bases <= 1 && !!(B0[0] || B0[2]);
+}
+function thrOptions(B0, c) {
+  const bsp = curBatter().sp, hitG = c.res === 'ゴロヒット';
+  const slow = clamp((128 - c.ev) / 120, 0, 0.35);                  // ぼてぼて（打球が遅い）ほど処理が遅れて不利
+  const hit = hitG ? 0.6 : 1;
+  const forced = [!!B0[0], !!(B0[0] && B0[1]), !!(B0[0] && B0[1] && B0[2])];
+  const o = [{ b: 1, p: hitG ? 0.05 : clamp(0.92 - 0.08 * (bsp - 3) - slow, 0.25, 0.97), name: '1塁', sub: '打者' }];
+  for (let i = 0; i < 3; i++) if (forced[i]) o.push({ b: i + 2, i, force: true, p: clamp(0.9 - 0.02 * i - 0.06 * (B0[i] - 3) - slow * 0.6, 0.2, 0.95) * hit, name: i === 2 ? '本塁' : (i + 2) + '塁', sub: 'フォース' });
+  if (B0[2] && !forced[2]) o.push({ b: 4, i: 2, tag: true, p: clamp(0.55 - 0.09 * (B0[2] - 3) - slow * 0.5, 0.12, 0.8) * hit, name: '本塁', sub: 'タッチ' });
+  return o;
+}
+function thrStart(c, p, B0, now) {
+  const opts = thrOptions(B0, c).sort((a, b) => b.b - a.b);
+  const Tn = p.T, Ts = clamp(Tn * 2.8, 3.2, 6);
+  p.sp = null; p.endY = BALL_R;
+  p.pend = { c, B0, opts, Tn, Ts, sub: '' };
+  p.T = Ts;                                                       // 打球がゆっくり転がる＝スローモーション
+  setHint('スロー！ どこに投げる？');
+}
+function stepThrowPick(now) {
+  const p = play, pe = p.pend, left = (0.92 - (now - p.start) / p.T) * p.T;
+  if (left > 0) { setHint('スロー！ どこに投げる？ あと ' + left.toFixed(1) + '秒'); return; }
+  let best = pe.opts[0];
+  pe.opts.forEach(o => { if (o.p > best.p) best = o; });
+  pickThrow(best.b, true);
+}
+function pickThrow(b, late) {
+  const p = play; if (!p || !p.pend) return;
+  const pe = p.pend, now = now_(), opt = pe.opts.find(o => o.b === b) || pe.opts[pe.opts.length - 1];
+  p.pend = null;
+  const r = thrResolve(pe, opt, late);
+  const u0 = clamp((now - p.start) / p.T, 0, 1);
+  p.T = pe.Tn; p.start = now - u0 * pe.Tn;                         // 同じ位置から通常速度に戻す
+  addThrows(p, r.thr);
+  p.run = pe.B0;
+  const delay = (1 - u0) * pe.Tn + p.throwEnd;
+  queueBanner(now + delay, r.t, pe.sub, r.good ? 'b' : 'g', r.cheer);
+  nextAt = now + Math.max(1.8, delay + 1.7);
+  setHint('');
+}
+function thrResolve(pe, opt, late) {
+  const B = pe.B0.slice(), c = pe.c, bsp = curBatter().sp;
+  const ok = Math.random() < opt.p * (late ? 0.8 : 1);
+  const thr = [opt.b];
+  if (opt.b === 1) {                                              // 一塁：打者を刺す。ランナーは従来どおり進む
+    if (ok) return { t: groundOut('ゴロアウト'), thr, good: false, cheer: 0 };
+    return { t: advance(1, 'ゴロヒット'), thr, good: true, cheer: 0 };
+  }
+  const forced = [!!B[0], !!(B[0] && B[1]), !!(B[0] && B[1] && B[2])];
+  const outIdx = ok ? opt.i : -1;
+  endPA();
+  const nb = [0, 0, 0]; let sc = 0;
+  for (let i = 0; i < 3; i++) if (B[i] && !forced[i] && i !== outIdx) {
+    if (opt.tag && i === 2) sc++;                                 // タッチ失敗：三塁ランナーが生還
+    else nb[i] = B[i];
+  }
+  for (let i = 0; i < 3; i++) if (forced[i] && i !== outIdx) { if (i === 2) sc++; else nb[i + 1] = B[i]; }
+  nb[0] = bsp;
+  const nm = opt.name;
+  let label, cheer = 0, good = !ok;
+  if (ok) {
+    G.outs++;
+    if (G.outs >= 3) return { t: endInning(nm + (opt.tag ? 'でタッチアウト' : 'でフォースアウト')), thr, good: false, cheer: 0.6 };
+    label = nm + (opt.tag ? 'でタッチアウト' : 'でフォースアウト'); cheer = 0.3;
+    if (opt.force && Math.random() < clamp(pe.opts[pe.opts.length - 1].p * 0.6, 0.1, 0.7)) {   // 一塁へ転送してゲッツー
+      thr.push(1); G.outs++; nb[0] = 0; cheer = 0.8;
+      if (G.outs >= 3) return { t: endInning('ゲッツー'), thr, good: false, cheer };
+      label = 'ゲッツー';
+    }
+  } else label = opt.tag ? 'ホームでセーフ' : 'オールセーフ';
+  G.bases = nb; G.runs += sc;
+  return { t: label + (sc ? ' ' + sc + '点' : ''), thr, good, cheer };
+}
 
 /* ---- 06-online.js ---- */
 
@@ -2802,6 +2889,8 @@ const LINES = {
   fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。'],
   lout: ['ライナー！捕られました！'],
   pout: ['内野フライ！捕りました、アウト。', '高く上がった！しっかり捕ってアウト。'],
+  force: ['フォースプレー！アウトです！', 'いい判断！しっかり送球してアウト。', 'そっちを選びました！アウト！'],
+  allsafe: ['間に合わなかった！オールセーフ！', 'セーフ！ランナーが溜まります。'],
   dp: ['ゲッツー！助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
   err: ['エラー！ボールがこぼれた！', 'ああっと、エラーです！'],
   steal: ['スタートを切った！盗塁成功！', '盗塁セーフ！いい走りです！'],
@@ -2905,6 +2994,8 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/見逃し三振/.test(t)) key = 'KL';
   else if (/三振/.test(t)) key = 'K';
   else if (/ゲッツー/.test(t)) key = 'dp';
+  else if (/フォースアウト|タッチアウト/.test(t)) key = 'force';
+  else if (/オールセーフ|ホームでセーフ/.test(t)) key = 'allsafe';
   else if (/スクイズ成功/.test(t)) key = 'squeeze';
   else if (/犠牲フライ/.test(t)) key = 'sac';
   else if (/送りバント成功/.test(t)) key = 'bunt';
@@ -2978,7 +3069,7 @@ function makePlay(c, C, now) {
   };
 }
 /* infield throws after a grounder is fielded. bases: 1 = first, 2 = second */
-const BASE_AT = { 1: V(19.4, 1.2, -19.4), 2: V(0, 1.2, -38.8), 3: V(-19.4, 1.2, -19.4) };
+const BASE_AT = { 1: V(19.4, 1.2, -19.4), 2: V(0, 1.2, -38.8), 3: V(-19.4, 1.2, -19.4), 4: V(0, 1.2, -0.4) };
 function addThrows(p, bases) {
   let t = 0.25, from = V(p.L.x, 1.0, p.L.z);
   p.throws = []; p.cover = {};
@@ -3175,6 +3266,7 @@ function playShot(p, now) {
   const mid = V((p.S0.x + p.L.x) / 2, Math.max(p.S0.y, p.endY) + p.h, (p.S0.z + p.L.z) / 2);
   const pts = [p.S0, mid, V(p.L.x + p.roll.x, 0.5, p.L.z + p.roll.z)];
   if (p.throws) p.throws.forEach(t => pts.push(t.to));
+  if (p.pend) p.pend.opts.forEach(o => pts.push(BASE_AT[o.b]));          // 送球先を選ぶ場面：投げ先の塁が全部映るように
   p.shot = frameShot(pts, now + 0.35);                             // let the swing finish in the catcher view, then cut
   if (p.sp) {                                                      // スーパープレー：野手に寄る
     let hx = p.L.x - FPOS[p.bi][0], hz = p.L.z - FPOS[p.bi][1]; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
@@ -3410,6 +3502,7 @@ function frame() {
   else if (phase === 'deliver' && now >= deliverStart + DELIVER) { const p = pending; pending = null; launchBall(p); }
   else if (phase === 'fly' && ball) stepFly(now);
   else if (phase === 'result' && now >= nextAt) afterResult();
+  if (play && play.pend) stepThrowPick(now);
   if (pendBanner && now >= pendBanner.at) flushBanner();
   update(now, dt);
   renderer.render(scene, camera);

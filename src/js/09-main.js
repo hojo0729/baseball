@@ -37,7 +37,7 @@ function makePlay(c, C, now) {
   };
 }
 /* infield throws after a grounder is fielded. bases: 1 = first, 2 = second */
-const BASE_AT = { 1: V(19.4, 1.2, -19.4), 2: V(0, 1.2, -38.8), 3: V(-19.4, 1.2, -19.4) };
+const BASE_AT = { 1: V(19.4, 1.2, -19.4), 2: V(0, 1.2, -38.8), 3: V(-19.4, 1.2, -19.4), 4: V(0, 1.2, -0.4) };
 function addThrows(p, bases) {
   let t = 0.25, from = V(p.L.x, 1.0, p.L.z);
   p.throws = []; p.cover = {};
@@ -234,6 +234,7 @@ function playShot(p, now) {
   const mid = V((p.S0.x + p.L.x) / 2, Math.max(p.S0.y, p.endY) + p.h, (p.S0.z + p.L.z) / 2);
   const pts = [p.S0, mid, V(p.L.x + p.roll.x, 0.5, p.L.z + p.roll.z)];
   if (p.throws) p.throws.forEach(t => pts.push(t.to));
+  if (p.pend) p.pend.opts.forEach(o => pts.push(BASE_AT[o.b]));          // 送球先を選ぶ場面：投げ先の塁が全部映るように
   p.shot = frameShot(pts, now + 0.35);                             // let the swing finish in the catcher view, then cut
   if (p.sp) {                                                      // スーパープレー：野手に寄る
     let hx = p.L.x - FPOS[p.bi][0], hz = p.L.z - FPOS[p.bi][1]; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
@@ -469,6 +470,7 @@ function frame() {
   else if (phase === 'deliver' && now >= deliverStart + DELIVER) { const p = pending; pending = null; launchBall(p); }
   else if (phase === 'fly' && ball) stepFly(now);
   else if (phase === 'result' && now >= nextAt) afterResult();
+  if (play && play.pend) stepThrowPick(now);
   if (pendBanner && now >= pendBanner.at) flushBanner();
   update(now, dt);
   renderer.render(scene, camera);

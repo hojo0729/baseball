@@ -242,6 +242,7 @@ function reliefOption() {
 function armed(k) { return sign === k || (k === 'crit' && critArm) || (k === 'vn' && vanishArm); }
 function actOptions() {
   if (!G) return [];
+  if (play && play.pend) return play.pend.opts.map(x => ['thr' + x.b, x.name + '\n' + x.sub + ' ' + (x.p >= 0.7 ? '◎' : x.p >= 0.5 ? '○' : '△')]);   // スロー中：送球先
   const o = [];
   if (mode === 'bat') {
     if (phase === 'wait') {
@@ -281,7 +282,8 @@ $('#acts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   audioInit();
   const k = b.dataset.k;
-  if (k === 'pick') userPickoff();
+  if (/^thr\d$/.test(k)) pickThrow(+k[3], false);
+  else if (k === 'pick') userPickoff();
   else if (k === 'relief') userRelief();
   else if (k === 'closer') userCloser();
   else if (k === 'ph') userPinch();
@@ -291,3 +293,82 @@ $('#acts').addEventListener('click', e => {
   else if (k === 'steal' && !online && mode === 'bat' && phase === 'wait') stealPress(now_());
   else if (mode === 'bat' && phase === 'wait') { sign = sign === k ? null : k; if (online) send('sign', { s: sign, n: onl.pn }); }
 });
+
+/* ===== 送球先の選択：ゴロでランナーがいるとき、守備側(自分)がスローモーションで投げ先を選ぶ =====
+   ランナー1塁(→2塁フォース/ゲッツー)、3塁(→本塁タッチ)、満塁(→本塁フォース)など。◎○△は成功しやすさ。
+   時間切れ（ボールが野手に届くまで）だと、いちばん確実な塁へ「迷った」分だけ不利に投げる。 */
+function thrWanted(c, p, B0, sg) {
+  return !online && mode === 'pit' && !sg && p.grounder && !c.bunt && c.kind === 'play' && c.bases <= 1 && !!(B0[0] || B0[2]);
+}
+function thrOptions(B0, c) {
+  const bsp = curBatter().sp, hitG = c.res === 'ゴロヒット';
+  const slow = clamp((128 - c.ev) / 120, 0, 0.35);                  // ぼてぼて（打球が遅い）ほど処理が遅れて不利
+  const hit = hitG ? 0.6 : 1;
+  const forced = [!!B0[0], !!(B0[0] && B0[1]), !!(B0[0] && B0[1] && B0[2])];
+  const o = [{ b: 1, p: hitG ? 0.05 : clamp(0.92 - 0.08 * (bsp - 3) - slow, 0.25, 0.97), name: '1塁', sub: '打者' }];
+  for (let i = 0; i < 3; i++) if (forced[i]) o.push({ b: i + 2, i, force: true, p: clamp(0.9 - 0.02 * i - 0.06 * (B0[i] - 3) - slow * 0.6, 0.2, 0.95) * hit, name: i === 2 ? '本塁' : (i + 2) + '塁', sub: 'フォース' });
+  if (B0[2] && !forced[2]) o.push({ b: 4, i: 2, tag: true, p: clamp(0.55 - 0.09 * (B0[2] - 3) - slow * 0.5, 0.12, 0.8) * hit, name: '本塁', sub: 'タッチ' });
+  return o;
+}
+function thrStart(c, p, B0, now) {
+  const opts = thrOptions(B0, c).sort((a, b) => b.b - a.b);
+  const Tn = p.T, Ts = clamp(Tn * 2.8, 3.2, 6);
+  p.sp = null; p.endY = BALL_R;
+  p.pend = { c, B0, opts, Tn, Ts, sub: '' };
+  p.T = Ts;                                                       // 打球がゆっくり転がる＝スローモーション
+  setHint('スロー！ どこに投げる？');
+}
+function stepThrowPick(now) {
+  const p = play, pe = p.pend, left = (0.92 - (now - p.start) / p.T) * p.T;
+  if (left > 0) { setHint('スロー！ どこに投げる？ あと ' + left.toFixed(1) + '秒'); return; }
+  let best = pe.opts[0];
+  pe.opts.forEach(o => { if (o.p > best.p) best = o; });
+  pickThrow(best.b, true);
+}
+function pickThrow(b, late) {
+  const p = play; if (!p || !p.pend) return;
+  const pe = p.pend, now = now_(), opt = pe.opts.find(o => o.b === b) || pe.opts[pe.opts.length - 1];
+  p.pend = null;
+  const r = thrResolve(pe, opt, late);
+  const u0 = clamp((now - p.start) / p.T, 0, 1);
+  p.T = pe.Tn; p.start = now - u0 * pe.Tn;                         // 同じ位置から通常速度に戻す
+  addThrows(p, r.thr);
+  p.run = pe.B0;
+  const delay = (1 - u0) * pe.Tn + p.throwEnd;
+  queueBanner(now + delay, r.t, pe.sub, r.good ? 'b' : 'g', r.cheer);
+  nextAt = now + Math.max(1.8, delay + 1.7);
+  setHint('');
+}
+function thrResolve(pe, opt, late) {
+  const B = pe.B0.slice(), c = pe.c, bsp = curBatter().sp;
+  const ok = Math.random() < opt.p * (late ? 0.8 : 1);
+  const thr = [opt.b];
+  if (opt.b === 1) {                                              // 一塁：打者を刺す。ランナーは従来どおり進む
+    if (ok) return { t: groundOut('ゴロアウト'), thr, good: false, cheer: 0 };
+    return { t: advance(1, 'ゴロヒット'), thr, good: true, cheer: 0 };
+  }
+  const forced = [!!B[0], !!(B[0] && B[1]), !!(B[0] && B[1] && B[2])];
+  const outIdx = ok ? opt.i : -1;
+  endPA();
+  const nb = [0, 0, 0]; let sc = 0;
+  for (let i = 0; i < 3; i++) if (B[i] && !forced[i] && i !== outIdx) {
+    if (opt.tag && i === 2) sc++;                                 // タッチ失敗：三塁ランナーが生還
+    else nb[i] = B[i];
+  }
+  for (let i = 0; i < 3; i++) if (forced[i] && i !== outIdx) { if (i === 2) sc++; else nb[i + 1] = B[i]; }
+  nb[0] = bsp;
+  const nm = opt.name;
+  let label, cheer = 0, good = !ok;
+  if (ok) {
+    G.outs++;
+    if (G.outs >= 3) return { t: endInning(nm + (opt.tag ? 'でタッチアウト' : 'でフォースアウト')), thr, good: false, cheer: 0.6 };
+    label = nm + (opt.tag ? 'でタッチアウト' : 'でフォースアウト'); cheer = 0.3;
+    if (opt.force && Math.random() < clamp(pe.opts[pe.opts.length - 1].p * 0.6, 0.1, 0.7)) {   // 一塁へ転送してゲッツー
+      thr.push(1); G.outs++; nb[0] = 0; cheer = 0.8;
+      if (G.outs >= 3) return { t: endInning('ゲッツー'), thr, good: false, cheer };
+      label = 'ゲッツー';
+    }
+  } else label = opt.tag ? 'ホームでセーフ' : 'オールセーフ';
+  G.bases = nb; G.runs += sc;
+  return { t: label + (sc ? ' ' + sc + '点' : ''), thr, good, cheer };
+}

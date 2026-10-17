@@ -32,6 +32,8 @@ const LINES = {
   fout: ['フライ！捕りました、アウト。', '打ち上げた！野手が捕って、アウト。'],
   lout: ['ライナー！捕られました！'],
   pout: ['内野フライ！捕りました、アウト。', '高く上がった！しっかり捕ってアウト。'],
+  force: ['フォースプレー！アウトです！', 'いい判断！しっかり送球してアウト。', 'そっちを選びました！アウト！'],
+  allsafe: ['間に合わなかった！オールセーフ！', 'セーフ！ランナーが溜まります。'],
   dp: ['ゲッツー！助かりました！', '二つ取った！ダブルプレー！', 'ゲッツー！ピンチを切り抜けた！'],
   err: ['エラー！ボールがこぼれた！', 'ああっと、エラーです！'],
   steal: ['スタートを切った！盗塁成功！', '盗塁セーフ！いい走りです！'],
@@ -135,6 +137,8 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/見逃し三振/.test(t)) key = 'KL';
   else if (/三振/.test(t)) key = 'K';
   else if (/ゲッツー/.test(t)) key = 'dp';
+  else if (/フォースアウト|タッチアウト/.test(t)) key = 'force';
+  else if (/オールセーフ|ホームでセーフ/.test(t)) key = 'allsafe';
   else if (/スクイズ成功/.test(t)) key = 'squeeze';
   else if (/犠牲フライ/.test(t)) key = 'sac';
   else if (/送りバント成功/.test(t)) key = 'bunt';

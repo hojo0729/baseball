@@ -726,6 +726,7 @@ function resolveCore(c, C) {
         const r = buntResult(c, B0, !!(sg && sg.squeeze));
         t = r.t; tn = tone(r.good); if (r.thr) addThrows(play, r.thr); if (!c.popup) play.run = B0;
       }
+      else if (c.bases === 1 && thrWanted(c, play, B0, sg)) thrStart(c, play, B0, now);   // ゴロヒット：守備側が送球先を選ぶ（スロー）
       else if (c.bases > 0) {
         t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
         if (c.bases === 4) { bgmHR(); celebrate(now + 0.5, 5); }
@@ -736,6 +737,7 @@ function resolveCore(c, C) {
           t = advance(1, 'エラー！'); G.hits--; play.err = true; play.caught = false; play.endY = BALL_R; play.fr = 1;
           play.roll = play.hd.clone().multiplyScalar(play.grounder ? 7 : 3); play.run = B0;
         }
+        else if (thrWanted(c, play, B0, sg)) thrStart(c, play, B0, now);   // ゴロアウト：守備側が送球先を選ぶ（スロー）
         else if (play.grounder && B0[0] && o0 < 2 && !hr && Math.random() < 0.7) { t = doublePlay(); addThrows(play, [2, 1]); play.run = B0; cheer = mode === 'pit' ? 0.8 : 0; }
         else if (play.grounder) {
           t = groundOut(c.res); addThrows(play, [1]); play.run = B0;
@@ -752,6 +754,7 @@ function resolveCore(c, C) {
       }
       if (play.sp && (play.err || c.bunt || (play.throws && play.throws.length > 1) || play.tag)) { play.sp = null; if (play.caught) play.endY = 1.35; }   // ゲッツー・エラー・犠牲フライでは出さない
       sub = (c.q > 0.88 ? 'ジャストミート ' : '') + Math.round(c.ev) + 'km/h' + (play.grounder ? '' : ' ' + Math.round(play.dist) + 'm');
+      if (play.pend) play.pend.sub = sub;
       if (play.sp) { sub = 'スーパープレー！' + (trT('fld') === 'neko' ? '（猫の身のこなし）' : '') + ' ' + sub; cheer = Math.max(cheer, 1.0); }
       else if (c.trait && c.bases > 0) sub = c.trait + ' ' + sub;
       if (c.crit) sub = '会心の一振り！ ' + sub;
@@ -761,8 +764,9 @@ function resolveCore(c, C) {
     shakeUntil = now + (c.q > 0.6 ? 0.25 : 0.12); shakeAmp = c.q > 0.6 ? 0.03 : 0.012;
     fxFlash = now; flashRing.position.set(C.x, C.y, 0.02);
     nextAt = now + Math.max(2.4, play.T + (play.throwEnd || 0) + 1.7);
+    if (play.pend) nextAt = Infinity;                          // 送球先が決まるまで次へ進まない
   }
-  queueBanner(now + delay, t, sub, tn, cheer);
+  if (!(play && play.pend)) queueBanner(now + delay, t, sub, tn, cheer);
   setHint('');
 }
 function stepFly(now) {
