@@ -75,10 +75,27 @@ export async function launchBrowser() {
   };
   const b = await chromium.launch(launchOpts);
   const patchPage = page => {
-    const origClick = page.click.bind(page);
-    page.click = async (sel, opts) => {
-      try { await page.bringToFront(); } catch {}
-      return origClick(sel, opts);
+    page.click = async sel => {
+      const done = await page.evaluate(s => {
+        const el = document.querySelector(s);
+        if (el && !el.hidden && el.offsetParent !== null) { el.click(); return true; }
+        return false;
+      }, sel);
+      if (done) return;
+      await page.waitForFunction(s => {
+        const el = document.querySelector(s);
+        return el && !el.hidden && el.offsetParent !== null;
+      }, sel, { polling: 50, timeout: 10000 });
+      await page.evaluate(s => document.querySelector(s).click(), sel);
+    };
+    page.fill = async (sel, val) => {
+      await page.waitForFunction(s => !!document.querySelector(s), sel, { polling: 50, timeout: 10000 });
+      await page.evaluate(([s, v]) => {
+        const el = document.querySelector(s);
+        el.value = v;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }, [sel, val]);
     };
     return page;
   };
