@@ -188,7 +188,7 @@ function makeFig(o) {
   const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
   const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
   add(SPH, 'LINE', hs, 1.055);
-  f.cheeks = [-1, 1].map(s => { const m = add(SPH, 'HEAD', h, 0.12, 0.11, 0.12); m.position.set(0.138 * s, -0.05, 0.05); return m; });
+  f.cheeks = [-1, 1].map(s => { const m = add(SPH, 'HEAD', h, 0.09, 0.08, 0.09); m.position.set(0.12 * s, -0.05, 0.05); return m; });
   f.muz = add(SPH, 'MUZ', h, 0.115, 0.085, 0.09); f.muz.position.set(0, -0.065, 0.165);
   if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
   f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.066, 0.085, 0.03); m.position.set(0.088 * s, -0.004, 0.19); m.rotation.z = 0.42 * s; return m; });
@@ -256,7 +256,7 @@ function faceFor(f, ex, now) {
 }
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
-const SQ = 0.68, LEG_SQ = 0.44, HIP_H = 0.9, HEAD_K = 1.74;   // 2頭身黄金比：頭を大きく、手足を短くコンパクトに
+const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 1.48;   // 自然で引き締まった二頭身ちびキャラ
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
@@ -283,7 +283,7 @@ function squashJ(J, base, keepHands) {
     o[k] = p;
   }
   const up = o.head.clone().sub(o.neck).normalize();
-  o.head = o.neck.clone().addScaledVector(up, 0.32);
+  o.head = o.neck.clone().addScaledVector(up, 0.28);
   return o;
 }
 function seg(m, a, b, w = 1) {
