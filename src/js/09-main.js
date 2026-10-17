@@ -270,6 +270,7 @@ function update(now, dt) {
   refreshAct();
   updateBall(now, dt, pj);
   updateFx(now);
+  updateShow(now, dt);
   updateCamera(now, dt);
 }
 

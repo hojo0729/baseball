@@ -160,6 +160,74 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #stage.rain::after { content: ''; position: absolute; left: -20%; top: -40%; width: 140%; height: 180%; pointer-events: none; z-index: 3; opacity: .35;
   background: repeating-linear-gradient(104deg, transparent 0 14px, rgba(190, 215, 255, .55) 14px 15px); animation: rainfall .45s linear infinite; }
 @keyframes rainfall { from { transform: translateY(-26px); } to { transform: translateY(0); } }
+
+/* ===== デザイン調整（メニュー・ボタン・告知・演出） ===== */
+.seg[hidden] { display: none; }
+/* メニュー類が開いている間は試合用の表示をしまって、画面いっぱいに */
+#app.ov .board, #app.ov .ctl { display: none; }
+#app.ov #cmtBtn, #app.ov #bgmBtn, #app.ov #goal, #app.ov #spd, #app.ov #hapB, #app.ov #cmt, #app.ov #hint, #app.ov #hap { visibility: hidden; }
+
+#overlay { background: radial-gradient(ellipse 90% 70% at 50% 42%, rgba(6, 14, 12, .5), rgba(6, 14, 12, .93) 78%); gap: 16px; }
+#overlay.clear { background: radial-gradient(ellipse 90% 70% at 50% 42%, rgba(6, 14, 12, .15), rgba(6, 14, 12, .75) 80%); }
+#overlay.clear h1 { font-size: clamp(44px, 14vw, 64px); }
+#overlay h1 { text-shadow: 0 3px 0 #3a2208, 0 0 24px rgba(244, 201, 90, .25); }
+#overlay p { color: #d6dccf; line-height: 1.55; }
+#overlay.logo h1 { white-space: nowrap; font-size: clamp(36px, 10.8vw, 58px); line-height: 1.05; transform: rotate(-3deg); color: transparent;
+  background: linear-gradient(180deg, #fff7d2 0%, #f8d567 48%, #e08a2c 100%); -webkit-background-clip: text; background-clip: text;
+  text-shadow: none; filter: drop-shadow(0 4px 0 #4a2a0c) drop-shadow(0 0 18px rgba(244, 201, 90, .3)); }
+#overlay.logo h1::before { content: 'ANIMAL LEAGUE'; display: block; font: 500 11px/1 var(--f-num); letter-spacing: .5em; color: #9fc4b3; -webkit-text-fill-color: #9fc4b3; margin-bottom: 8px; }
+#obadge { display: flex; gap: 8px; justify-content: center; }
+#obadge[hidden] { display: none; }
+#obadge i { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 400 17px/1 var(--f-disp); font-style: normal; color: #fff;
+  border: 2px solid rgba(255, 255, 255, .85); box-shadow: 0 3px 0 rgba(0, 0, 0, .45); animation: hop 2.4s ease-in-out infinite; }
+#obadge i:nth-child(2) { animation-delay: .15s; } #obadge i:nth-child(3) { animation-delay: .3s; } #obadge i:nth-child(4) { animation-delay: .45s; } #obadge i:nth-child(5) { animation-delay: .6s; }
+@keyframes hop { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-7px); } 90% { transform: translateY(0); } }
+
+#obtns { display: grid; grid-template-columns: 1fr; gap: 10px; width: min(300px, 82vw); }
+#overlay.dlg #obtns { display: flex; width: auto; }
+.go { background: linear-gradient(180deg, #ee8150, #d25a2c); box-shadow: 0 4px 0 #8a3416; border-radius: 14px; letter-spacing: .04em; }
+.go2 { background: rgba(16, 35, 31, .85); border: 1px solid #36594f; box-shadow: 0 3px 0 rgba(0, 0, 0, .45); border-radius: 14px; }
+.go:active, .go2:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .45); }
+.go2.menu { box-shadow: none; border-radius: 10px; }
+#obtns button small { display: block; font: 500 11.5px/1.35 var(--f-body); color: var(--dim); margin-top: 3px; }
+#obtns .go small { color: #ffe0cc; }
+#obtns button.team { text-align: left; padding: 10px 14px 10px 16px; border-left: 6px solid var(--tc); }
+
+/* 作戦ボタン：技（会心・魔球・守護神・代打）は色を変える */
+.acts { flex-wrap: nowrap; }
+.chip { font-size: 12.5px; line-height: 1.2; padding: 4px 3px; border-radius: 12px; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); }
+.chip.sp { color: #ffd9b0; border-color: #ff8a5a; background: linear-gradient(180deg, #3d2016, #24130d); }
+.chip.sp.on { background: linear-gradient(180deg, #ffa26f, #f07038); color: #2a0f04; }
+.chip:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, .4); }
+.seg { border-radius: 12px; }
+
+/* スコアボードのチーム色 */
+#slab i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: 0; }
+
+/* 結果の大きな文字 */
+#banner .t { text-shadow: 0 3px 0 rgba(0, 0, 0, .6), 0 0 2px rgba(0, 0, 0, .9); }
+#banner.big .t { font-size: clamp(34px, 10.5vw, 60px); color: transparent; background: linear-gradient(180deg, #fffbe0, #f8d567 50%, #e5892c);
+  -webkit-background-clip: text; background-clip: text; text-shadow: none; filter: drop-shadow(0 4px 0 #3a1e06) drop-shadow(0 0 16px rgba(255, 210, 110, .55)); }
+#banner.big.show { animation: popBig 2.6s ease-out forwards; }
+@keyframes popBig { 0% { opacity: 0; transform: scale(.4) rotate(-6deg); } 10% { opacity: 1; transform: scale(1.18) rotate(-3deg); } 20% { transform: scale(1) rotate(-2deg); } 85% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04) rotate(-2deg); } }
+
+/* ハプニング */
+#hap { top: 112px; border-radius: 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+#hap.alert { border-color: #ff9a5a; background: linear-gradient(180deg, rgba(60, 28, 14, .92), rgba(28, 14, 8, .92)); }
+#hapB { position: absolute; top: 76px; left: 12px; z-index: 5; font: 700 11px var(--f-body); color: #ffd866; background: rgba(40, 26, 6, .72); border: 1px solid rgba(255, 216, 102, .6); border-radius: 999px; padding: 5px 10px; pointer-events: none; }
+#hapB:empty { display: none; }
+#stage.windU::before, #stage.windD::before { content: ''; position: absolute; inset: -10% -50%; pointer-events: none; z-index: 3; opacity: .5;
+  background: repeating-linear-gradient(-4deg, transparent 0 26px, rgba(235, 245, 255, .22) 26px 27px, transparent 27px 61px); animation: windR 0.7s linear infinite; }
+#stage.windD::before { animation-name: windL; }
+@keyframes windR { from { transform: translateX(-60px); } to { transform: translateX(0); } }
+@keyframes windL { from { transform: translateX(0); } to { transform: translateX(-60px); } }
+@media (prefers-reduced-motion: reduce) { #banner.big.show { animation: none; opacity: 1; } #obadge i { animation: none; } }
+#stage canvas { transition: filter .35s; }
+#stage.dark canvas { filter: brightness(.45) saturate(.7); }
+/* 球種ボタン：持ち球の数に合わせて横いっぱいに */
+.pitches { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.pitches .pg { min-height: 46px; border-radius: 12px; font-size: 11.5px; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); }
+.pitches .pg i { font-size: 17px; }
 </style>
 </head>
 <body>
@@ -188,8 +256,10 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
     <div id="hint"></div>
     <div id="spd"></div>
     <div id="goal"></div>
+    <div id="hapB"></div>
     <div id="overlay">
       <div id="ospk"></div>
+      <div id="obadge" hidden></div>
       <h1 id="ot">どうぶつリーグ</h1>
       <p id="od"></p>
       <input id="codeIn" type="text" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="部屋番号" hidden>
@@ -454,11 +524,11 @@ function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0
 
 /* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
 const HAP = [
-  { t: 'windU', n: '追い風！', d: 'この回、フライがよく伸びる' },
-  { t: 'windD', n: '向かい風…', d: 'この回、フライが伸びにくい' },
-  { t: 'rain', n: '雨が降ってきた！', d: 'この回、ぬかるんでエラーが出やすい' },
-  { t: 'wave', n: '球場がウェーブ！', d: 'この回、攻撃側のミートが上がる' },
-  { t: 'dark', n: '照明トラブル！', d: '次の2球、ボールが見えにくい' }
+  { t: 'windU', i: '↗', n: '追い風！', d: 'この回、フライがよく伸びる' },
+  { t: 'windD', i: '↙', n: '向かい風…', d: 'この回、フライが伸びにくい' },
+  { t: 'rain', i: '☂', n: '雨が降ってきた！', d: 'この回、ぬかるんでエラーが出やすい' },
+  { t: 'wave', i: '〜', n: '球場がウェーブ！', d: 'この回、攻撃側のミートが上がる' },
+  { t: 'dark', i: '●', n: '照明トラブル！', d: '次の2球、ボールが見えにくい' }
 ];
 const hapOn = t => !!(G && G.hap && G.hap.inn === G.inning && G.hap.t === t);
 function darkNow() {
@@ -475,6 +545,10 @@ function nextHap() {
   hapEl.innerHTML = '<b>' + h.n + '</b><span>' + h.d + '</span>';
   hapEl.classList.remove('show'); void hapEl.offsetWidth; hapEl.classList.add('show');
   if (h.say) say({ text: h.n + h.d, id: 'hap' }, 1);
+  hapEl.classList.toggle('alert', !!h.t);
+  if (h.t === 'windU' || h.t === 'windD') { const st = $('#stage'); st.classList.add(h.t === 'windU' ? 'windU' : 'windD'); setTimeout(() => st.classList.remove('windU', 'windD'), 4200); }
+  if (h.t === 'wave') crowdWave(7);
+  hud();
   setTimeout(() => { hapEl.classList.remove('show'); setTimeout(nextHap, 300); }, 3000);
 }
 function rollHap(odd) {
@@ -489,7 +563,7 @@ function rollHap(odd) {
   if (a > 0.3) return;
   const h = HAP[Math.floor(b * HAP.length)];
   G.hap = { t: h.t, inn: G.inning, left: 2 };
-  queueHap({ n: h.n, d: h.d, say: true }, w);
+  queueHap({ n: h.n, d: h.d, say: true, t: h.t }, w);
 }
 /* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
 const DICE_FX = {
@@ -574,6 +648,8 @@ function dots(id, n, on) {
 function hud() {
   pitchIcons();
   $('#stage').classList.toggle('rain', hapOn('rain'));
+  const hb = G && G.hap && G.hap.inn === G.inning ? HAP.find(h => h.t === G.hap.t) : null;
+  $('#hapB').textContent = hb && !(hb.t === 'dark' && G.hap.left <= 0) ? hb.i + ' ' + hb.n.replace(/[！…]/g, '') : '';
   $('#inn').textContent = Math.min(G.inning, 3) + '回';
   dots('#db', 3, G.b); dots('#ds', 2, G.s); dots('#do', 2, G.outs);
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
@@ -582,8 +658,9 @@ function hud() {
   if (twoTeam()) {
     const sc = onlineScore();
     $('#inn').textContent = inningLabel();
-    if (online) { $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away; }
-    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = ROSTER[match.mine].name.slice(0, 2) + ' - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    const tag = t => '<i style="background:' + TEAM_COL[t][0] + '"></i>' + ROSTER[t].name.slice(0, 2);
+    if (online) { $('#slab').innerHTML = tag('home') + ' - ' + tag('away'); $('#runs').textContent = sc.home + '-' + sc.away; }
+    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').innerHTML = tag(match.mine) + ' - ' + tag(match.opp); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
   }
   updateRunners();
   updateGoal();
@@ -591,7 +668,7 @@ function hud() {
 function setHint(t) { $('#hint').textContent = t; }
 function showBanner(t, s, tone) {
   const b = $('#banner');
-  b.className = tone;
+  b.className = tone + (/ホームラン|サヨナラ|勝ち|優勝|グランドスラム/.test(t) ? ' big' : '');
   $('#bt').textContent = t; $('#bs').textContent = s || '';
   void b.offsetWidth;
   b.classList.add('show');
@@ -714,13 +791,14 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
+  let dk = false;
   const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
   commentPitch(o);
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
-    key: o.key, speed: o.speed, vn: !!o.vn || darkNow(), T: [o.tx, o.ty], P0,
+    key: o.key, speed: o.speed, vn: !!o.vn || (dk = darkNow()), dk, T: [o.tx, o.ty], P0,
     tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
@@ -896,7 +974,7 @@ function resolveCore(c, C) {
       }
       else if (c.bases > 0) {
         t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
-        if (c.bases === 4) bgmHR();
+        if (c.bases === 4) { bgmHR(); celebrate(now + 0.5, 5); }
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
       else {
@@ -1196,7 +1274,7 @@ const bEye = new THREE.Mesh(new THREE.CylinderGeometry(FR + 51.4, FR + 4.4, 30, 
 bEye.position.copy(stands.position); scene.add(bEye);
 
 /* ---- lights ---- */
-scene.add(new THREE.HemisphereLight('#a9bde0', '#1c2a20', 0.6));
+const hemi = new THREE.HemisphereLight('#a9bde0', '#1c2a20', 0.6); scene.add(hemi);
 const key = new THREE.DirectionalLight('#fff1d6', 1.55);
 key.position.set(18, 40, 26); key.target.position.set(0, 0, -9);
 key.castShadow = SHADOWS; key.shadow.mapSize.set(1024, 1024);
@@ -1210,6 +1288,7 @@ const glowTex = canvasTex(128, 128, (g) => {
   gr.addColorStop(0, 'rgba(255,246,214,1)'); gr.addColorStop(0.2, 'rgba(255,236,180,.5)'); gr.addColorStop(1, 'rgba(255,236,180,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
 });
+const towerSp = [];
 [96, 138, 222, 264].forEach(deg => {
   const a = deg * D2R, r = FR + 58, x = FC.x + Math.sin(a) * r, z = FC.z + Math.cos(a) * r;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 48, 8), mat('#1a1f24'));
@@ -1217,7 +1296,7 @@ const glowTex = canvasTex(128, 128, (g) => {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 0.6), new THREE.MeshBasicMaterial({ color: '#fff6d6' }));
   panel.position.set(x, 50, z); panel.lookAt(0, 0, -20); scene.add(panel);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
-  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp);
+  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp); towerSp.push(sp);
 });
 (() => {
   const n = 500, p = new Float32Array(n * 3);
@@ -1228,6 +1307,78 @@ const glowTex = canvasTex(128, 128, (g) => {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#cfd8e6', size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0.6, fog: false })));
 })();
+
+/* ---- 演出：花火・観客のウェーブ・照明の明滅（すべて軽い：Points 1個とメッシュ1枚） ---- */
+const waveTex = canvasTex(512, 8, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, w, 0);
+  gr.addColorStop(0, 'rgba(255,240,200,0)'); gr.addColorStop(0.44, 'rgba(255,240,200,0)'); gr.addColorStop(0.5, 'rgba(255,240,200,1)');
+  gr.addColorStop(0.56, 'rgba(255,240,200,0)'); gr.addColorStop(1, 'rgba(255,240,200,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+});
+waveTex.wrapS = THREE.RepeatWrapping; waveTex.repeat.set(1.5, 1);
+const waveMat = new THREE.MeshBasicMaterial({ map: waveTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+const waveMesh = new THREE.Group();   // two pieces: leaves the batter's eye (166°-194°) dark so pitches stay easy to see
+[[68, 98], [194, 98]].forEach(([a, l]) => waveMesh.add(new THREE.Mesh(new THREE.CylinderGeometry(FR + 51.6, FR + 4.6, 29, 32, 1, true, a * D2R, l * D2R), waveMat)));
+waveMesh.position.copy(stands.position); waveMesh.visible = false; scene.add(waveMesh);
+let waveUntil = 0;
+function crowdWave(sec) { waveUntil = Math.max(waveUntil, now_() + sec); }
+
+const FW_N = 480, fwPos = new Float32Array(FW_N * 3), fwCol = new Float32Array(FW_N * 3), fwVel = new Float32Array(FW_N * 3), fwBase = new Float32Array(FW_N * 3), fwT = new Float32Array(FW_N).fill(-1);
+const fwGeo = new THREE.BufferGeometry();
+fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('color', new THREE.BufferAttribute(fwCol, 3));
+const fwPts = new THREE.Points(fwGeo, new THREE.PointsMaterial({ size: 1.3, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+fwPts.frustumCulled = false; fwPts.visible = false; scene.add(fwPts);
+const FW_COL = [[1, .8, .3], [1, .35, .3], [.4, .8, 1], [.6, 1, .5], [1, .5, .9], [1, 1, .9]];
+let fwNext = 0, fwQueue = [], flashUntil = 0;
+function fwBurst(at) {
+  const c = FW_COL[(Math.random() * FW_COL.length) | 0], cx = rnd(-24, 24), cy = rnd(16, 26), cz = rnd(-112, -100), sp = rnd(38, 48);   // 観客席の前（打者目線の画面に入る高さ）
+  for (let k = 0; k < 90; k++) {
+    const i = fwNext; fwNext = (fwNext + 1) % FW_N;
+    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u), v = sp * (0.75 + Math.random() * 0.25);
+    fwVel.set([Math.cos(a) * r * v, u * v, Math.sin(a) * r * v], i * 3);
+    fwPos.set([cx, cy, cz], i * 3); fwBase.set(c, i * 3); fwT[i] = at;
+  }
+}
+/* ホームラン・勝利：at（秒）から n 発の花火、観客のウェーブ、照明のフラッシュ */
+function celebrate(at, n) {
+  for (let i = 0; i < n; i++) fwQueue.push(at + i * 0.45 + Math.random() * 0.2);
+  waveUntil = Math.max(waveUntil, at + 5); flashUntil = Math.max(flashUntil, at + 1.6);
+}
+let lightK = 1, darkCss = false;
+function updateShow(now, dt) {
+  fwQueue = fwQueue.filter(t => { if (now >= t) { fwBurst(t); sfx.pop && sfx.pop(); return false; } return true; });
+  let live = 0;
+  for (let i = 0; i < FW_N; i++) {
+    const t0 = fwT[i]; if (t0 < 0) continue;
+    const age = now - t0;
+    if (age < 0) { fwCol[i * 3] = fwCol[i * 3 + 1] = fwCol[i * 3 + 2] = 0; live++; continue; }
+    if (age > 2.4) { fwT[i] = -1; fwCol[i * 3] = fwCol[i * 3 + 1] = fwCol[i * 3 + 2] = 0; continue; }
+    live++;
+    const drag = Math.exp(-1.6 * age), b = i * 3;
+    const f = Math.max(0, 1 - age / 2.4) * (age < 0.08 ? 1.6 : 1);
+    fwCol[b] = fwBase[b] * f; fwCol[b + 1] = fwBase[b + 1] * f; fwCol[b + 2] = fwBase[b + 2] * f;
+    fwPos[b] += fwVel[b] * drag * dt; fwPos[b + 1] += (fwVel[b + 1] * drag - 4.5 * age) * dt; fwPos[b + 2] += fwVel[b + 2] * drag * dt;
+  }
+  fwPts.visible = live > 0;
+  if (live) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
+  // crowd wave: a bright band sweeping around the stands
+  const wv = now < waveUntil;
+  waveMesh.visible = wv || waveMat.opacity > 0.01;
+  waveMat.opacity += ((wv ? 0.8 : 0) - waveMat.opacity) * Math.min(1, dt * 4);
+  if (waveMesh.visible) waveTex.offset.x = (waveTex.offset.x - dt * 0.35) % 1;
+  // lights: flash on a celebration, dim during the lights-out happening
+  const dark = darkActive();
+  if (dark !== darkCss) { darkCss = dark; $('#stage').classList.toggle('dark', dark); }
+  const target = dark ? 0.32 : 1;
+  lightK += (target - lightK) * Math.min(1, dt * (dark ? 6 : 2.5));
+  const fl = now < flashUntil ? 0.5 + 0.5 * Math.abs(Math.sin(now * 14)) : 1;
+  key.intensity = 1.55 * lightK; hemi.intensity = 0.6 * (0.45 + 0.55 * lightK); fill.intensity = 0.5 * lightK; rim.intensity = 0.45 * lightK;
+  towerSp.forEach(s => { s.material.opacity = (dark ? 0.08 : 1) * fl; });
+}
+function darkActive() {
+  if (!G || !G.hap || G.hap.t !== 'dark' || G.hap.inn !== G.inning) return false;
+  return G.hap.left > 0 || !!(ball && ball.dk);
+}
 
 /* ---- ball, trails, markers ---- */
 const ballTex = canvasTex(256, 128, (g, w, h) => {
@@ -1674,14 +1825,25 @@ function overlay(o) {
   $('#ot').textContent = o.title || ''; $('#ot').hidden = !o.title;
   $('#od').textContent = o.text || '';
   $('#overlay').classList.toggle('dlg', !!o.dlg);
-  const g1 = $('#goBtn'), g2 = $('#go2');
-  g1.hidden = !o.b1; g2.hidden = !o.b2;
-  if (o.b1) { g1.textContent = o.b1[0]; ovAction = o.b1[1]; }
-  if (o.b2) { g2.textContent = o.b2[0]; ovAction2 = o.b2[1]; }
-  const g3 = $('#go3'); g3.hidden = !o.b3;
-  if (o.b3) { g3.textContent = o.b3[0]; ovAction3 = o.b3[1]; }
-  const g4 = $('#go4'); g4.hidden = !o.b4;
-  if (o.b4) { g4.textContent = o.b4[0]; ovAction4 = o.b4[1]; }
+  $('#overlay').classList.toggle('logo', !!o.logo);
+  $('#overlay').classList.toggle('clear', !!o.clear);
+  const bd = $('#obadge'); bd.hidden = !o.logo;
+  if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのバッジ
+    const i = document.createElement('i'); i.textContent = TEAM_COL[t][1]; i.style.background = TEAM_COL[t][0]; bd.appendChild(i);
+  });
+  /* label 'name\nsmall text' -> two lines. optional 3rd item: team key for a color stripe */
+  const setB = (el, b) => {
+    el.hidden = !b; if (!b) return;
+    const [main, sub] = b[0].split('\n');
+    el.textContent = main;
+    if (sub) { const s = document.createElement('small'); s.textContent = sub; el.appendChild(s); }
+    el.style.setProperty('--tc', b[2] ? TEAM_COL[b[2]][0] : 'transparent');
+    el.classList.toggle('team', !!b[2]);
+  };
+  setB($('#goBtn'), o.b1); if (o.b1) ovAction = o.b1[1];
+  setB($('#go2'), o.b2); if (o.b2) ovAction2 = o.b2[1];
+  setB($('#go3'), o.b3); if (o.b3) ovAction3 = o.b3[1];
+  setB($('#go4'), o.b4); if (o.b4) ovAction4 = o.b4[1];
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -1704,7 +1866,7 @@ function showMenu() {
   $('.seg').hidden = true; $('#menuBtn').hidden = true;
   const done = loadProgress();
   overlay({
-    title: 'どうぶつリーグ',
+    title: 'どうぶつリーグ', logo: true,
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
     b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
   });
@@ -1723,11 +1885,12 @@ function showCpuMenu() {
 }
 /* 自分のチームを選ぶ（相手はほかの4チームからランダム）→ CPUの強さ → 試合開始 */
 const TEAM_ORDER = ['home', 'away', 'neko', 'usagi', 'kuma'];
+const TEAM_COL = { home: ['#d0452a', '柴'], away: ['#2f5aa0', 'パ'], neko: ['#7a56b5', '猫'], usagi: ['#2f9a6c', '兎'], kuma: ['#b8901f', '熊'] };
 function pickTeam(side, page) {
   const go = t => () => chooseDiff(() => startMatch(side, t));
   const ts = page ? TEAM_ORDER.slice(3) : TEAM_ORDER.slice(0, 3), o = { title: 'チームをえらぶ',
-    text: 'しばいぬズ＝粘り強い　パンダーズ＝パワー　ニャンキーズ＝足と守備　ラビッツ＝内野安打　ヒグマーズ＝重い球' };
-  ts.forEach((t, i) => { o['b' + (i + 1)] = [ROSTER[t].name, go(t)]; });
+    text: '相手はほかのチームからランダム。チームごとに固有スキルがあります。' };
+  ts.forEach((t, i) => { o['b' + (i + 1)] = [ROSTER[t].name + '\n' + TRAIT[t].n + '：' + TRAIT[t].d, go(t), t]; });
   if (page) o.b3 = ['◀ もどる', () => pickTeam(side, 0)]; else o.b4 = ['ほかのチーム ▶', () => pickTeam(side, 1)];
   overlay(o);
 }
@@ -1782,7 +1945,8 @@ function showMatchOver() {
   const sb = onlineScore(), me = sb[match.side], cpu = sb[match.side === 'home' ? 'away' : 'home'], opp = ROSTER[match.opp].name;
   const inn = Math.ceil(Math.min(G.inning, 24) / 2);
   idle();
-  overlay({ title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: ROSTER[match.mine].name + ' ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
+  if (me > cpu) celebrate(now_() + 0.2, 6);
+  overlay({ clear: me > cpu, title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: ROSTER[match.mine].name + ' ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
     b1: ['もう一度', showCpuMenu], b2: ['メニュー', showMenu] });
 }
 /* the menu button during a CPU match: the game stops while the sheet is open */
@@ -1819,6 +1983,10 @@ function storyEnd(win) {
     else overlay({ title: 'ステージクリア', text: st.title + ' クリア！', b1: ['次の話へ', () => showStage(i + 1)], b2: ['メニュー', showMenu] });
   });
 }
+
+/* メニューなどの画面が開いている間は、試合用の表示（実況ボタン・選手情報・下の操作）を隠す */
+new MutationObserver(() => $('#app').classList.toggle('ov', !$('#overlay').hidden && !$('#overlay').classList.contains('dlg')))
+  .observe($('#overlay'), { attributes: true, attributeFilter: ['hidden', 'class'] });
 
 /* ---- 05-tactics.js ---- */
 
@@ -2065,7 +2233,7 @@ function refreshAct() {
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
+    b.className = 'chip' + (/^(crit|vn|closer|ph)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
   if (mode === 'bat' && phase === 'wait') setHint(sign ? 'サイン：' + SIGN_HINT[sign] : '投手が投げたら、ボールが通る位置をタップして打つ');
@@ -2310,7 +2478,8 @@ function onlinePause() {
 function showOnlineOver() {
   const sc = onlineScore(), mine = sc[onl.side], theirs = sc[onl.side === 'home' ? 'away' : 'home'];
   leaveRoom(); idle();
-  overlay({ title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
+  if (mine > theirs) celebrate(now_() + 0.2, 6);
+  overlay({ clear: mine > theirs, title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
     text: 'しばいぬズ ' + sc.home + ' - ' + sc.away + ' パンダーズ', b1: ['メニューへ', showMenu] });
 }
 
@@ -2934,6 +3103,7 @@ function update(now, dt) {
   refreshAct();
   updateBall(now, dt, pj);
   updateFx(now);
+  updateShow(now, dt);
   updateCamera(now, dt);
 }
 

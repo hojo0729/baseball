@@ -129,3 +129,71 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #stage.rain::after { content: ''; position: absolute; left: -20%; top: -40%; width: 140%; height: 180%; pointer-events: none; z-index: 3; opacity: .35;
   background: repeating-linear-gradient(104deg, transparent 0 14px, rgba(190, 215, 255, .55) 14px 15px); animation: rainfall .45s linear infinite; }
 @keyframes rainfall { from { transform: translateY(-26px); } to { transform: translateY(0); } }
+
+/* ===== デザイン調整（メニュー・ボタン・告知・演出） ===== */
+.seg[hidden] { display: none; }
+/* メニュー類が開いている間は試合用の表示をしまって、画面いっぱいに */
+#app.ov .board, #app.ov .ctl { display: none; }
+#app.ov #cmtBtn, #app.ov #bgmBtn, #app.ov #goal, #app.ov #spd, #app.ov #hapB, #app.ov #cmt, #app.ov #hint, #app.ov #hap { visibility: hidden; }
+
+#overlay { background: radial-gradient(ellipse 90% 70% at 50% 42%, rgba(6, 14, 12, .5), rgba(6, 14, 12, .93) 78%); gap: 16px; }
+#overlay.clear { background: radial-gradient(ellipse 90% 70% at 50% 42%, rgba(6, 14, 12, .15), rgba(6, 14, 12, .75) 80%); }
+#overlay.clear h1 { font-size: clamp(44px, 14vw, 64px); }
+#overlay h1 { text-shadow: 0 3px 0 #3a2208, 0 0 24px rgba(244, 201, 90, .25); }
+#overlay p { color: #d6dccf; line-height: 1.55; }
+#overlay.logo h1 { white-space: nowrap; font-size: clamp(36px, 10.8vw, 58px); line-height: 1.05; transform: rotate(-3deg); color: transparent;
+  background: linear-gradient(180deg, #fff7d2 0%, #f8d567 48%, #e08a2c 100%); -webkit-background-clip: text; background-clip: text;
+  text-shadow: none; filter: drop-shadow(0 4px 0 #4a2a0c) drop-shadow(0 0 18px rgba(244, 201, 90, .3)); }
+#overlay.logo h1::before { content: 'ANIMAL LEAGUE'; display: block; font: 500 11px/1 var(--f-num); letter-spacing: .5em; color: #9fc4b3; -webkit-text-fill-color: #9fc4b3; margin-bottom: 8px; }
+#obadge { display: flex; gap: 8px; justify-content: center; }
+#obadge[hidden] { display: none; }
+#obadge i { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 400 17px/1 var(--f-disp); font-style: normal; color: #fff;
+  border: 2px solid rgba(255, 255, 255, .85); box-shadow: 0 3px 0 rgba(0, 0, 0, .45); animation: hop 2.4s ease-in-out infinite; }
+#obadge i:nth-child(2) { animation-delay: .15s; } #obadge i:nth-child(3) { animation-delay: .3s; } #obadge i:nth-child(4) { animation-delay: .45s; } #obadge i:nth-child(5) { animation-delay: .6s; }
+@keyframes hop { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-7px); } 90% { transform: translateY(0); } }
+
+#obtns { display: grid; grid-template-columns: 1fr; gap: 10px; width: min(300px, 82vw); }
+#overlay.dlg #obtns { display: flex; width: auto; }
+.go { background: linear-gradient(180deg, #ee8150, #d25a2c); box-shadow: 0 4px 0 #8a3416; border-radius: 14px; letter-spacing: .04em; }
+.go2 { background: rgba(16, 35, 31, .85); border: 1px solid #36594f; box-shadow: 0 3px 0 rgba(0, 0, 0, .45); border-radius: 14px; }
+.go:active, .go2:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .45); }
+.go2.menu { box-shadow: none; border-radius: 10px; }
+#obtns button small { display: block; font: 500 11.5px/1.35 var(--f-body); color: var(--dim); margin-top: 3px; }
+#obtns .go small { color: #ffe0cc; }
+#obtns button.team { text-align: left; padding: 10px 14px 10px 16px; border-left: 6px solid var(--tc); }
+
+/* 作戦ボタン：技（会心・魔球・守護神・代打）は色を変える */
+.acts { flex-wrap: nowrap; }
+.chip { font-size: 12.5px; line-height: 1.2; padding: 4px 3px; border-radius: 12px; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); }
+.chip.sp { color: #ffd9b0; border-color: #ff8a5a; background: linear-gradient(180deg, #3d2016, #24130d); }
+.chip.sp.on { background: linear-gradient(180deg, #ffa26f, #f07038); color: #2a0f04; }
+.chip:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, .4); }
+.seg { border-radius: 12px; }
+
+/* スコアボードのチーム色 */
+#slab i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: 0; }
+
+/* 結果の大きな文字 */
+#banner .t { text-shadow: 0 3px 0 rgba(0, 0, 0, .6), 0 0 2px rgba(0, 0, 0, .9); }
+#banner.big .t { font-size: clamp(34px, 10.5vw, 60px); color: transparent; background: linear-gradient(180deg, #fffbe0, #f8d567 50%, #e5892c);
+  -webkit-background-clip: text; background-clip: text; text-shadow: none; filter: drop-shadow(0 4px 0 #3a1e06) drop-shadow(0 0 16px rgba(255, 210, 110, .55)); }
+#banner.big.show { animation: popBig 2.6s ease-out forwards; }
+@keyframes popBig { 0% { opacity: 0; transform: scale(.4) rotate(-6deg); } 10% { opacity: 1; transform: scale(1.18) rotate(-3deg); } 20% { transform: scale(1) rotate(-2deg); } 85% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04) rotate(-2deg); } }
+
+/* ハプニング */
+#hap { top: 112px; border-radius: 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+#hap.alert { border-color: #ff9a5a; background: linear-gradient(180deg, rgba(60, 28, 14, .92), rgba(28, 14, 8, .92)); }
+#hapB { position: absolute; top: 76px; left: 12px; z-index: 5; font: 700 11px var(--f-body); color: #ffd866; background: rgba(40, 26, 6, .72); border: 1px solid rgba(255, 216, 102, .6); border-radius: 999px; padding: 5px 10px; pointer-events: none; }
+#hapB:empty { display: none; }
+#stage.windU::before, #stage.windD::before { content: ''; position: absolute; inset: -10% -50%; pointer-events: none; z-index: 3; opacity: .5;
+  background: repeating-linear-gradient(-4deg, transparent 0 26px, rgba(235, 245, 255, .22) 26px 27px, transparent 27px 61px); animation: windR 0.7s linear infinite; }
+#stage.windD::before { animation-name: windL; }
+@keyframes windR { from { transform: translateX(-60px); } to { transform: translateX(0); } }
+@keyframes windL { from { transform: translateX(0); } to { transform: translateX(-60px); } }
+@media (prefers-reduced-motion: reduce) { #banner.big.show { animation: none; opacity: 1; } #obadge i { animation: none; } }
+#stage canvas { transition: filter .35s; }
+#stage.dark canvas { filter: brightness(.45) saturate(.7); }
+/* 球種ボタン：持ち球の数に合わせて横いっぱいに */
+.pitches { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.pitches .pg { min-height: 46px; border-radius: 12px; font-size: 11.5px; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); }
+.pitches .pg i { font-size: 17px; }

@@ -224,7 +224,8 @@ function onlinePause() {
 function showOnlineOver() {
   const sc = onlineScore(), mine = sc[onl.side], theirs = sc[onl.side === 'home' ? 'away' : 'home'];
   leaveRoom(); idle();
-  overlay({ title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
+  if (mine > theirs) celebrate(now_() + 0.2, 6);
+  overlay({ clear: mine > theirs, title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
     text: 'しばいぬズ ' + sc.home + ' - ' + sc.away + ' パンダーズ', b1: ['メニューへ', showMenu] });
 }
 

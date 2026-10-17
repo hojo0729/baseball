@@ -197,7 +197,7 @@ const bEye = new THREE.Mesh(new THREE.CylinderGeometry(FR + 51.4, FR + 4.4, 30, 
 bEye.position.copy(stands.position); scene.add(bEye);
 
 /* ---- lights ---- */
-scene.add(new THREE.HemisphereLight('#a9bde0', '#1c2a20', 0.6));
+const hemi = new THREE.HemisphereLight('#a9bde0', '#1c2a20', 0.6); scene.add(hemi);
 const key = new THREE.DirectionalLight('#fff1d6', 1.55);
 key.position.set(18, 40, 26); key.target.position.set(0, 0, -9);
 key.castShadow = SHADOWS; key.shadow.mapSize.set(1024, 1024);
@@ -211,6 +211,7 @@ const glowTex = canvasTex(128, 128, (g) => {
   gr.addColorStop(0, 'rgba(255,246,214,1)'); gr.addColorStop(0.2, 'rgba(255,236,180,.5)'); gr.addColorStop(1, 'rgba(255,236,180,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
 });
+const towerSp = [];
 [96, 138, 222, 264].forEach(deg => {
   const a = deg * D2R, r = FR + 58, x = FC.x + Math.sin(a) * r, z = FC.z + Math.cos(a) * r;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 48, 8), mat('#1a1f24'));
@@ -218,7 +219,7 @@ const glowTex = canvasTex(128, 128, (g) => {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 0.6), new THREE.MeshBasicMaterial({ color: '#fff6d6' }));
   panel.position.set(x, 50, z); panel.lookAt(0, 0, -20); scene.add(panel);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
-  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp);
+  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp); towerSp.push(sp);
 });
 (() => {
   const n = 500, p = new Float32Array(n * 3);
@@ -229,6 +230,78 @@ const glowTex = canvasTex(128, 128, (g) => {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#cfd8e6', size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0.6, fog: false })));
 })();
+
+/* ---- 演出：花火・観客のウェーブ・照明の明滅（すべて軽い：Points 1個とメッシュ1枚） ---- */
+const waveTex = canvasTex(512, 8, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, w, 0);
+  gr.addColorStop(0, 'rgba(255,240,200,0)'); gr.addColorStop(0.44, 'rgba(255,240,200,0)'); gr.addColorStop(0.5, 'rgba(255,240,200,1)');
+  gr.addColorStop(0.56, 'rgba(255,240,200,0)'); gr.addColorStop(1, 'rgba(255,240,200,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+});
+waveTex.wrapS = THREE.RepeatWrapping; waveTex.repeat.set(1.5, 1);
+const waveMat = new THREE.MeshBasicMaterial({ map: waveTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+const waveMesh = new THREE.Group();   // two pieces: leaves the batter's eye (166°-194°) dark so pitches stay easy to see
+[[68, 98], [194, 98]].forEach(([a, l]) => waveMesh.add(new THREE.Mesh(new THREE.CylinderGeometry(FR + 51.6, FR + 4.6, 29, 32, 1, true, a * D2R, l * D2R), waveMat)));
+waveMesh.position.copy(stands.position); waveMesh.visible = false; scene.add(waveMesh);
+let waveUntil = 0;
+function crowdWave(sec) { waveUntil = Math.max(waveUntil, now_() + sec); }
+
+const FW_N = 480, fwPos = new Float32Array(FW_N * 3), fwCol = new Float32Array(FW_N * 3), fwVel = new Float32Array(FW_N * 3), fwBase = new Float32Array(FW_N * 3), fwT = new Float32Array(FW_N).fill(-1);
+const fwGeo = new THREE.BufferGeometry();
+fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('color', new THREE.BufferAttribute(fwCol, 3));
+const fwPts = new THREE.Points(fwGeo, new THREE.PointsMaterial({ size: 1.3, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+fwPts.frustumCulled = false; fwPts.visible = false; scene.add(fwPts);
+const FW_COL = [[1, .8, .3], [1, .35, .3], [.4, .8, 1], [.6, 1, .5], [1, .5, .9], [1, 1, .9]];
+let fwNext = 0, fwQueue = [], flashUntil = 0;
+function fwBurst(at) {
+  const c = FW_COL[(Math.random() * FW_COL.length) | 0], cx = rnd(-24, 24), cy = rnd(16, 26), cz = rnd(-112, -100), sp = rnd(38, 48);   // 観客席の前（打者目線の画面に入る高さ）
+  for (let k = 0; k < 90; k++) {
+    const i = fwNext; fwNext = (fwNext + 1) % FW_N;
+    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u), v = sp * (0.75 + Math.random() * 0.25);
+    fwVel.set([Math.cos(a) * r * v, u * v, Math.sin(a) * r * v], i * 3);
+    fwPos.set([cx, cy, cz], i * 3); fwBase.set(c, i * 3); fwT[i] = at;
+  }
+}
+/* ホームラン・勝利：at（秒）から n 発の花火、観客のウェーブ、照明のフラッシュ */
+function celebrate(at, n) {
+  for (let i = 0; i < n; i++) fwQueue.push(at + i * 0.45 + Math.random() * 0.2);
+  waveUntil = Math.max(waveUntil, at + 5); flashUntil = Math.max(flashUntil, at + 1.6);
+}
+let lightK = 1, darkCss = false;
+function updateShow(now, dt) {
+  fwQueue = fwQueue.filter(t => { if (now >= t) { fwBurst(t); sfx.pop && sfx.pop(); return false; } return true; });
+  let live = 0;
+  for (let i = 0; i < FW_N; i++) {
+    const t0 = fwT[i]; if (t0 < 0) continue;
+    const age = now - t0;
+    if (age < 0) { fwCol[i * 3] = fwCol[i * 3 + 1] = fwCol[i * 3 + 2] = 0; live++; continue; }
+    if (age > 2.4) { fwT[i] = -1; fwCol[i * 3] = fwCol[i * 3 + 1] = fwCol[i * 3 + 2] = 0; continue; }
+    live++;
+    const drag = Math.exp(-1.6 * age), b = i * 3;
+    const f = Math.max(0, 1 - age / 2.4) * (age < 0.08 ? 1.6 : 1);
+    fwCol[b] = fwBase[b] * f; fwCol[b + 1] = fwBase[b + 1] * f; fwCol[b + 2] = fwBase[b + 2] * f;
+    fwPos[b] += fwVel[b] * drag * dt; fwPos[b + 1] += (fwVel[b + 1] * drag - 4.5 * age) * dt; fwPos[b + 2] += fwVel[b + 2] * drag * dt;
+  }
+  fwPts.visible = live > 0;
+  if (live) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
+  // crowd wave: a bright band sweeping around the stands
+  const wv = now < waveUntil;
+  waveMesh.visible = wv || waveMat.opacity > 0.01;
+  waveMat.opacity += ((wv ? 0.8 : 0) - waveMat.opacity) * Math.min(1, dt * 4);
+  if (waveMesh.visible) waveTex.offset.x = (waveTex.offset.x - dt * 0.35) % 1;
+  // lights: flash on a celebration, dim during the lights-out happening
+  const dark = darkActive();
+  if (dark !== darkCss) { darkCss = dark; $('#stage').classList.toggle('dark', dark); }
+  const target = dark ? 0.32 : 1;
+  lightK += (target - lightK) * Math.min(1, dt * (dark ? 6 : 2.5));
+  const fl = now < flashUntil ? 0.5 + 0.5 * Math.abs(Math.sin(now * 14)) : 1;
+  key.intensity = 1.55 * lightK; hemi.intensity = 0.6 * (0.45 + 0.55 * lightK); fill.intensity = 0.5 * lightK; rim.intensity = 0.45 * lightK;
+  towerSp.forEach(s => { s.material.opacity = (dark ? 0.08 : 1) * fl; });
+}
+function darkActive() {
+  if (!G || !G.hap || G.hap.t !== 'dark' || G.hap.inn !== G.inning) return false;
+  return G.hap.left > 0 || !!(ball && ball.dk);
+}
 
 /* ---- ball, trails, markers ---- */
 const ballTex = canvasTex(256, 128, (g, w, h) => {

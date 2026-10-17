@@ -242,7 +242,7 @@ function refreshAct() {
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
+    b.className = 'chip' + (/^(crit|vn|closer|ph)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
   if (mode === 'bat' && phase === 'wait') setHint(sign ? 'サイン：' + SIGN_HINT[sign] : '投手が投げたら、ボールが通る位置をタップして打つ');

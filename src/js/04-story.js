@@ -71,14 +71,25 @@ function overlay(o) {
   $('#ot').textContent = o.title || ''; $('#ot').hidden = !o.title;
   $('#od').textContent = o.text || '';
   $('#overlay').classList.toggle('dlg', !!o.dlg);
-  const g1 = $('#goBtn'), g2 = $('#go2');
-  g1.hidden = !o.b1; g2.hidden = !o.b2;
-  if (o.b1) { g1.textContent = o.b1[0]; ovAction = o.b1[1]; }
-  if (o.b2) { g2.textContent = o.b2[0]; ovAction2 = o.b2[1]; }
-  const g3 = $('#go3'); g3.hidden = !o.b3;
-  if (o.b3) { g3.textContent = o.b3[0]; ovAction3 = o.b3[1]; }
-  const g4 = $('#go4'); g4.hidden = !o.b4;
-  if (o.b4) { g4.textContent = o.b4[0]; ovAction4 = o.b4[1]; }
+  $('#overlay').classList.toggle('logo', !!o.logo);
+  $('#overlay').classList.toggle('clear', !!o.clear);
+  const bd = $('#obadge'); bd.hidden = !o.logo;
+  if (o.logo && !bd.childElementCount) TEAM_ORDER.forEach(t => {          // 5チームのバッジ
+    const i = document.createElement('i'); i.textContent = TEAM_COL[t][1]; i.style.background = TEAM_COL[t][0]; bd.appendChild(i);
+  });
+  /* label 'name\nsmall text' -> two lines. optional 3rd item: team key for a color stripe */
+  const setB = (el, b) => {
+    el.hidden = !b; if (!b) return;
+    const [main, sub] = b[0].split('\n');
+    el.textContent = main;
+    if (sub) { const s = document.createElement('small'); s.textContent = sub; el.appendChild(s); }
+    el.style.setProperty('--tc', b[2] ? TEAM_COL[b[2]][0] : 'transparent');
+    el.classList.toggle('team', !!b[2]);
+  };
+  setB($('#goBtn'), o.b1); if (o.b1) ovAction = o.b1[1];
+  setB($('#go2'), o.b2); if (o.b2) ovAction2 = o.b2[1];
+  setB($('#go3'), o.b3); if (o.b3) ovAction3 = o.b3[1];
+  setB($('#go4'), o.b4); if (o.b4) ovAction4 = o.b4[1];
   const ci = $('#codeIn'); ci.hidden = !o.input;
   if (o.input) { ci.value = ''; setTimeout(() => { try { ci.focus(); } catch (e) {} }, 60); }
   $('#overlay').hidden = false;
@@ -101,7 +112,7 @@ function showMenu() {
   $('.seg').hidden = true; $('#menuBtn').hidden = true;
   const done = loadProgress();
   overlay({
-    title: 'どうぶつリーグ',
+    title: 'どうぶつリーグ', logo: true,
     text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
     b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame]
   });
@@ -120,11 +131,12 @@ function showCpuMenu() {
 }
 /* 自分のチームを選ぶ（相手はほかの4チームからランダム）→ CPUの強さ → 試合開始 */
 const TEAM_ORDER = ['home', 'away', 'neko', 'usagi', 'kuma'];
+const TEAM_COL = { home: ['#d0452a', '柴'], away: ['#2f5aa0', 'パ'], neko: ['#7a56b5', '猫'], usagi: ['#2f9a6c', '兎'], kuma: ['#b8901f', '熊'] };
 function pickTeam(side, page) {
   const go = t => () => chooseDiff(() => startMatch(side, t));
   const ts = page ? TEAM_ORDER.slice(3) : TEAM_ORDER.slice(0, 3), o = { title: 'チームをえらぶ',
-    text: 'しばいぬズ＝粘り強い　パンダーズ＝パワー　ニャンキーズ＝足と守備　ラビッツ＝内野安打　ヒグマーズ＝重い球' };
-  ts.forEach((t, i) => { o['b' + (i + 1)] = [ROSTER[t].name, go(t)]; });
+    text: '相手はほかのチームからランダム。チームごとに固有スキルがあります。' };
+  ts.forEach((t, i) => { o['b' + (i + 1)] = [ROSTER[t].name + '\n' + TRAIT[t].n + '：' + TRAIT[t].d, go(t), t]; });
   if (page) o.b3 = ['◀ もどる', () => pickTeam(side, 0)]; else o.b4 = ['ほかのチーム ▶', () => pickTeam(side, 1)];
   overlay(o);
 }
@@ -179,7 +191,8 @@ function showMatchOver() {
   const sb = onlineScore(), me = sb[match.side], cpu = sb[match.side === 'home' ? 'away' : 'home'], opp = ROSTER[match.opp].name;
   const inn = Math.ceil(Math.min(G.inning, 24) / 2);
   idle();
-  overlay({ title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: ROSTER[match.mine].name + ' ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
+  if (me > cpu) celebrate(now_() + 0.2, 6);
+  overlay({ clear: me > cpu, title: me > cpu ? '勝ち！' : me < cpu ? '負け…' : '引き分け', text: ROSTER[match.mine].name + ' ' + me + ' - ' + cpu + ' ' + opp + (inn > 9 ? '（延長' + inn + '回）' : ''),
     b1: ['もう一度', showCpuMenu], b2: ['メニュー', showMenu] });
 }
 /* the menu button during a CPU match: the game stops while the sheet is open */
@@ -216,3 +229,7 @@ function storyEnd(win) {
     else overlay({ title: 'ステージクリア', text: st.title + ' クリア！', b1: ['次の話へ', () => showStage(i + 1)], b2: ['メニュー', showMenu] });
   });
 }
+
+/* メニューなどの画面が開いている間は、試合用の表示（実況ボタン・選手情報・下の操作）を隠す */
+new MutationObserver(() => $('#app').classList.toggle('ov', !$('#overlay').hidden && !$('#overlay').classList.contains('dlg')))
+  .observe($('#overlay'), { attributes: true, attributeFilter: ['hidden', 'class'] });

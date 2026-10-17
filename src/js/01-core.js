@@ -236,11 +236,11 @@ function newGame() { G = { inning: 1, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0
 
 /* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
 const HAP = [
-  { t: 'windU', n: '追い風！', d: 'この回、フライがよく伸びる' },
-  { t: 'windD', n: '向かい風…', d: 'この回、フライが伸びにくい' },
-  { t: 'rain', n: '雨が降ってきた！', d: 'この回、ぬかるんでエラーが出やすい' },
-  { t: 'wave', n: '球場がウェーブ！', d: 'この回、攻撃側のミートが上がる' },
-  { t: 'dark', n: '照明トラブル！', d: '次の2球、ボールが見えにくい' }
+  { t: 'windU', i: '↗', n: '追い風！', d: 'この回、フライがよく伸びる' },
+  { t: 'windD', i: '↙', n: '向かい風…', d: 'この回、フライが伸びにくい' },
+  { t: 'rain', i: '☂', n: '雨が降ってきた！', d: 'この回、ぬかるんでエラーが出やすい' },
+  { t: 'wave', i: '〜', n: '球場がウェーブ！', d: 'この回、攻撃側のミートが上がる' },
+  { t: 'dark', i: '●', n: '照明トラブル！', d: '次の2球、ボールが見えにくい' }
 ];
 const hapOn = t => !!(G && G.hap && G.hap.inn === G.inning && G.hap.t === t);
 function darkNow() {
@@ -257,6 +257,10 @@ function nextHap() {
   hapEl.innerHTML = '<b>' + h.n + '</b><span>' + h.d + '</span>';
   hapEl.classList.remove('show'); void hapEl.offsetWidth; hapEl.classList.add('show');
   if (h.say) say({ text: h.n + h.d, id: 'hap' }, 1);
+  hapEl.classList.toggle('alert', !!h.t);
+  if (h.t === 'windU' || h.t === 'windD') { const st = $('#stage'); st.classList.add(h.t === 'windU' ? 'windU' : 'windD'); setTimeout(() => st.classList.remove('windU', 'windD'), 4200); }
+  if (h.t === 'wave') crowdWave(7);
+  hud();
   setTimeout(() => { hapEl.classList.remove('show'); setTimeout(nextHap, 300); }, 3000);
 }
 function rollHap(odd) {
@@ -271,7 +275,7 @@ function rollHap(odd) {
   if (a > 0.3) return;
   const h = HAP[Math.floor(b * HAP.length)];
   G.hap = { t: h.t, inn: G.inning, left: 2 };
-  queueHap({ n: h.n, d: h.d, say: true }, w);
+  queueHap({ n: h.n, d: h.d, say: true, t: h.t }, w);
 }
 /* ---- サイコロ：奇数の回の攻撃側が振る。出た目でボーナス（両端末とも同じ目になる） ---- */
 const DICE_FX = {
@@ -356,6 +360,8 @@ function dots(id, n, on) {
 function hud() {
   pitchIcons();
   $('#stage').classList.toggle('rain', hapOn('rain'));
+  const hb = G && G.hap && G.hap.inn === G.inning ? HAP.find(h => h.t === G.hap.t) : null;
+  $('#hapB').textContent = hb && !(hb.t === 'dark' && G.hap.left <= 0) ? hb.i + ' ' + hb.n.replace(/[！…]/g, '') : '';
   $('#inn').textContent = Math.min(G.inning, 3) + '回';
   dots('#db', 3, G.b); dots('#ds', 2, G.s); dots('#do', 2, G.outs);
   G.bases.forEach((v, i) => $('#b' + (i + 1)).classList.toggle('on', !!v));
@@ -364,8 +370,9 @@ function hud() {
   if (twoTeam()) {
     const sc = onlineScore();
     $('#inn').textContent = inningLabel();
-    if (online) { $('#slab').textContent = 'しば - パン'; $('#runs').textContent = sc.home + '-' + sc.away; }
-    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').textContent = ROSTER[match.mine].name.slice(0, 2) + ' - ' + ROSTER[match.opp].name.slice(0, 2); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
+    const tag = t => '<i style="background:' + TEAM_COL[t][0] + '"></i>' + ROSTER[t].name.slice(0, 2);
+    if (online) { $('#slab').innerHTML = tag('home') + ' - ' + tag('away'); $('#runs').textContent = sc.home + '-' + sc.away; }
+    else { const os = match.side === 'home' ? 'away' : 'home'; $('#slab').innerHTML = tag(match.mine) + ' - ' + tag(match.opp); $('#runs').textContent = sc[match.side] + '-' + sc[os]; }
   }
   updateRunners();
   updateGoal();
@@ -373,7 +380,7 @@ function hud() {
 function setHint(t) { $('#hint').textContent = t; }
 function showBanner(t, s, tone) {
   const b = $('#banner');
-  b.className = tone;
+  b.className = tone + (/ホームラン|サヨナラ|勝ち|優勝|グランドスラム/.test(t) ? ' big' : '');
   $('#bt').textContent = t; $('#bs').textContent = s || '';
   void b.offsetWidth;
   b.classList.add('show');
@@ -496,13 +503,14 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
+  let dk = false;
   const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
   commentPitch(o);
   const P0 = squashJ(pitcherJ(1), MOUND_Y).hR;
   const v = o.speed / 3.6, real = Math.abs(P0.z) / v;
   ball = {
-    key: o.key, speed: o.speed, vn: !!o.vn || darkNow(), T: [o.tx, o.ty], P0,
+    key: o.key, speed: o.speed, vn: !!o.vn || (dk = darkNow()), dk, T: [o.tx, o.ty], P0,
     tgt: zoneToWorld(o.tx, o.ty), app: zoneToWorld(o.tx + T.brk[0] * BRK * hs, o.ty + T.brk[1] * BRK),
     n: T.n, gf: T.gf, real, dur: real * SLOW, start: now_(), done: false,
     wob: T.wob || 0, ph: rnd(0, 6.28), ph2: rnd(0, 6.28),
@@ -678,7 +686,7 @@ function resolveCore(c, C) {
       }
       else if (c.bases > 0) {
         t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
-        if (c.bases === 4) bgmHR();
+        if (c.bases === 4) { bgmHR(); celebrate(now + 0.5, 5); }
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
       else {
