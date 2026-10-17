@@ -200,26 +200,42 @@ function swingAt(tau, plan) {
   if (i === plan.length - 2) u = easeOut(u);
   return { G: a.G.clone().lerp(b.G, u), dir: slerpVec(a.d, b.d, u), th: lerp(a.th, b.th, u) };
 }
+/* 打者：体（腰・肩・頭・脚）は本物のモーションキャプチャ（03-motion-bat.js の BAT_MO）、
+   手とバットはスイング計画（タップした所にバットが来る）のまま。右打者で作り、左打者は左右反転 */
+const BAT_NAMES = ['pelvis', 'neck', 'head', 'sL', 'sR', 'hipL', 'hipR', 'kL', 'kR', 'fL', 'fR'];
+const BAT_F = { stride: 12, land: 33, contact: 43, finish: 70 };
+let buntK = 0, buntT = 0;
+function batterBody(fi) {
+  const M = BAT_MO, f = clamp(fi, 0, M.n - 1), i0 = Math.min(M.n - 2, Math.floor(f)), a = f - i0, d = M.d, J = {};
+  BAT_NAMES.forEach((n, j) => {
+    const b0 = (i0 * 11 + j) * 3, b1 = b0 + 33;
+    let x = d[b0] + (d[b1] - d[b0]) * a, y = d[b0 + 1] + (d[b1 + 1] - d[b0 + 1]) * a, z = d[b0 + 2] + (d[b1 + 2] - d[b0 + 2]) * a;
+    if (buntK > 0) { const q = M.bunt; x += (q[j * 3] - x) * buntK; y += (q[j * 3 + 1] - y) * buntK; z += (q[j * 3 + 2] - z) * buntK; }
+    J[n] = V(x + X0, y, z + 0.06);
+  });
+  return J;
+}
 function batterJ(now, k) {
-  const step = clamp((k - 0.45) / 0.45, 0, 1), lift = Math.sin(step * Math.PI) * 0.07;
-  let G, dir, th;
+  let G, dir, fi;
   const sw = batAnim && now >= batAnim.t0 ? now - batAnim.t0 : -1;
   if (sw < 0) {
-    const w = Math.sin(now * 3) * 0.03 * (1 - step);
-    G = V(X0 + 0.24, 1.0 + w * 0.3, 0.26); dir = V(0.12 + w, 0.85, 0.5).normalize(); th = -0.2 - step * 0.08;
-  } else ({ G, dir, th } = swingAt(sw, batAnim.plan));
-  if (isBunting()) { ({ G, dir } = buntGrip()); th = 0.9; }      // squared around to bunt
-  const P = V(X0, 0.95 - 0.03 * step, 0.06);
-  const hipF = P.clone().add(rotY(V(0, -0.04, -0.12), th * 0.6)), hipB = P.clone().add(rotY(V(0, -0.04, 0.12), th * 0.6));
-  const fF = V(X0 + 0.02, lift, -0.36 - 0.1 * step), fB = V(X0 - 0.04, 0, 0.46);
-  const kF = hipF.clone().lerp(fF, 0.5).add(V(0.1, 0.03, 0)), kB = hipB.clone().lerp(fB, 0.5).add(V(0.11, 0, 0));
-  if (sw > 0) kB.add(V(0.03, -0.04, -0.12 * clamp(sw / 0.2, 0, 1)));
-  const N = P.clone().add(V(0.08, 0.46, -0.02));
-  const sF = N.clone().add(rotY(V(0, -0.03, -0.19), th)), sB = N.clone().add(rotY(V(0, -0.03, 0.19), th));
-  const head = N.clone().add(V(0.03, 0.15, -0.03));
+    const w = Math.sin(now * 3) * 0.03 * (k < 0.35 ? 1 : 0);
+    G = V(X0 + 0.24, 1.0 + w * 0.3, 0.26); dir = V(0.12 + w, 0.85, 0.5).normalize();
+    fi = k < 0.35 ? 0 : k <= 1 ? BAT_F.stride + (BAT_F.land - BAT_F.stride) * (k - 0.35) / 0.65 : BAT_F.land;   // 投手に合わせて足を上げて踏み込む
+  } else {
+    ({ G, dir } = swingAt(sw, batAnim.plan));
+    fi = sw < SWING_LEAD ? BAT_F.land + (BAT_F.contact - BAT_F.land) * sw / SWING_LEAD
+      : BAT_F.contact + (BAT_F.finish - BAT_F.contact) * clamp((sw - SWING_LEAD) / 0.4, 0, 1);
+  }
+  const bunting = isBunting();
+  if (bunting) ({ G, dir } = buntGrip());                        // squared around to bunt
+  const dtb = clamp(now - buntT, 0, 0.1); buntT = now;
+  buntK += ((bunting ? 1 : 0) - buntK) * Math.min(1, dtb * 10);
+  if (buntK < 0.01) buntK = 0;
+  const B = batterBody(fi);
   const hF = G.clone().addScaledVector(dir, 0.04), hB = G.clone().addScaledVector(dir, 0.12);
-  const eF = sF.clone().lerp(hF, 0.5).add(V(0.02, -0.12, -0.04)), eB = sB.clone().lerp(hB, 0.5).add(V(0, -0.13, 0.06));
-  const J = { pelvis: P, neck: N, head, sL: sF, sR: sB, eL: eF, eR: eB, hL: hF, hR: hB, hipL: hipF, hipR: hipB, kL: kF, kR: kB, fL: fF, fR: fB };
+  const eF = B.sL.clone().lerp(hF, 0.5).add(V(0.02, -0.12, -0.04)), eB = B.sR.clone().lerp(hB, 0.5).add(V(0, -0.13, 0.06));
+  const J = { pelvis: B.pelvis, neck: B.neck, head: B.head, sL: B.sL, sR: B.sR, eL: eF, eR: eB, hL: hF, hR: hB, hipL: B.hipL, hipR: B.hipR, kL: B.kL, kR: B.kR, fL: B.fL, fR: B.fR };
   return shownLeft ? { J: mirrorJ(J), G: mirX(G), dir: mirX(dir) } : { J, G, dir };
 }
 
