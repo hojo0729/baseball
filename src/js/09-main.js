@@ -459,7 +459,7 @@ function endFlick(cancel) {
   ptype = key; markGuide(key);
   const T = TYPES[key];
   const P = curPitcher();
-  const sig = (0.06 + f * 0.22) * (1 + (3 - P.c) * 0.15) + P.fatigue * 0.25;
+  const sig = ((0.01 + f * 0.03) * (1 + (3 - P.c) * 0.1) + P.fatigue * 0.04);
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
   pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2), vn: vanishArm };
   if (vanishArm) { vanishArm = false; G.skill.vn--; }

@@ -252,16 +252,16 @@ const sfx = {
 /* ---- pitch types. brk: zone units the ball breaks late (A = where it seems to head). gf: gravity drop factor ---- */
 const TYPES = {
   str: { name: 'ストレート',     short: 'ストレート', ico: '↑',  min: 128, max: 152, n: 3,   brk: [0, 0.05],     gf: 0.45, hard: 0,    w: 26, ax: [1, 0, 0],    rps: 40 },
-  two: { name: 'ツーシーム',     short: 'ツーシーム', ico: '↖',  min: 125, max: 147, n: 3,   brk: [0.32, -0.05], gf: 0.7,  hard: 0.1,  w: 8,  ax: [1, 0.5, 0],  rps: 35 },
-  cut: { name: 'カットボール',   short: 'カット',     ico: '↗',  min: 127, max: 145, n: 5,   brk: [-0.4, 0.05],  gf: 0.6,  hard: 0.3,  w: 8,  ax: [1, -0.6, 0], rps: 40 },
-  sli: { name: 'スライダー',     short: 'スライダー', ico: '→', min: 112, max: 131, n: 4,   brk: [-0.95, 0.1],  gf: 0.8,  hard: 0.5,  w: 14, ax: [0.3, 1, 0],  rps: 45 },
-  cur: { name: 'カーブ',         short: 'カーブ',     ico: '↘', min: 92,  max: 114, n: 3.2, brk: [-0.3, -1.15], gf: 1.0,  hard: 0.5,  w: 10, ax: [1, 0.3, 0],  rps: -40 },
-  frk: { name: 'フォーク',       short: 'フォーク',   ico: '↓',  min: 122, max: 140, n: 5,   brk: [0, -0.95],    gf: 0.9,  hard: 0.6,  w: 8,  ax: [1, 0, 0],    rps: 6 },
-  chg: { name: 'チェンジアップ', short: 'チェンジ',   ico: '↑ゆっくり',  min: 104, max: 124, n: 3,   brk: [0.15, -0.4],  gf: 0.85, hard: 0.45, w: 9,  ax: [1, 0.5, 0],  rps: 20 },
-  sht: { name: 'シュート',       short: 'シュート',   ico: '←', min: 122, max: 140, n: 4,   brk: [0.85, 0.08],  gf: 0.7,  hard: 0.35, w: 6,  ax: [0.3, -1, 0], rps: -35 },
-  snk: { name: 'シンカー',       short: 'シンカー',   ico: '↙',  min: 120, max: 138, n: 4,   brk: [0.55, -0.65], gf: 0.9,  hard: 0.4,  w: 6,  ax: [0.6, -1, 0], rps: -30 },
+  two: { name: 'ツーシーム',     short: 'ツーシーム', ico: '↖',  min: 125, max: 147, n: 3,   brk: [0.42, -0.08], gf: 0.7,  hard: 0.1,  w: 8,  ax: [1, 0.5, 0],  rps: 35 },
+  cut: { name: 'カットボール',   short: 'カット',     ico: '↗',  min: 127, max: 145, n: 5,   brk: [-0.55, 0.06], gf: 0.6,  hard: 0.3,  w: 8,  ax: [1, -0.6, 0], rps: 40 },
+  sli: { name: 'スライダー',     short: 'スライダー', ico: '→', min: 112, max: 131, n: 4,   brk: [-1.28, 0.12], gf: 0.8,  hard: 0.5,  w: 14, ax: [0.3, 1, 0],  rps: 45 },
+  cur: { name: 'カーブ',         short: 'カーブ',     ico: '↘', min: 92,  max: 114, n: 3.2, brk: [-0.42, -1.48],gf: 1.0,  hard: 0.5,  w: 10, ax: [1, 0.3, 0],  rps: -40 },
+  frk: { name: 'フォーク',       short: 'フォーク',   ico: '↓',  min: 122, max: 140, n: 5,   brk: [0, -1.28],    gf: 0.9,  hard: 0.6,  w: 8,  ax: [1, 0, 0],    rps: 6 },
+  chg: { name: 'チェンジアップ', short: 'チェンジ',   ico: '↑ゆっくり',  min: 104, max: 124, n: 3,   brk: [0.22, -0.55], gf: 0.85, hard: 0.45, w: 9,  ax: [1, 0.5, 0],  rps: 20 },
+  sht: { name: 'シュート',       short: 'シュート',   ico: '←', min: 122, max: 140, n: 4,   brk: [1.15, 0.10],  gf: 0.7,  hard: 0.35, w: 6,  ax: [0.3, -1, 0], rps: -35 },
+  snk: { name: 'シンカー',       short: 'シンカー',   ico: '↙',  min: 120, max: 138, n: 4,   brk: [0.72, -0.85], gf: 0.9,  hard: 0.4,  w: 6,  ax: [0.6, -1, 0], rps: -30 },
   gou: { name: '剛速球',         short: '剛速球',     ico: '↑速く', min: 155, max: 168, n: 3, brk: [0, 0.12], gf: 0.25, hard: 0.3, w: 2,  ax: [1, 0, 0],    rps: 55 },
-  knk: { name: 'ナックル',       short: 'ナックル',   ico: 'ジグザグ', min: 78,  max: 104, n: 3,   brk: [0, -0.2],     gf: 0.9,  hard: 1,    w: 3,  ax: [1, 0, 0],    rps: 1, wob: 0.34 }
+  knk: { name: 'ナックル',       short: 'ナックル',   ico: 'ジグザグ', min: 78,  max: 104, n: 3,   brk: [0, -0.28],    gf: 0.9,  hard: 1,    w: 3,  ax: [1, 0, 0],    rps: 1, wob: 0.42 }
 };
 
 /* ---- game state ---- */
