@@ -1110,10 +1110,10 @@ function resolveCore(c, C) {
             t = sacFly();
             cheer = mode === 'bat' ? 1.0 : 0.2;
           } else {
-            const res = out('本塁タッチアウト！');
+            const r1 = out('フライアウト');
+            const r2 = out('本塁タッチアウト！');
             G.bases[2] = 0;
-            t = res + ' ゲッツー';
-            if (G.outs === 0) t = endInning('本塁タッチアウト！');
+            t = G.outs >= 3 ? r2 : r2 + ' ゲッツー';
             cheer = mode === 'pit' ? 1.0 : 0.2;
           }
         }

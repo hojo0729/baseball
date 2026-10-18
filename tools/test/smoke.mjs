@@ -250,9 +250,53 @@ async function playPA(p, errs, hitObj, label) {
     }
     // 1回裏（守備）で実際に1球投げる
     await playPA(p, errs, FLYOUT, 'CPU対戦 1回裏1球');
+
+    // 4b. 本塁クロスプレー回帰テスト（3塁走者タッチアップでのアウト数確認）
+    // 状態：G.outs = 1, G.bases = [0, 0, 3], フライアウト (dist 60, res 'フライアウト')
+    const TAGUP_FLY = { kind: 'play', q: 0.6, dir: 0, ev: 110, launch: 32, dist: 60, res: 'フライアウト', bases: 0 };
+    // アウト側強制（Math.random = 0.999）: フライ＋本塁タッチアウトで計2アウト増え、チェンジになること
+    const tagOutRes = await p.evaluate(c => {
+      const d = window.__dbg;
+      d.G.inning = 1;
+      d.G.outs = 1;
+      d.G.runs = 0;
+      d.G.bases = [0, 0, 3];
+      d.pitch();
+      d.ff();
+      d.hit(c, () => 0.999);
+      d.ff();
+      const G = d.G;
+      return { inn: G.inning, outs: G.outs, runs: G.runs, bases: G.bases };
+    }, TAGUP_FLY);
+    if (!(tagOutRes.inn === 2 && tagOutRes.outs === 0 && tagOutRes.runs === 0 && tagOutRes.bases.every(x => x === 0))) {
+      ng('4b. 本塁クロスプレー回帰テスト（アウト側）失敗', tagOutRes);
+      throw new Error('Home plate tag out test failed');
+    }
+
+    // セーフ側強制（Math.random = 0）: 犠牲フライで1点入り、アウトはフライの1つだけ増えて計2アウトになること
+    const tagSafeRes = await p.evaluate(c => {
+      const d = window.__dbg;
+      d.G.inning = 1;
+      d.G.outs = 1;
+      d.G.runs = 0;
+      d.G.bases = [0, 0, 3];
+      d.pitch();
+      d.ff();
+      // 1回目(makePlay superPlay): 0.5, 2回目(エラー判定): 0.5 (>=0.05), 3回目(本塁突入セーフ判定): 0 (<safeProb)
+      let cnt = 0;
+      d.hit(c, () => (cnt++ < 2 ? 0.5 : 0));
+      d.ff();
+      const G = d.G;
+      return { inn: G.inning, outs: G.outs, runs: G.runs, bases: G.bases };
+    }, TAGUP_FLY);
+    if (!(tagSafeRes.inn === 1 && tagSafeRes.outs === 2 && tagSafeRes.runs === 1)) {
+      ng('4b. 本塁クロスプレー回帰テスト（セーフ側）失敗', tagSafeRes);
+      throw new Error('Home plate safe test failed');
+    }
+
     await p.click('#menuBtn');
     await p.click('#go3'); // 試合をやめる
-    ok('4. CPU対戦（開始・攻守交代・投球・メニュー帰還）');
+    ok('4. CPU対戦（開始・攻守交代・本塁クロスプレー判定・メニュー帰還）');
 
     // 5. 練習モード：開始して、1球打てること
     await p.click('#go2');   // CPU対戦
