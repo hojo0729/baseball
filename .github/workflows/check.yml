@@ -1,0 +1,20 @@
+# GitHub 側の自動チェック。pre-push フック（手元）を回し忘れた・有効にしていない clone からの push も、ここで見つける。
+# 失敗しても本番（GitHub Pages）は止まらない。気づくための仕組み。直すときは HANDOFF.md の「障害対応」へ。
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node tools/check.mjs --full
+      # src/ を直したのに docs/（ビルド結果）をコミットし忘れていないか
+      - run: node build.mjs && git diff --exit-code -- docs/

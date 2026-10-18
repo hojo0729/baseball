@@ -132,3 +132,27 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 - 2026-10-17 Gemini（Antigravity）：環境を確認。node build.mjs と tools/check.sh が通ることを確認。
 - 2026-10-17 Claude：クレジット画面を追加、履歴を書き換え（作者名・旧URL）、共同開発ルールと `tools/check.sh` を追加。実機未確認：顔・送球選択・デッドボール頻度・打球角度・効果音の音量。
 
+
+## 12. 障害対応（何かあったとき。AIが確実に直すための手順）
+**まず上から順に切り分ける。憶測で広く書き換えない。**
+
+1. **再現するか**：`git pull` → `node build.mjs` → `node tools/check.mjs`（オンライン絡みは `--full`）。落ちたら、どのチェックか（ビルド・構文・旧名・乱数・smoke の何番）が手がかり。smoke の番号は `tools/test/smoke.mjs` の見出し（1〜8）と対応する。
+2. **check は通るのに本番だけ変**：古いキャッシュ（service worker）が原因のことが多い。`docs/sw.js` のキャッシュ版はビルドごとに変わる。ユーザー側は、ページの再読み込み、アプリ（PWA）なら開き直し・入れ直し。コードの問題と決めつけない。
+3. **すぐ戻したい**：`git log --oneline` で壊したコミットを探し、`git revert <コミット>` → `node build.mjs` → `node tools/check.mjs` → push。**force push はしない。**
+   最後に動作確認できた版には `stable-YYYYMMDD` のタグが付いている（`git tag -l 'stable-*'`）。`git diff stable-YYYYMMDD -- src/` で、そこから何が変わったかを絞れる。
+4. **症状から、見る場所を絞る**
+   - 起動しない・真っ白 → `02-stadium.js`（描画の準備）と `09-main.js`（起動）。ブラウザのコンソールのエラー行を先に見る。
+   - 判定がおかしい（ヒット・アウト・走塁） → `01-core.js` の `contact()`、結果処理。
+   - 作戦・牽制・送球選択 → `05-tactics.js`、`tools/test/thr.js`・`tac7.js`。
+   - オンラインだけ → `06-online.js`、`tools/test/tac7.js`（SAME/DIFF）。結果処理の乱数は `withSeed()` の中だけ。
+   - 音・実況 → `01-core.js` の `sfx*`、`08-commentary.js`。
+   - 描画が重い・落ちる → `03-players.js`、`02-stadium.js`（影・メッシュ数・テクスチャ）。
+5. **実機（Pixel）でしか出ない不具合**はヘッドレスでは再現しない。Take から次を聞く：機種、どの画面・操作で、何が起きたか、スクリーンショットか動画。AIは該当コードを読み、`tools/test/make-test-page.mjs` が付ける `window.__dbg`（状態の取得・早送り・表情や球の指定）で近い状態を作って確かめる。
+6. **直したら**：再現テストを `tools/test/smoke.mjs` に足す（本塁クロスプレーのときのように）→ `node tools/check.mjs` → push → Take に「何を直したか・実機で確認してほしいこと」を報告。
+7. **直せないとき**：広く書き換えず、`git revert` で戻して、状況（何を試して何が分かったか）を Take に伝える。この節か「作業ログ」にも書き残す。
+
+**戻れる印（タグ）の付け方**：動作確認が済んだら、`node tools/check.mjs --full` を通してから
+`git tag stable-YYYYMMDD && git push origin stable-YYYYMMDD`。大きな変更の前にも付ける。
+
+**GitHub 側の自動チェック**：`.github/workflows/check.yml` が push のたびに `check --full` と「docs/ の出し忘れ」を確認する。赤くなったら、上の手順で原因を探す（本番は止まらない）。
+**外部サービスの障害**：オンラインは Supabase、公開は GitHub Pages に頼っている。コードを直す前に、向こうの障害でないかも疑う。
