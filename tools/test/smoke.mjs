@@ -317,8 +317,11 @@ async function playPA(p, errs, hitObj, label) {
     // 6. オンライン（モック）：2タブで部屋を作って入り、1球投げて、両端末の状態が同じ（SAME）であること
     await p.click('#go3');   // オンライン対戦
     await p.click('#goBtn'); // 部屋を作る
-    await p.waitForTimeout(150);
-    const code = (await p.textContent('#ot')).replace(/\D/g, '');
+    await p.waitForFunction(() => {
+      const el = document.querySelector('#ot');
+      return el && /\d{4}/.test(el.textContent);
+    });
+    const code = (await p.textContent('#ot')).replace(/\D/g, '').slice(0, 4);
 
     const p2 = await ctx.newPage();
     attachErrors(p2, errs, 'P2 ');
