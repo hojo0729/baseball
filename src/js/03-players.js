@@ -8,6 +8,20 @@ const GRAD = (() => {
 })();
 // the stadium key light is strong; darken toon base colors so fur keeps its saturation after tone mapping
 const toon = (c, map) => new THREE.MeshToonMaterial(Object.assign({ color: new THREE.Color(c).multiplyScalar(0.55), gradientMap: GRAD }, map ? { map } : null));
+// ツヤ：主光源のハイライトをくっきり1段だけ足す（トゥーンの見た目は保つ）
+function glossy(m, k) {
+  m.onBeforeCompile = sh => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <output_fragment>', `
+      #if NUM_DIR_LIGHTS > 0
+      { vec3 gV = normalize(vViewPosition); vec3 gH = normalize(directionalLights[0].direction + gV);
+        float gS = pow(max(dot(normal, gH), 0.0), 55.0);
+        outgoingLight += vec3(1.0) * smoothstep(0.5, 0.58, gS) * ${k.toFixed(2)}; }
+      #endif
+      #include <output_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'toongloss' + k;
+  return m;
+}
 function jerseyTex(base, trim, pin) {
   return canvasTex(128, 64, (g, w, h) => {
     g.fillStyle = base; g.fillRect(0, 0, w, h);
@@ -54,9 +68,10 @@ for (const team in UNIFORM) {
   const U = UNIFORM[team], S = SPECIES[U.species], m = {};
   ['HEAD', 'MUZ', 'EARC', 'EARIN', 'LIMB', 'PAW', 'TAIL', 'PATCH', 'NOSE', 'CHEST'].forEach(r => { m[r] = toon(S[r]); });
   ['PANTS', 'CAP', 'SOCK'].forEach(r => { m[r] = toon(U[r]); });
+  ['HEAD', 'MUZ', 'EARC', 'LIMB', 'PAW', 'TAIL', 'CAP'].forEach(r => glossy(m[r], 0.32));
   m.SCARF = toon(U.SCARF || '#ffffff');
   if (S.lineK) m.LINE = new THREE.MeshBasicMaterial({ color: '#0c0605', side: THREE.BackSide });   // 太い輪郭は黒に近い色で
-  if (S.stripe) { m.LIMB = toon('#ffffff', stripeTex(S.LIMB, S.stripe, false)); m.TAIL = toon('#ffffff', stripeTex(S.TAIL, S.stripe, true)); }
+  if (S.stripe) { m.LIMB = toon('#ffffff', stripeTex(S.LIMB, S.stripe, false)); m.TAIL = toon('#ffffff', stripeTex(S.TAIL, S.stripe, true)); glossy(m.LIMB, 0.32); glossy(m.TAIL, 0.32); }
   m.JERSEY = toon('#ffffff', jerseyTex(U.JERSEY, U.SOCK, U.pin));
   MATS[team] = m;
 }
@@ -71,7 +86,7 @@ const COMMON = {
 };
 const geoCache = {};
 const cylGeo = (a, b) => geoCache[a + '_' + b] || (geoCache[a + '_' + b] = new THREE.CylinderGeometry(b, a, 1, 8));
-const SPH = new THREE.SphereGeometry(1, 14, 10), SPL = new THREE.SphereGeometry(1, 8, 6);
+const SPH = new THREE.SphereGeometry(1, 28, 20), SPL = new THREE.SphereGeometry(1, 12, 8);
 const CAPG = new THREE.SphereGeometry(1, 14, 6, 0, Math.PI * 2, 0, Math.PI * 0.5);
 const HELG = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.58);
 const BRIM = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false, -Math.PI / 2, Math.PI);
