@@ -1608,10 +1608,21 @@ function jerseyTex(base, trim, pin) {
     g.fillRect(0, h - 5, w, 5);                                  // 裾ライン
   });
 }
+// 縞模様：腕（輪っか状）としっぽ（長さ方向の帯）。キャラの毛色に暗い縞をのせる
+function stripeTex(base, ink, tail) {
+  return canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    g.fillStyle = ink;
+    for (let i = 0; i < 4; i++) {
+      const a = 6 + i * 15;
+      if (tail) g.fillRect(a, 0, 7, h); else g.fillRect(0, a, w, 7);
+    }
+  });
+}
 const SPECIES = {
   shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011, bulk: 1 },
   panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014, bulk: 1.07 },
-  neko:  { HEAD: '#eab26f', MUZ: '#fff6ea', EARC: '#eab26f', EARIN: '#f2b6bf', LIMB: '#eab26f', PAW: '#fff6ea', TAIL: '#eab26f', PATCH: '#eab26f', NOSE: '#d96b78', CHEST: '#fff6ea', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94 },
+  neko:  { HEAD: '#ad4a0e', MUZ: '#fff1dc', EARC: '#ad4a0e', EARIN: '#f2b6bf', LIMB: '#ad4a0e', PAW: '#fff1dc', TAIL: '#ad4a0e', PATCH: '#ad4a0e', NOSE: '#d96b78', CHEST: '#fff1dc', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94, stripe: '#2e1004', lineK: 1.6 },
   usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013, bulk: 0.93 },
   kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 },
   human: { HEAD: '#fad9be', MUZ: '#fad9be', EARC: '#fad9be', EARIN: '#fad9be', LIMB: '#fad9be', PAW: '#fad9be', TAIL: '#fad9be', PATCH: '#fad9be', NOSE: '#df9c82', CHEST: '#fad9be', ear: 'none', muzS: [0.06, 0.04, 0.04], tail: 'none', hl: 0.012, bulk: 1.04 }
@@ -1619,7 +1630,7 @@ const SPECIES = {
 const UNIFORM = {
   home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true },
   away: { species: 'panda', JERSEY: '#24467d', PANTS: '#dde2ea', CAP: '#162845', SOCK: '#162845' },
-  neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#2e1f4a', SOCK: '#2e1f4a', pin: true },
+  neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#3a2268', SOCK: '#2e1f4a', pin: true, SCARF: '#4a2596' },
   usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f' },
   kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' },
   human: { species: 'human', JERSEY: '#16181f', PANTS: '#2a2d36', CAP: '#0e1014', SOCK: '#2b78dc' }
@@ -1629,6 +1640,9 @@ for (const team in UNIFORM) {
   const U = UNIFORM[team], S = SPECIES[U.species], m = {};
   ['HEAD', 'MUZ', 'EARC', 'EARIN', 'LIMB', 'PAW', 'TAIL', 'PATCH', 'NOSE', 'CHEST'].forEach(r => { m[r] = toon(S[r]); });
   ['PANTS', 'CAP', 'SOCK'].forEach(r => { m[r] = toon(U[r]); });
+  m.SCARF = toon(U.SCARF || '#ffffff');
+  if (S.lineK) m.LINE = new THREE.MeshBasicMaterial({ color: '#0c0605', side: THREE.BackSide });   // 太い輪郭は黒に近い色で
+  if (S.stripe) { m.LIMB = toon('#ffffff', stripeTex(S.LIMB, S.stripe, false)); m.TAIL = toon('#ffffff', stripeTex(S.TAIL, S.stripe, true)); }
   m.JERSEY = toon('#ffffff', jerseyTex(U.JERSEY, U.SOCK, U.pin));
   MATS[team] = m;
 }
@@ -1650,6 +1664,7 @@ const BRIM = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false, -Math.PI / 2, Mat
 const EARG = new THREE.ConeGeometry(1, 1, 8);
 const CURL = new THREE.TorusGeometry(0.055, 0.03, 6, 10, Math.PI * 1.6);
 const LONGT = new THREE.TorusGeometry(0.105, 0.022, 6, 10, Math.PI * 0.85);
+const SCARFG = new THREE.TorusGeometry(0.15, 0.04, 6, 14), KNOTG = new THREE.ConeGeometry(0.06, 0.13, 6);
 const MOUTHG = new THREE.TorusGeometry(0.022, 0.0055, 4, 8, Math.PI);   // ω の片側
 /* ===== 顔：目・まゆ・ほっぺ・どうぶつ別の特徴を頭の球面に貼る絵にして、表情ごとに絵を切り替える =====
    絵は 横=頭の正面±0.75rad、縦=上から1.05〜2.15rad の範囲。pandaは目の周りが黒いので線を白くする */
@@ -1756,12 +1771,14 @@ function makeFig(o) {
   };
   const f = { g, parts, helmet: !!o.helmet };
   f.body = add(SPH, 'JERSEY');
-  add(SPH, 'LINE', f.body, 1.05);
+  f.lineB = add(SPH, 'LINE', f.body, 1.05);
   if (!o.lite) { f.chest = add(SPH, 'CHEST', f.body, 0.42, 0.28, 0.18); f.chest.position.set(0, 0.36, 0.88); }
   f.belt = add(cylGeo(0.2, 0.2), 'CAP');
   const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
   const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
-  add(SPH, 'LINE', hs, 1.055);
+  f.lineH = add(SPH, 'LINE', hs, 1.055);
+  f.scarf = add(SCARFG, 'SCARF', h); f.scarf.position.set(0, -0.2, 0.01); f.scarf.rotation.x = Math.PI / 2;     // スカーフ（ネコ）
+  if (!o.lite) { f.knot = add(KNOTG, 'SCARF', h); f.knot.position.set(0.03, -0.27, 0.15); f.knot.rotation.set(Math.PI, 0, 0.25); }
   f.cheeks = [-1, 1].map(s => { const m = add(SPH, 'HEAD', h, 0.09, 0.08, 0.09); m.position.set(0.12 * s, -0.05, 0.05); return m; });
   f.muz = add(SPH, 'MUZ', h, 0.115, 0.085, 0.09); f.muz.position.set(0, -0.065, 0.165);
   if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
@@ -1802,6 +1819,7 @@ function makeFig(o) {
   setTeam(f, o.team);
   return f;
 }
+const U_SCARF = team => UNIFORM[team].SCARF;
 function setTeam(f, team) {
   const sp = UNIFORM[team].species, M = MATS[team], S = SPECIES[sp];
   f.team = team; f.sp = sp;
@@ -1813,6 +1831,8 @@ function setTeam(f, team) {
   f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; if (S.earS) e.scale.set(S.earS[0], S.earS[1], 0.05); });
   f.longEar.forEach(e => { e.visible = S.ear === 'long'; });
   f.roundEar.forEach(e => { e.visible = S.ear === 'round'; });
+  f.scarf.visible = !!U_SCARF(team); if (f.knot) f.knot.visible = f.scarf.visible;
+  const lk = S.lineK || 1; f.lineB.scale.setScalar(1 + 0.05 * lk); f.lineH.scale.setScalar(1 + 0.055 * lk);
   f.panda = sp === 'panda';
   f.patch.forEach(p => { p.visible = f.panda; });
   f.ex = null; setFace(f, 'normal');
