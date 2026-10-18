@@ -46,8 +46,9 @@ function addThrows(p, bases) {
   if (bases.includes(1)) p.cover[p.bi === 0 ? 1 : 0] = BASE_AT[1];
   if (bases.includes(2)) p.cover[p.bi === 2 || p.bi === 3 ? 1 : 2] = BASE_AT[2];
   if (bases.includes(3)) p.cover[p.bi === 3 ? 2 : 3] = BASE_AT[3];
+  if (bases.includes(4)) p.cover[p.bi === 0 ? 1 : 0] = BASE_AT[4];
   bases.forEach(b => {
-    const to = BASE_AT[b], dur = from.distanceTo(to) / 30 + 0.12;
+    const to = BASE_AT[b], dur = from.distanceTo(to) / (p.homePlay ? 26 : 30) + (p.homePlay ? 0.35 : 0.12);
     p.throws.push({ base: b, from: from.clone(), to: to.clone(), t0: t, dur });
     t += dur + (b === 2 ? 0.35 : 0); from = to.clone();
   });
@@ -206,11 +207,22 @@ function updateRunAnim(now) {
     if (!play.run[i]) return;
     const [sx, sz] = RUNPOS[i], [tx, tz] = NEXT_BASE[i];
     const d = Math.hypot(tx - sx, tz - sz), t0 = play.start + (play.tag ? play.T : 0.1);
-    const k = clamp((now - t0) * 7.5 / d, 0, 1);
+    const speed = (play.homePlay && i === 2) ? 6.2 : 7.5;
+    const k = clamp((now - t0) * speed / d, 0, 1);
     const x = lerp(sx, tx, k), z = lerp(sz, tz, k), yaw = Math.atan2(tx - sx, tz - sz);
     f.g.visible = true;
-    poseFig(f, squashJ(fielderJ(x, z, yaw, now * 12 + i, k > 0 && k < 1 ? 1 : 0, 0, 0), 0), yaw, yaw);
-    faceFor(f, k > 0 && k < 1 ? 'shout' : 'smile', now);
+    if (i === 2 && play.homePlay && k >= 0.72) {
+      if (!f.slid) { f.slid = true; sfx.slide(0); }
+      const su = (k - 0.72) / 0.28;
+      let J = squashJ(fielderJ(x, z, yaw, 0, 0, 1, 0), 0);
+      J = superPose(J, 'dive', 0.8 + su * 0.4, x, z, yaw);
+      poseFig(f, J, yaw, yaw);
+      faceFor(f, play.homeSafe ? 'smile' : 'sad', now);
+    } else {
+      if (k < 0.72) f.slid = false;
+      poseFig(f, squashJ(fielderJ(x, z, yaw, now * 12 + i, k > 0 && k < 1 ? 1 : 0, 0, 0), 0), yaw, yaw);
+      faceFor(f, k > 0 && k < 1 ? 'shout' : 'smile', now);
+    }
   });
 }
 function updateBall(now, dt, pj) {
@@ -311,11 +323,21 @@ function playShot(p, now) {
     const pos = V(p.L.x - hz * 6.5 * sd + hx * 3, 2.0, p.L.z + hx * 6.5 * sd + hz * 3);
     p.spShot = { pos, look: V(p.L.x, 0.9, p.L.z), fov: 42, at: now + p.T * 0.58, until: now + p.T * 1.5 };
   }
+  if (p.homePlay) {                                                // 本塁クロスプレー：捕球・タッチの攻防に寄る
+    p.homeShot = {
+      pos: V(-4.8, 1.8, 4.2),
+      look: V(-1.2, 0.9, -1.2),
+      fov: 38,
+      at: now + p.T + 0.15,
+      until: now + p.T + (p.throwEnd || 1.8) + 1.2
+    };
+  }
 }
 let camShot = null;
 function updateCamera(now, dt) {
   let shot = null;
-  if (play && play.spShot && now >= play.spShot.at && now < play.spShot.until) shot = play.spShot;
+  if (play && play.homeShot && now >= play.homeShot.at && now < play.homeShot.until) shot = play.homeShot;
+  else if (play && play.spShot && now >= play.spShot.at && now < play.spShot.until) shot = play.spShot;
   else if (brawl && now >= brawl.at - 0.3 && now < brawl.end) shot = brawl.shot;
   else if (play && play.shot && now >= play.shot.at) shot = play.shot;
   else if (camShot && now >= camShot.at) shot = camShot;

@@ -558,12 +558,16 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
   const r = Math.random();
   let res, bases = 0;
   if (launch < 5) {
-    // 内野手の前にポトリと落ちる・緩いゴロは内野ゴロアウト。強い当たりや間を抜けた当たり（ev高または芯）のみゴロヒット
-    if (dist >= 38 && ev >= 95 && r < 0.08 + 0.52 * q) { res = 'ゴロヒット'; bases = 1; }
+    // 強い打球（ev >= 118km/h）は内野の間を一瞬で抜けてヒット。
+    // 中程度の速さ（ev >= 92km/h）は野手の間を抜ける確率でゴロヒット。緩い当たり（ボテボテ）は内野ゴロアウト。
+    const hardThrough = ev >= 122 || (ev >= 115 && r < 0.75);
+    if (hardThrough || (dist >= 36 && ev >= 92 && r < 0.08 + 0.55 * q)) { res = 'ゴロヒット'; bases = 1; }
     else res = 'ゴロアウト';
   }
   else if (launch < 20) {
-    if (dist >= 35 && (ev >= 98 || q > 0.65) && r < 0.32 + 0.55 * q) {
+    // 鋭いライナー（ev高）は内野の頭上や間を抜ける
+    const hardLiner = ev >= 118 || (ev >= 105 && r < 0.6);
+    if (hardLiner || (dist >= 35 && (ev >= 92 || q > 0.6) && r < 0.35 + 0.55 * q)) {
       if (q > 0.8 && Math.random() < 0.4) { res = 'ツーベース'; bases = 2; } else { res = 'ヒット'; bases = 1; }
     } else res = 'ライナーアウト';
   }
@@ -794,7 +798,24 @@ function resolveCore(c, C) {
           t = groundOut(c.res); addThrows(play, [1]); play.run = B0;
           if (hr && B0[1] && !B0[0] && G.outs !== 0 && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += ' 進塁'; }
         }
-        else if (B0[2] && o0 < 2 && c.res === 'フライアウト' && play.dist > 55) { t = sacFly(); play.run = [0, 0, 1]; play.tag = true; }
+        else if (B0[2] && o0 < 2 && c.res === 'フライアウト' && play.dist > 52) {
+          const rs = B0[2] || 3, arm = ROSTER[teamsNow().fld].arm || 3;
+          // 外野からの返球と3塁走者の競争：距離・走力・強肩で判定
+          const safeProb = clamp(0.72 + (play.dist - 65) * 0.012 + (rs - 3) * 0.1 - (arm - 3) * 0.12, 0.15, 0.95);
+          const safe = Math.random() < safeProb;
+          play.run = [0, 0, 1]; play.tag = true; play.homePlay = true; play.homeSafe = safe;
+          addThrows(play, [4]);
+          if (safe) {
+            t = sacFly();
+            cheer = mode === 'bat' ? 1.0 : 0.2;
+          } else {
+            const res = out('本塁タッチアウト！');
+            G.bases[2] = 0;
+            t = res + ' ゲッツー';
+            if (G.outs === 0) t = endInning('本塁タッチアウト！');
+            cheer = mode === 'pit' ? 1.0 : 0.2;
+          }
+        }
         else {
           t = out(c.res);
           if (hr && G.outs !== 0 && Math.random() < 0.4) {         // runner was off with the pitch and gets doubled off
