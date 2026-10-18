@@ -13,7 +13,7 @@
   - `03-motion.js` 投球フォームのモーションキャプチャ（CMU mocap 124_01。`tools/bvh-joints.py` → `tools/make-motion.py` で生成。手で編集しない）
   - `03-motion-bat.js` 打者の体の動き（CMU mocap 124_07 スイング・124_08 バント。`tools/make-bat-motion.py` で生成）。手とバットはスイング計画のまま
   - `03-players.js` 動物の選手モデル、ポーズ（打者・投手・野手）、バット
-  - `04-story.js` ストーリーモード（全4話）、メニューと会話オーバーレイ
+  - `04-story.js` ストーリーモード（全5話。第5話だけ `story.inn` の5回戦で、相手 `human`（ヒューマンズ）はストーリー専用のチーム。自軍の打順は `ALL_STAR_BAT`）、メニューと会話オーバーレイ
   - `05-tactics.js` 作戦（盗塁・エンドラン・バント・スクイズ）、牽制
   - `06-online.js` オンライン対戦（Supabase Realtime）
   - `07-roster.js` 各チームの打順・投手陣（ミート/パワー、球速/制球/変化/スタミナ、左右・両打ち、★スター、投手の持ち球 pt、走力 run・捕手の肩 arm・守護神 closer・代打の切り札 ph）、疲労、継投。G.bases は空=0、走者がいれば その走者の走力(1-5)。サイコロ（奇数の回）・ハプニング（回の頭に30%：風・雨・ウェーブ・照明トラブル。オンラインは共有シードで同じものが起きる）・技（会心・消える魔球）は 01-core。どうぶつ固有スキルは `TRAIT`（チーム単位の常時効果。ストーリーでは無効。`trT('bat'|'fld')` で参照）。ギミックのオン・オフは `OPT`（localStorage 'yakyu-opts'）を `opt(k)` で読む。オンラインはホストの設定を start メッセージで共有。盗塁（CPUが投げるとき）は `stealPress` で投手モーションの k からスタートの良し悪しを決め、早すぎると牽制。ゴロでランナーがいるとき（CPU対戦・守備側のみ、オンラインは対象外）は `thrWanted`→`thrStart` でスローになり、`pickThrow`/`thrResolve`（05-tactics 末尾）で送球先を選ぶ（`play.pend` の間は nextAt=Infinity。時間切れは `stepThrowPick`）。デッドボール：見逃した球が打者の体の位置（`hbpCheck`）に来ると `c.hbp`（オンラインは結果メッセージに載る）。同じ投手が2個目で乱闘（`brawl`、投手は `G.eject`→`applyEject` で退場・交代。ストーリーは退場なし）。打者のタイムは `timeOut`（オンラインは1試合3回、'time' メッセージ）。左投手・左打者は右用の動きを x 反転して描く
