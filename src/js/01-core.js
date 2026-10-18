@@ -431,7 +431,14 @@ function setHint(t) { $('#hint').textContent = t; }
 function showBanner(t, s, tone) {
   const b = $('#banner');
   b.className = tone + (/ホームラン|サヨナラ|勝ち|優勝|グランドスラム/.test(t) ? ' big' : '');
-  $('#bt').textContent = t; $('#bs').textContent = s || '';
+  const bt = $('#bt'); bt.textContent = t; $('#bs').textContent = s || '';
+  // 見出しは1行に収める：はみ出すときは文字を縮める（小さくなりすぎるなら折り返しに戻す）
+  bt.style.fontSize = ''; bt.style.whiteSpace = 'nowrap';
+  const avail = b.clientWidth - 24, w0 = bt.scrollWidth;
+  if (avail > 0 && w0 > avail) {
+    const fs = parseFloat(getComputedStyle(bt).fontSize) * avail / w0 * 0.98;
+    if (fs >= 24) bt.style.fontSize = fs + 'px'; else bt.style.whiteSpace = '';
+  }
   void b.offsetWidth;
   b.classList.add('show');
   commentBanner(t, s);
