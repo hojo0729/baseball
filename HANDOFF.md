@@ -139,7 +139,7 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 1. **再現するか**：`git pull` → `node build.mjs` → `node tools/check.mjs`（オンライン絡みは `--full`）。落ちたら、どのチェックか（ビルド・構文・旧名・乱数・smoke の何番）が手がかり。smoke の番号は `tools/test/smoke.mjs` の見出し（1〜8）と対応する。
 2. **check は通るのに本番だけ変**：古いキャッシュ（service worker）が原因のことが多い。`docs/sw.js` のキャッシュ版はビルドごとに変わる。ユーザー側は、ページの再読み込み、アプリ（PWA）なら開き直し・入れ直し。コードの問題と決めつけない。
 3. **すぐ戻したい**：`git log --oneline` で壊したコミットを探し、`git revert <コミット>` → `node build.mjs` → `node tools/check.mjs` → push。**force push はしない。**
-   最後に動作確認できた版には `stable-YYYYMMDD` のタグが付いている（`git tag -l 'stable-*'`）。`git diff stable-YYYYMMDD -- src/` で、そこから何が変わったかを絞れる。
+   最後に動作確認できた版は、ブランチ `stable` が指している（`git fetch origin stable`）。`git diff origin/stable -- src/` で、そこから何が変わったかを絞れる。戻すだけなら `git revert` で十分。
 4. **症状から、見る場所を絞る**
    - 起動しない・真っ白 → `02-stadium.js`（描画の準備）と `09-main.js`（起動）。ブラウザのコンソールのエラー行を先に見る。
    - 判定がおかしい（ヒット・アウト・走塁） → `01-core.js` の `contact()`、結果処理。
@@ -151,8 +151,9 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 6. **直したら**：再現テストを `tools/test/smoke.mjs` に足す（本塁クロスプレーのときのように）→ `node tools/check.mjs` → push → Take に「何を直したか・実機で確認してほしいこと」を報告。
 7. **直せないとき**：広く書き換えず、`git revert` で戻して、状況（何を試して何が分かったか）を Take に伝える。この節か「作業ログ」にも書き残す。
 
-**戻れる印（タグ）の付け方**：動作確認が済んだら、`node tools/check.mjs --full` を通してから
-`git tag stable-YYYYMMDD && git push origin stable-YYYYMMDD`。大きな変更の前にも付ける。
+**戻れる印（`stable` ブランチ）の更新**：動作確認が済んだら（`node tools/check.mjs --full` が通り、Take が実機で見て問題なしと言ったあと）、
+`git push origin main:stable`（早送りだけなので安全。force は使わない）。大きな変更の前にも、その時点の main を `stable` に進めておく。
+（Claude のクラウド環境はタグを push できない（403）ため、タグではなくブランチにしている。タグを使いたいときは Take かパソコン側のAIが `git tag` → `git push origin <タグ>` する。）
 
 **GitHub 側の自動チェック**：`.github/workflows/check.yml` が push のたびに `check --full` と「docs/ の出し忘れ」を確認する。赤くなったら、上の手順で原因を探す（本番は止まらない）。
 **外部サービスの障害**：オンラインは Supabase、公開は GitHub Pages に頼っている。コードを直す前に、向こうの障害でないかも疑う。
