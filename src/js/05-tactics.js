@@ -169,28 +169,37 @@ function buntGrip() {
 }
 
 /* ---- pickoffs ---- */
-function startPickoff(now, isOut) {
-  const base = G.bases[0] ? 1 : 2;
+function pickoffTarget() {
+  if (!G) return 0;
+  if (G.bases[0]) return 1;
+  if (G.bases[1]) return 2;
+  return 0;
+}
+function startPickoff(now, isOut, targetBase) {
+  const base = targetBase || pickoffTarget();
+  if (!base || !G.bases[base - 1]) return false;
   const from = squashJ(pitcherJ(0), MOUND_Y).hR.clone(), to = BASE_PT[base];
   pickoff = { base, from, to, t0: now + 0.2, dur: from.distanceTo(to) / 26, out: isOut, done: false };
   phase = 'pick'; setHint('牽制！');
+  return true;
 }
 function tryCpuPickoff(now) {
-  if (online || mode !== 'bat' || !(G.bases[0] || G.bases[1])) return false;
+  if (online || mode !== 'bat' || !pickoffTarget()) return false;
   if (G.pickPa !== G.pa) { G.pickPa = G.pa; G.pickN = 0; }
   if (G.pickN >= 2 || Math.random() > (runSign() ? 0.3 : 0.15)) return false;
   G.pickN++;
-  startPickoff(now, runSign() && Math.random() < 0.3);   // 走る指示を出していないときは刺されない
-  return true;
+  return startPickoff(now, runSign() && Math.random() < 0.3);   // 走る指示を出していないときは刺されない
 }
 function userPickoff() {
-  if (mode !== 'pit' || phase !== 'ready' || !(G.bases[0] || G.bases[1])) return;
+  const base = pickoffTarget();
+  if (mode !== 'pit' || phase !== 'ready' || !base) return;
   if (online) {   // the pitcher's device decides and tells the batter's device
     const planned = onl.oppSign === 'steal' || onl.oppSign === 'run', out = planned && Math.random() < 0.4;   // 走る気配がないときは刺せない
-    startPickoff(now_(), out); send('pick', { out }); return;
+    if (startPickoff(now_(), out, base)) send('pick', { out, base });
+    return;
   }
   const planned = cpuStealPlan;
-  startPickoff(now_(), planned && Math.random() < 0.4);
+  startPickoff(now_(), planned && Math.random() < 0.4, base);
   if (planned && Math.random() < 0.5) cpuStealPlan = false;     // the runner gets scared off
 }
 function stepPickoff(now) {
@@ -200,6 +209,7 @@ function stepPickoff(now) {
   const good = mode === 'pit';                                  // a pickoff out is good news for the pitcher
   if (pk.out) {
     const ended = runnerOut(pk.base - 1);
+    hud();
     queueBanner(now, ended ? endInning('牽制アウト！') : '牽制アウト！', '', good ? 'g' : 'b', good ? 0.6 : 0);
     sign = null; cpuStealPlan = false;
   } else showBanner('牽制', 'セーフ', 'n');

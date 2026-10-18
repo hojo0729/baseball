@@ -6,7 +6,9 @@ function makePlay(c, C, now) {
   const fd = foul ? 999 : fenceDist(hx, hz);
   let dd = Math.min(c.dist, 135);
   if (grounder && isOut) dd = Math.min(dd, rnd(24, 34));
+  else if (grounder && !isOut) dd = Math.max(dd, rnd(42, 54));   // ゴロヒットは内野を抜けて転がる
   if (isOut && !grounder) dd = Math.min(dd, fd - 5);
+  else if (!isOut && !grounder && !hr && !foul && c.bases > 0) dd = Math.max(dd, 48); // ヒットは内野手の後ろへ落ちる
   if (hr) dd = Math.max(dd, fd + rnd(6, 20));
   if (!hr && !foul) dd = Math.min(dd, fd - 2);
   const S0 = C.clone();
@@ -137,6 +139,24 @@ function updateFielders(now, k) {
       x = lerp(x, tx, e); z = lerp(z, tz, e);
       yaw = Math.atan2(-x, -0.8 - z); mv = bk < 1 ? 1 : 0; rd = 1;
       if (bk >= 1) { reach = 0.5 + 0.5 * Math.sin(now * 16 + i * 1.7); x += Math.sin(now * 13 + i * 2.1) * 0.1; z += Math.cos(now * 11 + i) * 0.1; }
+    } else
+    if (pickoff && (phase === 'pick' || (phase === 'result' && !play))) {
+      rd = 1;
+      const targetBase = pickoff.base;
+      const coverIdx = targetBase === 1 ? 0 : 1; // 1塁なら一塁手(0)、2塁なら二塁手(1)がベースに入る
+      if (i === coverIdx) {
+        const to = BASE_PT[targetBase];
+        // 投球開始からベースへ素早くダッシュして入る
+        const pkK = clamp((now - (pickoff.t0 - 0.2)) / 0.45, 0, 1);
+        const tx = to.x + (targetBase === 1 ? -0.4 : -0.4);
+        const tz = to.z + (targetBase === 1 ? 0.4 : 0.6);
+        x = lerp(FPOS[i][0], tx, pkK); z = lerp(FPOS[i][1], tz, pkK);
+        if (pkK < 1) { mv = 1; yaw = Math.atan2(tx - FPOS[i][0], tz - FPOS[i][1]); }
+        else {
+          yaw = Math.atan2(-x, -z); // ベース上でマウンド/本塁方向を向いて捕球体勢
+          reach = clamp((now - pickoff.t0) / pickoff.dur, 0, 1);
+        }
+      } else yaw = Math.atan2(BASE_PT[targetBase].x - x, BASE_PT[targetBase].z - z);
     } else
     if (play) {
       rd = 0.5;

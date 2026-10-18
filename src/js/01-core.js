@@ -557,15 +557,20 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
   const dist = launch < 5 ? 22 + q * 55 : 0.62 * v * v / 9.8 * Math.sin(2 * Math.min(th, 1.5)) * wm;
   const r = Math.random();
   let res, bases = 0;
-  if (launch < 5) { if (r < 0.12 + 0.55 * q) { res = 'ゴロヒット'; bases = 1; } else res = 'ゴロアウト'; }
+  if (launch < 5) {
+    // 内野手の前にポトリと落ちる・緩いゴロは内野ゴロアウト。強い当たりや間を抜けた当たり（ev高または芯）のみゴロヒット
+    if (dist >= 38 && ev >= 95 && r < 0.08 + 0.52 * q) { res = 'ゴロヒット'; bases = 1; }
+    else res = 'ゴロアウト';
+  }
   else if (launch < 20) {
-    if (r < 0.35 + 0.6 * q) { if (q > 0.8 && Math.random() < 0.4) { res = 'ツーベース'; bases = 2; } else { res = 'ヒット'; bases = 1; } }
-    else res = 'ライナーアウト';
+    if (dist >= 35 && (ev >= 98 || q > 0.65) && r < 0.32 + 0.55 * q) {
+      if (q > 0.8 && Math.random() < 0.4) { res = 'ツーベース'; bases = 2; } else { res = 'ヒット'; bases = 1; }
+    } else res = 'ライナーアウト';
   }
   else if (launch < 50) {
     if (dist >= 100) { res = 'ホームラン'; bases = 4; }
     else if (dist >= 75) { if (r < 0.45) { res = 'ツーベース'; bases = 2; } else res = 'フライアウト'; }
-    else if (dist >= 40) { if (r < 0.28) { res = 'ヒット'; bases = 1; } else res = 'フライアウト'; }
+    else if (dist >= 45) { if (r < 0.28) { res = 'ヒット'; bases = 1; } else res = 'フライアウト'; }
     else res = '内野フライ';
   }
   else res = 'ポップフライ';

@@ -143,7 +143,7 @@ function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; onl.opts =
 /* a pickoff thrown by the pitcher: the batter's device runs the same play */
 function onPickMsg(m) {
   if (!online) return;
-  if (mode === 'bat' && phase === 'wait') { if (m.out) sign = null; startPickoff(now_(), m.out); }
+  if (mode === 'bat' && phase === 'wait') { if (m.out) sign = null; startPickoff(now_(), m.out, m.base); }
   else onl.queuedPick = m;
 }
 

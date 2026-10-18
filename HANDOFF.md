@@ -117,6 +117,7 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 
 ### 作業ログ（新しいものを上に1行ずつ。AIも Take も書く）
 - 2026-10-18 Gemini（Antigravity）：区切りの締め。pull後の最新状態で `node tools/check.mjs --full` 通過（smoke/thr/hbp/tac7 全通過）、HANDOFF.md の現状・実機未確認一覧・次候補を更新。
+- 2026-10-18 Gemini（Antigravity）：内野手の前に落ちる打球のヒット判定と打球到達距離を改善（内野前のポトリ・緩いゴロをアウト化、クリーンヒットは内野間・頭上を抜けて転がるよう調整）、牽制ターゲット走者判定と野手のベースカバー動作（1塁牽制時は一塁手、2塁牽制時は二塁手がベースへダッシュして捕球）を追加。
 - 2026-10-18 Claude：Gemini のテスト環境（check.mjs / smoke.mjs）を Linux でも検証。外部通信（フォント・CDN）をスタブにして、制限のある環境でも同じ結果になるよう `lib.mjs` を修正。`__pycache__` をコミット対象から外した。気づき：テスト用の `page.click` は JS の click で押すため、ボタンが他の要素に隠れていても通る（見た目の重なりは検知できない）。
 - 2026-10-18 Gemini（Antigravity）：Node.js v24＋Chromeのみで動く開発用テスト基盤（`package.json`、`tools/test/make-test-page.mjs`、`tools/test/lib.mjs`、`tools/test/smoke.mjs`、`tools/check.mjs`、`.githooks/pre-push`）を整備。
 - 2026-10-18 Gemini（Antigravity）：頭部スケールHEAD_Kを1.74→1.48に縮小、ほっぺ張り出しと首の高さを自然なちびキャラバランスに再調整。
