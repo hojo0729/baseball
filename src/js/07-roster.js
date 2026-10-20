@@ -27,6 +27,9 @@ const ROSTER = {
     bat: [['コード01', 4, 3, 'L'], ['コード02', 4, 4], ['コード03', 4, 5, 'S'], ['アルファ', 5, 7, 'R*'], ['ベータ', 4, 5], ['ガンマ', 3, 4, 'L'], ['デルタ', 3, 3], ['エプシロン', 4, 2], ['ゼータ', 3, 3]],
     pit: [['ディレクター', 5, 4, 4, 90, '', ['str','sli','frk','gou','cut']], ['マネージャー', 4, 4, 4, 50, 'L', ['str','chg','snk','cur']], ['エグゼクティブ', 5, 5, 5, 40, '*', ALL_PITCHES]] }
 };
+// Story-only opposition. Existing CPU/network team membership and ratings are unchanged.
+ROSTER.tiger = { ...ROSTER.kuma, name: 'タイガーズ', bat: ROSTER.kuma.bat.map((b, i) => [i ? 'トラ選手' + (i + 1) : 'トラ', ...b.slice(1)]), pit: ROSTER.kuma.pit.map((p, i) => [i ? 'トラ投手' + (i + 1) : 'トラ', ...p.slice(1)]) };
+ROSTER.alien = { ...ROSTER.human, name: 'スターズ', bat: ROSTER.human.bat.map((b, i) => [i ? '星の選手' + (i + 1) : '使節', ...b.slice(1)]), pit: ROSTER.human.pit.map((p, i) => [i ? '星の投手' + (i + 1) : 'キャプテン', ...p.slice(1)]) };
 /* どうぶつ固有スキル：チーム（どうぶつ）ごとの特性。ストーリーでは使わない */
 const TRAIT = {
   home: { n: '忠犬ガッツ', d: '2ストライクからでも粘れる' },
@@ -56,15 +59,15 @@ function teamState(t) {
   if (!G.teams[t]) G.teams[t] = { order: 0, pit: 0, sta: ROSTER[t].pit[0][4] };
   return G.teams[t];
 }
-const ALL_STAR_BAT = [
-  ['マメ（柴）', 5, 2, 'L', 5, 'home'], ['ミケ（猫）', 5, 5, 'S*', 4, 'neko'], ['ソウタ（柴）', 5, 7, 'L*', 4, 'home'],
-  ['ダイパン（パ）', 4, 7, 'R*', 3, 'away'], ['グリズ（熊）', 4, 7, 'S*', 2, 'kuma'], ['ウサミ（兎）', 4, 3, 'L', 5, 'usagi'],
-  ['ハチ（柴）', 4, 3, 'S', 4, 'home'], ['ボス（猫）', 5, 5, 'L', 3, 'neko'], ['ピョン（兎）', 4, 2, 'S', 5, 'usagi']
+const STORY_BAT = [
+  ['コタロウ', 5, 4, '', 4, 'home'], ['ミケ', 5, 4, 'S', 5, 'neko'], ['ウサミ', 4, 3, 'L', 5, 'usagi'],
+  ['トラ', 4, 5, '', 4, 'tiger'], ['ヒグマ', 3, 6, '', 2, 'kuma'], ['パン太', 4, 3, 'L', 3, 'away'],
+  ['モカ', 4, 3, '', 5, 'floppy'], ['ハチ', 4, 3, 'S', 4, 'home'], ['ソラ', 3, 3, 'L', 4, 'home']
 ];
 function curBatter() {
   const t = teamsNow().bat, s = teamState(t), slot = s.order % 9;
   let sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
-  if (story && story.inn && t === 'home' && !sub) b = ALL_STAR_BAT[slot];
+  if (story && t === 'home' && !sub) b = STORY_BAT[slot];
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
   const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
   const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1
@@ -74,7 +77,7 @@ function curPitcher() {
   const t = teamsNow().fld, s = teamState(t), p = ROSTER[t].pit[s.pit];
   // tired below 40% of stamina: up to -8 km/h and wilder
   const fatigue = clamp(1 - s.sta / (p[4] * 0.4), 0, 1);
-  return { team: t, name: p[0], v: p[1], c: p[2], b: p[3], max: p[4], pt: p[6] || ['str'], hand: handOf(p[5]), star: isStar(p[5]), sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
+  return { team: t, name: story && t === 'home' && s.pit === 0 ? 'コタロウ' : p[0], v: p[1], c: p[2], b: p[3], max: p[4], pt: p[6] || ['str'], hand: handOf(p[5]), star: isStar(p[5]), sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
 }
 /* handedness on the field right now (safe before a game exists) */
 function pitcherHand() { if (!G) return 'R'; const t = teamsNow().fld; return handOf(ROSTER[t].pit[teamState(t).pit][5]); }

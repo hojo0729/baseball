@@ -5,7 +5,7 @@
 const cmt = { mode: Number((() => { try { return localStorage.getItem('yakyu-cmt'); } catch (e) { return null; } })() ?? 2),
   s: 12345, last: {}, bat: '', pit: '', timer: 0, voice: null, n: 0 };   // mode 0:切 1:字だけ 2:字+声
 const CMT_LABEL = ['実況 切', '実況 字', '実況 声'];
-function cmtUnlock() { if (cmt.mode === 2) cmtPreload(); }   // first tap: start loading the recordings
+function cmtUnlock() { if (storySilent) return; if (cmt.mode === 2) cmtPreload(); }   // first tap: start loading the recordings
 
 const LINES = {
   play: ['プレイボール！', 'さあ、試合開始です！', 'ナイターの幕が上がりました！'],
@@ -99,7 +99,7 @@ function cmtStop() { if (cmt.cur) { try { cmt.cur.pause(); } catch (e) {} cmt.cu
 /* L: {text, id} from cmtLine(). extra: count / score text shown on the ticker only.
    prio 2: cut in; prio 1: only if nothing is being said. Lines with no recording stay silent (ticker only). */
 function say(L, prio, extra) {
-  if (!L || cmt.mode === 0) return;
+  if (storySilent || !L || cmt.mode === 0) return;
   showCmtText(L.text + (extra || ''));
   if (cmt.mode !== 2) return;
   if (cmtBusy()) { if ((prio || 1) < 2) return; cmtStop(); }

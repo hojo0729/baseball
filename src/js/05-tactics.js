@@ -254,6 +254,7 @@ function actOptions() {
   if (!G) return [];
   if (play && play.pend) return play.pend.opts.map(x => ['thr' + x.b, x.name + '\n' + x.sub + ' ' + (x.p >= 0.7 ? '◎' : x.p >= 0.5 ? '○' : '△')]);   // スロー中：送球先
   const o = [];
+  if (story && story.beast && storySession && storySession.beastLeft && (phase === 'wait' || phase === 'ready')) o.push(['beast', 'ビーストモード 1']);
   if (mode === 'bat') {
     if (phase === 'wait') {
       const st = stealers().length;
@@ -282,7 +283,7 @@ function refreshAct() {
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (/^(crit|vn|closer|ph)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
+    b.className = 'chip' + (/^(crit|vn|closer|ph|beast)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
   if (mode === 'bat' && phase === 'wait') setHint(timeOut ? 'タイム中。作戦をゆっくり選んで「プレイ再開」' : stealMsg ? '盗塁：' + stealMsg
@@ -297,6 +298,7 @@ $('#acts').addEventListener('click', e => {
   else if (k === 'relief') userRelief();
   else if (k === 'closer') userCloser();
   else if (k === 'ph') userPinch();
+  else if (k === 'beast') activateBeast();
   else if (k === 'crit') critArm = !critArm;
   else if (k === 'vn') vanishArm = !vanishArm;
   else if (k === 'time') { if (mode === 'bat' && phase === 'wait') toggleTime(); }

@@ -1,4 +1,5 @@
 import { launchBrowser, attachErrors } from './lib.mjs';
+import { runStory } from './story.mjs';
 
 const FLYOUT = { kind: 'play', q: 0.5, dir: 0, ev: 110, launch: 32, dist: 65, res: 'フライアウト', bases: 0 };
 const SINGLE = { kind: 'play', q: 0.75, dir: -15, ev: 130, launch: 14, dist: 55, res: 'ヒット', bases: 1 };
@@ -72,8 +73,8 @@ async function playPA(p, errs, hitObj, label) {
     await p.goto(url);
     await p.waitForTimeout(2500);
     const title = await p.textContent('#ot');
-    if (errs.length === 0 && title === 'どうぶつリーグ') {
-      ok('1. 起動（2.5秒待機・エラー0件・タイトル「どうぶつリーグ」）');
+    if (errs.length === 0 && title === 'どうぶつベースボール') {
+      ok('1. 起動（2.5秒待機・エラー0件・タイトル「どうぶつベースボール」）');
     } else {
       ng('1. 起動', { title, errs });
       throw new Error('Boot failed');
@@ -89,13 +90,13 @@ async function playPA(p, errs, hitObj, label) {
     await p.click('#go2');
     if ((await p.textContent('#ot')) !== 'CPU対戦') throw new Error('CPU対戦画面が開かない');
     await p.click('#go4');
-    if ((await p.textContent('#ot')) !== 'どうぶつリーグ') throw new Error('CPU対戦から戻れない');
+    if ((await p.textContent('#ot')) !== 'どうぶつベースボール') throw new Error('CPU対戦から戻れない');
 
     // オンライン対戦 -> もどる
     await p.click('#go3');
     if ((await p.textContent('#ot')) !== 'オンライン対戦') throw new Error('オンライン対戦画面が開かない');
     await p.click('#go3');
-    if ((await p.textContent('#ot')) !== 'どうぶつリーグ') throw new Error('オンライン対戦から戻れない');
+    if ((await p.textContent('#ot')) !== 'どうぶつベースボール') throw new Error('オンライン対戦から戻れない');
 
     // 友達に送る
     await p.click('#go4');
@@ -111,7 +112,7 @@ async function playPA(p, errs, hitObj, label) {
     await p.click('#goBtn');
     if (!(await p.textContent('#ot')).startsWith('遊び方 ③')) throw new Error('遊び方③が開かない');
     await p.click('#goBtn');
-    if ((await p.textContent('#ot')) !== 'どうぶつリーグ') throw new Error('遊び方から戻れない');
+    if ((await p.textContent('#ot')) !== 'どうぶつベースボール') throw new Error('遊び方から戻れない');
 
     // 設定 -> クレジット -> 設定 -> もどる
     await p.click('#go6');
@@ -121,114 +122,12 @@ async function playPA(p, errs, hitObj, label) {
     await p.click('#goBtn');
     if ((await p.textContent('#ot')) !== '設定') throw new Error('クレジットから設定に戻れない');
     await p.click('#go6');
-    if ((await p.textContent('#ot')) !== 'どうぶつリーグ') throw new Error('設定からメニューに戻れない');
+    if ((await p.textContent('#ot')) !== 'どうぶつベースボール') throw new Error('設定からメニューに戻れない');
 
     await checkInvariants(p, errs, 'メニュー巡回後');
     ok('2. メニュー（CPU対戦・オンライン対戦・友達に送る・遊び方・設定・クレジットの開閉）');
 
-    // 3. ストーリー：第1話から第5話まで
-    await p.evaluate(() => localStorage.setItem('yakyu-progress', '0'));
-    await p.click('#goBtn'); // ストーリー開始（第1話）
-
-    for (let i = 0; i < 5; i++) {
-      // 導入ダイアログをスキップしてプレイボール画面へ
-      await p.click('#go2');
-      const preTitle = await p.textContent('#ot');
-      await p.click('#goBtn'); // プレイボール（startGame() 実行）
-
-      // 3a. 開始時のステージ定義と実際の状態 G の一致確認
-      const stCheck = await p.evaluate(idx => {
-        const d = window.__dbg, st = d.story, G = d.G;
-        const expectedMaxHalf = st.inn ? st.inn * 2 : 3;
-        const expectedMode = st.inn ? 'pit' : st.mode;
-        return {
-          idx,
-          short: st ? st.short : null,
-          titleMatch: st && st.title === window.__dbg.STAGES[idx].title,
-          inning: G.inning,
-          maxHalf: G.maxHalf,
-          expectedMaxHalf,
-          mode: d.mode,
-          expectedMode,
-          phase: d.phase,
-          outs: G.outs,
-          runs: G.runs,
-          scoreOk: !st.inn || (st.score && st.score.home === 0 && st.score.away === 0 && st.half === 1)
-        };
-      }, i);
-      if (
-        !stCheck.titleMatch ||
-        stCheck.inning !== 1 ||
-        stCheck.maxHalf !== stCheck.expectedMaxHalf ||
-        stCheck.mode !== stCheck.expectedMode ||
-        stCheck.outs !== 0 ||
-        stCheck.runs !== 0 ||
-        !stCheck.scoreOk
-      ) {
-        ng(`3a. ストーリー第${i + 1}話 開始時の状態不一致`, stCheck);
-        throw new Error(`Stage ${i + 1} init mismatch`);
-      }
-      await checkInvariants(p, errs, `第${i + 1}話開始時`);
-
-      // 3b. 3アウト取ってイニング進行（第5話は攻守交代も確認）
-      await playPA(p, errs, FLYOUT, `第${i + 1}話 1アウト目`);
-      await playPA(p, errs, FLYOUT, `第${i + 1}話 2アウト目`);
-      const before3rd = await p.evaluate(() => ({ inn: window.__dbg.G.inning, outs: window.__dbg.G.outs, mode: window.__dbg.mode }));
-      if (before3rd.inn !== 1 || before3rd.outs !== 2) {
-        ng(`3b. ストーリー第${i + 1}話 2アウト時点の状態異常`, before3rd);
-        throw new Error('2 outs check failed');
-      }
-      await playPA(p, errs, FLYOUT, `第${i + 1}話 3アウト目`);
-      const after3rd = await p.evaluate(() => ({ inn: window.__dbg.G.inning, outs: window.__dbg.G.outs, mode: window.__dbg.mode, over: window.__dbg.G.over }));
-      const expectedModeAfter = i === 4 ? 'bat' : stCheck.expectedMode;
-      if (after3rd.inn !== 2 || after3rd.outs !== 0 || after3rd.mode !== expectedModeAfter) {
-        ng(`3b. ストーリー第${i + 1}話 3アウト後のイニング進行・攻守交代異常`, after3rd);
-        throw new Error('Inning advance check failed');
-      }
-
-      // 3c. 試合を最後まで進めて勝利し、「次の話へ」（最終話は「メニューへ」）を確認
-      if (i === 0 || i === 2 || i === 3) {
-        // 打撃ステージ：目標点数までホームランを打つ
-        const need = await p.evaluate(() => window.__dbg.story.runs);
-        for (let r = 0; r < need; r++) {
-          await playPA(p, errs, HOMERUN, `第${i + 1}話 HR ${r + 1}`);
-        }
-      } else if (i === 1) {
-        // 第2話（守備3回・1失点以内）：2回・3回を3アウトずつ抑える
-        for (let outN = 0; outN < 6; outN++) {
-          await playPA(p, errs, FLYOUT, `第2話 残りアウト${outN + 1}`);
-        }
-      } else if (i === 4) {
-        // 第5話（5回表裏）：1回裏に1点先制し、5回表終了（G.inning === 10、後攻リードでコールド終了）までアウトを重ねる
-        let st = await playPA(p, errs, HOMERUN, '第5話 1回裏 先制HR');
-        while (!st.over) {
-          st = await playPA(p, errs, FLYOUT, '第5話 イニング進行');
-        }
-      }
-
-      // 勝利ダイアログ -> スキップ -> クリア画面
-      const isDlg = await p.evaluate(() => !document.querySelector('#overlay').hidden && document.querySelector('#overlay').classList.contains('dlg'));
-      if (!isDlg) {
-        ng(`3c. ストーリー第${i + 1}話 勝利ダイアログが表示されない`, await p.textContent('#ot'));
-        throw new Error('Win dialog missing');
-      }
-      await p.click('#go2'); // スキップ
-      const clearTitle = await p.textContent('#ot');
-      if (i < 4) {
-        if (clearTitle !== 'ステージクリア') {
-          ng(`3c. ストーリー第${i + 1}話 クリア画面タイトル不一致`, clearTitle);
-          throw new Error('Stage clear title mismatch');
-        }
-        await p.click('#goBtn'); // 次の話へ
-      } else {
-        if (clearTitle !== '完全勝利！') {
-          ng('3c. ストーリー第5話 完全勝利タイトル不一致', clearTitle);
-          throw new Error('Final clear title mismatch');
-        }
-        await p.click('#goBtn'); // メニューへ
-      }
-      ok(`3-${i + 1}. ストーリー第${i + 1}話（${preTitle}：開始状態・3アウト進行・クリア遷移）`);
-    }
+    await runStory(p, errs, { playPA, FLYOUT, HOMERUN });
 
     // 4. CPU対戦：開始して、1球投げて、攻守交代まで進むこと
     await p.click('#go2');   // CPU対戦

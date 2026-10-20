@@ -6,8 +6,8 @@ const GRAD = (() => {
   const t = new THREE.DataTexture(new Uint8Array([90, 90, 90, 255, 170, 170, 170, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
   t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t;
 })();
-// the stadium key light is strong; darken toon base colors so fur keeps its saturation after tone mapping
-const toon = (c, map) => new THREE.MeshToonMaterial(Object.assign({ color: new THREE.Color(c).multiplyScalar(0.55), gradientMap: GRAD }, map ? { map } : null));
+// Matte plush materials use the provided gallery's palette under the existing stadium lights.
+const toon = (c, map) => new THREE.MeshStandardMaterial(Object.assign({ color: new THREE.Color(c).convertSRGBToLinear().multiplyScalar(0.85), roughness: 1 }, map ? { map } : null));
 function jerseyTex(base, trim, pin) {
   return canvasTex(128, 64, (g, w, h) => {
     g.fillStyle = base; g.fillRect(0, 0, w, h);
@@ -34,27 +34,34 @@ function stripeTex(base, ink, tail) {
   });
 }
 const SPECIES = {
-  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011, bulk: 1 },
+  shiba: { HEAD: '#ed963f', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011, bulk: 1 },
   panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014, bulk: 1.07 },
-  neko:  { HEAD: '#ad4a0e', MUZ: '#fff1dc', EARC: '#ad4a0e', EARIN: '#f2b6bf', LIMB: '#ad4a0e', PAW: '#fff1dc', TAIL: '#ad4a0e', PATCH: '#ad4a0e', NOSE: '#d96b78', CHEST: '#fff1dc', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94, stripe: '#2e1004', lineK: 1.6 },
+  neko:  { HEAD: '#b8bdc2', MUZ: '#fff1dc', EARC: '#b8bdc2', EARIN: '#f2b6bf', LIMB: '#b8bdc2', PAW: '#fff1dc', TAIL: '#b8bdc2', PATCH: '#ad4a0e', NOSE: '#d96b78', CHEST: '#fff1dc', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94, lineK: 1 },
   usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013, bulk: 0.93 },
   kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 },
   human: { HEAD: '#fad9be', MUZ: '#fad9be', EARC: '#fad9be', EARIN: '#fad9be', LIMB: '#fad9be', PAW: '#fad9be', TAIL: '#fad9be', PATCH: '#fad9be', NOSE: '#df9c82', CHEST: '#fad9be', ear: 'none', muzS: [0.06, 0.04, 0.04], tail: 'none', hl: 0.012, bulk: 1.04 }
 };
+// Additional designs in the supplied eight-character gallery. Panda remains for existing teams.
+SPECIES.tiger = { ...SPECIES.neko, HEAD: '#ed963f', EARC: '#ed963f', LIMB: '#ed963f', TAIL: '#ed963f', MUZ: '#fff5e7', ear: 'round', stripe: '#302b2a', NOSE: '#29252a' };
+SPECIES.floppy = { ...SPECIES.usagi, HEAD: '#f2dfbf', EARC: '#f2dfbf', LIMB: '#f2dfbf', ear: 'floppy' };
+SPECIES.alien = { ...SPECIES.shiba, HEAD: '#8bdcb6', EARC: '#8bdcb6', LIMB: '#8bdcb6', PAW: '#8bdcb6', TAIL: '#8bdcb6', MUZ: '#8bdcb6', ear: 'none', tail: 'long', NOSE: '#53c7b6' };
 const UNIFORM = {
-  home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true },
+  home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true, SCARF: '#e55d58' },
   away: { species: 'panda', JERSEY: '#24467d', PANTS: '#dde2ea', CAP: '#162845', SOCK: '#162845' },
-  neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#3a2268', SOCK: '#2e1f4a', pin: true, SCARF: '#4a2596' },
-  usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f' },
+  neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#3a2268', SOCK: '#2e1f4a', pin: true, SCARF: null },
+  usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f', SCARF: '#a78bd5' },
   kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' },
   human: { species: 'human', JERSEY: '#16181f', PANTS: '#2a2d36', CAP: '#0e1014', SOCK: '#2b78dc' }
 };
+UNIFORM.tiger = { ...UNIFORM.home, species: 'tiger', SCARF: '#53c7b6', CAP: '#53a99b' };
+UNIFORM.floppy = { ...UNIFORM.usagi, species: 'floppy', SCARF: '#53c7b6' };
+UNIFORM.alien = { species: 'alien', JERSEY: '#5598dc', PANTS: '#fff5e7', CAP: '#5598dc', SOCK: '#e55d58' };
 const MATS = {};
 for (const team in UNIFORM) {
   const U = UNIFORM[team], S = SPECIES[U.species], m = {};
   ['HEAD', 'MUZ', 'EARC', 'EARIN', 'LIMB', 'PAW', 'TAIL', 'PATCH', 'NOSE', 'CHEST'].forEach(r => { m[r] = toon(S[r]); });
   ['PANTS', 'CAP', 'SOCK'].forEach(r => { m[r] = toon(U[r]); });
-  m.SCARF = toon(U.SCARF || '#ffffff');
+  m.SCARF = toon(U.SCARF || '#ffffff'); m.BOW = toon('#ef9eae'); m.ACCENT = toon('#f4cf65');
   if (S.lineK) m.LINE = new THREE.MeshBasicMaterial({ color: '#0c0605', side: THREE.BackSide });   // 太い輪郭は黒に近い色で
   if (S.stripe) { m.LIMB = toon('#ffffff', stripeTex(S.LIMB, S.stripe, false)); m.TAIL = toon('#ffffff', stripeTex(S.TAIL, S.stripe, true)); }
   m.JERSEY = toon('#ffffff', jerseyTex(U.JERSEY, U.SOCK, U.pin));
@@ -99,9 +106,9 @@ function drawFace(ex, sp) {
       dot(X(s * 0.62), Y(2.03), 28, 14, 'rgba(255,246,232,0.88)');
       c.save(); c.translate(X(s * 0.27), Y(1.29)); c.rotate(s * 0.18); dot(0, 0, 13, 8, '#fff6e8'); c.restore();
     });
-  } else if (sp === 'neko') {
+  } else if (sp === 'neko' || sp === 'tiger') {
     c.strokeStyle = '#9a5822'; c.lineWidth = 6.5;
-    [-0.09, 0, 0.09].forEach((a, i) => { c.beginPath(); c.moveTo(X(a), Y(1.08)); c.lineTo(X(a * 0.85), Y(i === 1 ? 1.29 : 1.25)); c.stroke(); });
+    (sp === 'tiger' ? [-0.18, 0, 0.18] : []).forEach((a, i) => { c.beginPath(); c.moveTo(X(a), Y(1.08)); c.lineTo(X(a * 0.85), Y(i === 1 ? 1.29 : 1.25)); c.stroke(); });
     sides.forEach(s => {
       c.strokeStyle = '#3a241c'; c.lineWidth = 4.2;
       [0, 1].forEach(j => { c.beginPath(); c.moveTo(X(s * 0.48), Y(1.87 + j * 0.09)); c.lineTo(X(s * 0.72), Y(1.84 + j * 0.12)); c.stroke(); });
@@ -111,11 +118,13 @@ function drawFace(ex, sp) {
   const eye = (s, rx, ry, sparkle) => {
     const x = X(s * EA), y = Y(EY);
     if (sp === 'human') { rx *= 0.85; ry *= 0.82; }
-    if (sp === 'usagi') {
+    if ((sp === 'usagi' || sp === 'floppy')) {
       ry += 2;
       c.strokeStyle = line; c.lineWidth = 4.5; c.beginPath();
       c.moveTo(x + s * (rx - 2), y - ry * 0.45); c.lineTo(x + s * (rx + 7), y - ry * 0.68); c.stroke();
     }
+    if (sp === 'alien') { rx *= 1.15; ry *= 1.35; }
+    else dot(x, y, rx * 1.28, ry * 1.20, '#fff5e7');
     dot(x, y, rx, ry, ink);
     dot(x + rx * 0.3, y - ry * 0.36, rx * 0.36, rx * 0.36, '#fff');
     dot(x - rx * 0.36, y + ry * 0.4, rx * 0.15, rx * 0.15, '#fff');
@@ -133,7 +142,7 @@ function drawFace(ex, sp) {
     c.lineWidth = w0 || (sp === 'kuma' ? 9.5 : sp === 'human' ? 7.5 : 7); c.beginPath();
     c.moveTo(x - s * 24, y - inner); c.lineTo(x + s * 24, y - outer); c.stroke();
   };
-  const blush = k => { if (sp !== 'human') sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)')); };
+  const blush = k => { if (sp !== 'human' && sp !== 'alien') sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)')); };
   if (ex === 'normal') { sides.forEach(s => { eye(s, 28, 34); if (hasBrow) brow(s, 42, 50); }); blush(1); }
   else if (ex === 'smile') { sides.forEach(s => { eye(s, 28, 34, true); if (hasBrow) brow(s, 44, 50); }); blush(1.25); }
   else if (ex === 'blink') { sides.forEach(s => { arc(s, false); if (hasBrow) brow(s, 43, 50); }); blush(1); }
@@ -163,14 +172,14 @@ function setFace(f, ex) {
   if (f.coneEar) {
     const p = ex === 'sad' ? -0.22 : (ex === 'joy' || ex === 'smile') ? 0.12 : 0;
     const tx = (ex === 'focus' || ex === 'shout') ? 0.12 : ex === 'sad' ? -0.1 : 0;
-    f.coneEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, (-0.55 + p) * s); });
-    f.longEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, (-0.18 + p * 0.9) * s); });
+    f.coneEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, (-0.05 + p) * s); });
+    f.longEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, ((f.sp === 'floppy' ? -2.0 : -0.12) + p * 0.9) * s); });
   }
   if (!f.mouthO) return;
   const o = FACE_MOUTH[ex];
-  f.mouthO.visible = !!o; f.mouths.forEach(m => { m.visible = !o; });
-  if (f.tooth) f.tooth.visible = !o && sp === 'usagi';
-  if (o) f.mouthO.scale.set(o[0], o[1], 0.014);
+  f.mouthO.visible = !!o; f.mouths.forEach(m => { m.visible = !o && sp !== 'alien'; });
+  if (f.tooth) f.tooth.visible = !o && (sp === 'usagi' || sp === 'floppy');
+  if (o) f.mouthO.scale.set(o[0] * 1.4, o[1] * 1.4, 0.018);
 }
 
 function makeFig(o) {
@@ -185,41 +194,10 @@ function makeFig(o) {
   };
   const f = { g, parts, helmet: !!o.helmet };
   f.body = add(SPH, 'JERSEY');
-  f.lineB = add(SPH, 'LINE', f.body, 1.05);
+  f.lineB = add(SPH, 'LINE', f.body, 1.05); f.lineB.visible = false;
   if (!o.lite) { f.chest = add(SPH, 'CHEST', f.body, 0.42, 0.28, 0.18); f.chest.position.set(0, 0.36, 0.88); }
   f.belt = add(cylGeo(0.2, 0.2), 'CAP');
-  const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
-  const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
-  f.lineH = add(SPH, 'LINE', hs, 1.055);
-  f.scarf = add(SCARFG, 'SCARF', h); f.scarf.position.set(0, -0.2, 0.01); f.scarf.rotation.x = Math.PI / 2;     // スカーフ（ネコ）
-  if (!o.lite) { f.knot = add(KNOTG, 'SCARF', h); f.knot.position.set(0.03, -0.27, 0.15); f.knot.rotation.set(Math.PI, 0, 0.25); }
-  f.cheeks = [-1, 1].map(s => { const m = add(SPH, 'HEAD', h, 0.09, 0.08, 0.09); m.position.set(0.12 * s, -0.05, 0.05); return m; });
-  f.muz = add(SPH, 'MUZ', h, 0.115, 0.085, 0.09); f.muz.position.set(0, -0.065, 0.165);
-  if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
-  f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.066, 0.085, 0.03); m.position.set(0.088 * s, -0.004, 0.19); m.rotation.z = 0.42 * s; return m; });
-  f.face = add(FACEG, 'FACE', h, 0.25 * 1.012, 0.225 * 1.012, 0.23 * 1.012);         // 目・まゆ・ほっぺ（表情で絵が変わる）
-  f.mouths = [];
-  if (!o.lite) {
-    [-1, 1].forEach(s => { const m = add(MOUTHG, 'MOUTH', h); m.position.set(0.021 * s, -0.082, 0.248); m.rotation.set(-0.3, 0, Math.PI); f.mouths.push(m); });
-    f.mouthO = add(SPH, 'MOUTHO', h, 0.03, 0.026, 0.014); f.mouthO.position.set(0, -0.092, 0.25); f.mouthO.visible = false;
-    f.tooth = add(SPH, 'TOOTH', h, 0.016, 0.014, 0.008); f.tooth.position.set(0, -0.092, 0.246); f.tooth.visible = false;
-  }
-  f.hl = [];
-  f.coneEar = [-1, 1].map(s => {
-    const e = add(EARG, 'EARC', h, 0.075, 0.16, 0.05); e.position.set(0.165 * s, 0.215, 0.0); e.rotation.z = -0.55 * s;
-    if (!o.lite) { const i = add(EARG, 'EARIN', e, 0.6, 0.6, 0.6); i.position.set(0, -0.08, 0.5); }
-    return e;
-  });
-  f.roundEar = [-1, 1].map(s => { const e = add(SPH, 'EARC', h, 0.08, 0.08, 0.05); e.position.set(0.185 * s, 0.17, -0.0); return e; });
-  f.longEar = [-1, 1].map(s => {
-    const e = add(SPH, 'EARC', h, 0.05, 0.17, 0.035); e.position.set(0.075 * s, 0.33, -0.02); e.rotation.z = -0.18 * s;
-    if (!o.lite) { const i = add(SPH, 'EARIN', e, 0.6, 0.75, 0.6); i.position.set(0, 0, 0.55); }
-    return e;
-  });
-  f.hair = [-1, 1].map(s => { const m = add(SPH, 'HAIR', h, 0.052, 0.11, 0.07); m.position.set(0.185 * s, 0.03, 0.04); m.visible = false; return m; });
-  if (o.helmet) { add(HELG, 'CAP', h, 0.258).position.set(0, 0.065, -0.01); }                    // 帽子を少し上げて、大きな目が隠れないようにする
-  else add(CAPG, 'CAP', h, 0.248).position.set(0, 0.08, -0.01);
-  const brim = add(BRIM, 'CAP', h, 0.155, 0.015, 0.155); brim.position.set(0, 0.09, 0.185); brim.rotation.x = 0.1;
+  buildMascotHead(f, add, o);
   f.ua = [add(cylGeo(0.096, 0.088), 'JERSEY'), add(cylGeo(0.096, 0.088), 'JERSEY')];
   f.fa = [add(cylGeo(0.085, 0.075), 'LIMB'), add(cylGeo(0.085, 0.075), 'LIMB')];
   f.ej = o.lite ? null : [add(SPH, 'LIMB'), add(SPH, 'LIMB')];
@@ -238,14 +216,18 @@ function setTeam(f, team) {
   const sp = UNIFORM[team].species, M = MATS[team], S = SPECIES[sp];
   f.team = team; f.sp = sp;
   f.parts.forEach(m => { const r = m.userData.role; m.material = M[r] || COMMON[r]; });
-  if (f.muz) { f.muz.visible = sp !== 'human'; if (S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]); }
-  if (f.cheeks) f.cheeks.forEach(m => { m.visible = sp !== 'human'; });
-  if (f.hair) f.hair.forEach(m => { m.visible = sp === 'human'; });
-  if (f.chest) f.chest.visible = sp === 'kuma' || sp === 'shiba';
-  f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; if (S.earS) e.scale.set(S.earS[0], S.earS[1], 0.05); });
-  f.longEar.forEach(e => { e.visible = S.ear === 'long'; });
+  if (f.muz) { f.muz.visible = !['human', 'alien', 'neko', 'usagi', 'floppy'].includes(sp); f.muz.scale.set(sp === 'kuma' ? 0.21 : 0.25, 0.14, 0.075); }
+  f.nose.position.y = sp === 'alien' ? -0.14 : -0.07;
+  f.nose.scale.set(sp === 'alien' ? 0.05 : 0.04, sp === 'alien' ? 0.025 : 0.03, 0.025);
+  f.hair.forEach(m => { m.visible = sp === 'human'; });
+  if (f.chest) f.chest.visible = true;
+  f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; });
+  f.longEar.forEach((e, i) => { e.visible = S.ear === 'long' || S.ear === 'floppy'; e.position.x = (i ? 1 : -1) * (sp === 'floppy' ? 0.30 : 0.17); });
   f.roundEar.forEach(e => { e.visible = S.ear === 'round'; });
-  f.scarf.visible = !!U_SCARF(team); if (f.knot) f.knot.visible = f.scarf.visible;
+  f.antennae.forEach(e => { e.visible = sp === 'alien'; });
+  f.bow.visible = sp === 'neko' || sp === 'kuma';
+  f.scarf.visible = !!U_SCARF(team); f.knot.visible = f.scarf.visible;
+  f.cap.visible = f.brim.visible = sp === 'alien' || f.helmet;
   const lk = S.lineK || 1; f.lineB.scale.setScalar(1 + 0.05 * lk); f.lineH.scale.setScalar(1 + 0.055 * lk);
   f.panda = sp === 'panda';
   f.patch.forEach(p => { p.visible = f.panda; });
@@ -264,7 +246,7 @@ function faceFor(f, ex, now) {
 }
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
-const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 1.35;   // 自然で引き締まった二頭身ちびキャラ
+const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 0.88;   // 自然で引き締まった二頭身ちびキャラ
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
@@ -291,7 +273,7 @@ function squashJ(J, base, keepHands) {
     o[k] = p;
   }
   const up = o.head.clone().sub(o.neck).normalize();
-  o.head = o.neck.clone().addScaledVector(up, 0.28);
+  o.head = o.neck.clone().addScaledVector(up, 0.34);
   return o;
 }
 function seg(m, a, b, w = 1) {
@@ -307,7 +289,7 @@ function poseFig(f, J, yaw, headYaw) {
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
   f.body.position.addVectors(J.pelvis, J.neck).multiplyScalar(0.5);
   f.body.quaternion.setFromUnitVectors(_Y, _d.multiplyScalar(1 / L));
-  f.body.scale.set(0.31 * bk, L * 0.62, 0.29 * bk);
+  f.body.scale.set(0.32 * bk, L * 0.72, 0.28 * bk);
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
   f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(1.15 * bk, 0.038, 1.10 * bk);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
@@ -320,14 +302,14 @@ function poseFig(f, J, yaw, headYaw) {
     _a.copy(ft); _a.y += 0.07; seg(f.sh[i], kn, _a);
     if (f.kj) dot(f.kj[i], kn, 0.11);
     f.shoe[i].position.set(ft.x + Math.sin(yaw) * 0.03, ft.y + 0.055, ft.z + Math.cos(yaw) * 0.03);
-    f.shoe[i].scale.set(0.118, 0.082, 0.148); f.shoe[i].rotation.set(0, yaw, 0);
+    f.shoe[i].scale.set(0.118, 0.065, 0.148); f.shoe[i].rotation.set(0, yaw, 0);
   });
   _b.set(-Math.sin(yaw), 0, -Math.cos(yaw));
   _a.copy(J.pelvis).addScaledVector(_b, 0.2); _a.y += 0.06;
   const wag = Math.sin(now_() * 4.5 + (f.helmet ? 0 : 1.7)) * 0.15;
   f.curl.position.copy(_a); f.curl.rotation.set(0, yaw + Math.PI / 2 + wag, 0);
   f.longT.position.copy(_a); f.longT.position.y += 0.03; f.longT.rotation.set(0.25, yaw + Math.PI / 2 + wag * 1.4, -0.35);
-  f.ball.position.copy(_a); if (f.sp === 'usagi') f.ball.position.y += 0.02; f.ball.scale.setScalar(f.sp === 'usagi' ? 0.082 : 0.06);
+  f.ball.position.copy(_a); if ((f.sp === 'usagi' || f.sp === 'floppy')) f.ball.position.y += 0.02; f.ball.scale.setScalar((f.sp === 'usagi' || f.sp === 'floppy') ? 0.082 : 0.06);
   if (f.mitt) { f.mitt.position.copy(J.hL); f.mitt.scale.set(0.1, 0.115, 0.065); f.mitt.rotation.set(0, headYaw, 0); }
 }
 
@@ -461,7 +443,7 @@ function updateRunners() {
 function setTeams() {
   const { bat, fld } = teamsNow();
   setTeam(batterF, bat); runnerF.forEach(f => setTeam(f, bat));
-  setTeam(pitcherF, fld); fielderF.forEach(f => setTeam(f, fld));
+  setTeam(pitcherF, fld); fielderF.forEach((f, i) => setTeam(f, story && fld === 'home' ? STORY_BAT[(i + 1) % STORY_BAT.length][5] : fld));
 }
 
 /* ---- bat ---- */

@@ -363,6 +363,7 @@ function update(now, dt) {
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
+  if (beastActive()) { batAura.visible = true; batAura.position.copy(bj.J.pelvis); batAura.scale.setScalar(2.8); batAura.material.color.set('#75dfcc'); batAura.material.opacity = 0.25 + 0.1 * Math.sin(now * 5); } else batAura.material.color.set('#ffc845');
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
   updateFielders(now, k);
@@ -471,6 +472,7 @@ cv.addEventListener('pointercancel', () => endFlick(true));
 
 /* ===== flow ===== */
 function startGame() {
+  storyVisual(null);
   audioInit(); newGame();
   if (story && story.inn) storyRole();
   const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);
@@ -548,6 +550,7 @@ let lastT = now_(), perfN = 0, perfSum = 0, degraded = LITE;
 let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
+  if (renderMascotGallery(now)) { requestAnimationFrame(frame); return; }
   if (!degraded && !document.hidden && rawDt < 0.5) {
     perfN++; perfSum += rawDt;
     if (perfN >= 90) {

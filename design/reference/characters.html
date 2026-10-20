@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>どうぶつベースボール 3Dキャラギャラリー</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;font-family:system-ui,sans-serif;background:#eaf3e5;color:#294632}
+header{position:absolute;z-index:5;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;background:#ffffffeb;box-shadow:0 2px 8px #0001}
+h1{font-size:16px;margin:0}
+small{font-size:11px;color:#718271}
+button{border:0;border-radius:10px;padding:11px 12px;background:#347b51;color:white;font-weight:700;font-size:12px}
+button:disabled{opacity:.6}
+#names{position:absolute;bottom:45px;left:0;right:0;display:flex;justify-content:center;gap:4px;pointer-events:none}
+.name{width:12.1%;padding:7px 0;background:#ffffffdc;border-radius:8px;text-align:center;font-size:clamp(8px,2.3vw,12px)}
+#hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:10px;color:#516a54;pointer-events:none}
+#status{position:absolute;top:65px;left:10px;font-size:11px;color:#347b51;pointer-events:none}
+canvas{display:block;touch-action:none}
+@media(max-width:480px){h1{font-size:14px}small{display:none}button{font-size:11px;padding:10px 9px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<header><div><h1>⚾ どうぶつベースボール 3Dキャラ</h1><small>みんなバットを持って集合！</small></div><button id="export">全キャラをGLB保存</button></header>
+<div id="status">読み込み中...</div>
+<div id="names">
+<div class="name">🐕 柴犬</div><div class="name">🐯 トラ</div><div class="name">🐈 ねこ</div><div class="name">🐰 うさぎ</div><div class="name">🐻 クマ</div><div class="name">🐰 うさぎ</div><div class="name">🧑 人間</div><div class="name">👽 宇宙人</div>
+</div>
+<div id="hint">ドラッグで回転 ・ ピンチ/ホイールでズーム</div>
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+import {GLTFExporter} from "three/addons/exporters/GLTFExporter.js";
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color("#eaf3e5");
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,100);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:"low-power"});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=false;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=.09;controls.enablePan=false;
+controls.minDistance=8;controls.maxDistance=48;controls.maxPolarAngle=Math.PI/2;
+controls.target.set(0,1.2,0);
+function setCamera(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();camera.position.set(0,innerWidth<innerHeight?8:5,innerWidth<innerHeight?35:23);controls.target.set(0,1.2,0);controls.update()}
+setCamera();
+scene.add(new THREE.HemisphereLight(0xffffff,0x9aaf83,2));
+const sun=new THREE.DirectionalLight(0xffffff,1.5);sun.position.set(-5,10,8);scene.add(sun);
+
+const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:1});
+const M={
+ white:mat("#fff5e7"),black:mat("#29252a"),pink:mat("#ef9eae"),
+ brown:mat("#b77a4a"),dark:mat("#573729"),orange:mat("#ed963f"),
+ cream:mat("#f2dfbf"),gray:mat("#b8bdc2"),red:mat("#e55d58"),
+ blue:mat("#5598dc"),yellow:mat("#f4cf65"),green:mat("#6eaa65"),
+ purple:mat("#a78bd5"),teal:mat("#53c7b6"),skin:mat("#f1c4a1"),
+ hair:mat("#48352d"),shirt:mat("#6ca4d8"),pants:mat("#46536b"),
+ alien:mat("#8bdcb6"),stripe:mat("#302b2a")
+};
+const sphere=new THREE.SphereGeometry(1,10,8);
+const characters=[],floaters=[],parts=[];
+function grp(p,x=0,y=0,z=0){const g=new THREE.Group();g.position.set(x,y,z);p.add(g);return g}
+function add(p,g,m,x,y,z,sx=1,sy=1,sz=1){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);p.add(o);return o}
+function ball(p,m,x,y,z,sx,sy,sz){return add(p,sphere,m,x,y,z,sx,sy,sz)}
+function box(p,m,x,y,z,sx,sy,sz){return add(p,new THREE.BoxGeometry(sx,sy,sz),m,x,y,z)}
+function cone(p,m,x,y,z,r=.14,h=.32){return add(p,new THREE.ConeGeometry(r,h,8),m,x,y,z)}
+function capsule(p,m,x,y,z,r=.09,len=.2){return add(p,new THREE.CapsuleGeometry(r,len,3,6),m,x,y,z)}
+function line(p,m,a,b,r=.025){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A);const o=add(p,new THREE.CylinderGeometry(r,r,d.length(),6),m,(A.x+B.x)/2,(A.y+B.y)/2,(A.z+B.z)/2);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o}
+function eyes(p,z,y,x=.16,size=.05){
+  for(const s of [-1,1]){
+    // 大きく丸い瞳＋ハイライトで、ぬいぐるみ風のかわいい目に
+    ball(p,M.white,s*x,y,z,size*1.28,size*1.48,size*.45);
+    ball(p,M.black,s*x,y,z+.018,size*1.02,size*1.22,size*.42);
+    ball(p,M.white,s*x-size*.28,y+size*.38,z+.035,size*.34,size*.38,size*.18);
+    ball(p,M.white,s*x+size*.24,y-size*.18,z+.034,size*.14,size*.16,size*.10);
+  }
+  // ほんのりピンクのほっぺ
+  for(const s of [-1,1]) ball(p,M.pink,s*(x+.095),y-.095,z-.006,size*.72,size*.38,size*.20);
+}
+function addBaseballGear(r){
+  // 体の横から出した短い腕。手はバットを握る位置に置く
+  const armMat = M.white;
+  for(const s of [-1,1]){
+    const arm=capsule(r,armMat,s*.34,1.12,.18,.075,.20);
+    arm.rotation.z=s*.68;
+    ball(r,armMat,s*.22,1.02,.39,.105,.095,.085);
+  }
+  // 木製バットを前面に斜めに持たせる
+  const bat=grp(r,.10,1.03,.47);
+  bat.rotation.z=-.48;
+  add(bat,new THREE.CylinderGeometry(.045,.075,.72,8),M.brown,0,.22,0);
+  add(bat,new THREE.CylinderGeometry(.052,.052,.13,8),M.dark,0,-.20,0);
+  // グリップの白い帯
+  for(let i=0;i<2;i++) add(bat,new THREE.CylinderGeometry(.053,.053,.025,8),M.white,0,-.23+i*.045,0);
+}
+function bow(p,x,y,z,color=M.pink){const g=grp(p,x,y,z);ball(g,color,-.075,0,0,.10,.065,.035);ball(g,color,.075,0,0,.10,.065,.035);ball(g,M.yellow,0,0,.025,.035,.035,.02)}
+function scarf(p,color=M.red){const g=grp(p,0,1.42,.03);const t=add(g,new THREE.TorusGeometry(.25,.055,5,12),color,0,0,0);t.rotation.x=Math.PI/2;box(p,color,.19,1.21,.24,.10,.28,.07).rotation.z=-.2}
+function baseBody(r,fur,belly=M.white){ball(r,fur,0,1.03,0,.38,.43,.30);ball(r,belly,0,.99,.255,.25,.25,.08);for(const x of [-.22,.22]){capsule(r,fur,x,.38,.01,.09,.18);ball(r,M.white,x,.21,.06,.11,.06,.12)}}
+function head(r,fur,sy=.40){ball(r,fur,0,1.79,.015,.42,sy,.35)}
+function animatePart(obj,axis,amp,phase=0){parts.push({obj,axis,amp,phase,base:obj.rotation[axis]})}
+function make(name,i,build){const outer=grp(scene,(i-3.5)*2.2,0,0);const root=grp(outer);const local=[];build(root,local);addBaseballGear(root);characters.push(outer);floaters.push({root,phase:i*.85});for(const p of local)animatePart(p.obj,p.axis,p.amp,p.phase||0);return root}
+
+// 1 柴犬
+make("柴犬",0,(r,p)=>{const f=M.orange;baseBody(r,f);head(r,f);for(const x of [-.29,.29]){const e=cone(r,f,x,2.12,.015,.14,.36);ball(r,M.pink,x,2.12,.105,.055,.10,.025);p.push({obj:e,axis:"z",amp:.08})}ball(r,M.white,0,1.67,.30,.25,.14,.07);eyes(r,.32,1.85,.17,.045);ball(r,M.black,0,1.72,.38,.045,.035,.025);const tail=grp(r,.32,1.18,-.15);const t=add(tail,new THREE.TorusGeometry(.13,.055,5,10),f,0,.06,0);t.rotation.y=Math.PI/2;p.push({obj:tail,axis:"z",amp:.25});scarf(r,M.red)});
+// 2 トラ
+make("トラ",1,(r,p)=>{baseBody(r,M.orange);head(r,M.orange);for(const x of [-.30,.30]){ball(r,M.orange,x,2.08,.02,.13,.14,.10);ball(r,M.pink,x,2.08,.10,.06,.07,.025)}ball(r,M.white,0,1.67,.30,.24,.14,.07);eyes(r,.32,1.85,.17,.045);ball(r,M.black,0,1.72,.38,.045,.035,.025);for(const x of [-.20,0,.20]){const s=box(r,M.stripe,x,1.99,.327,.045,.16,.018);s.rotation.z=x}for(const x of [-1,1]){const s=box(r,M.stripe,x*.28,1.75,.30,.035,.13,.02);s.rotation.z=x*.5}const tail=grp(r,.34,1.02,-.18);line(tail,M.orange,[0,0,0],[.13,.17,0],.05);line(tail,M.stripe,[.13,.17,0],[.18,.34,0],.045);p.push({obj:tail,axis:"z",amp:.25});scarf(r,M.teal)});
+// 3 ねこ
+make("ねこ",2,(r,p)=>{const f=M.gray;baseBody(r,f);head(r,f);for(const x of [-.29,.29]){const e=cone(r,f,x,2.11,.01,.15,.37);cone(r,M.pink,x,2.11,.09,.08,.25);p.push({obj:e,axis:"z",amp:.08})}eyes(r,.32,1.85,.17,.045);ball(r,M.pink,0,1.72,.37,.04,.03,.02);for(const s of [-1,1]){line(r,M.dark,[s*.10,1.72,.34],[s*.30,1.76,.32],.006);line(r,M.dark,[s*.10,1.69,.34],[s*.30,1.66,.32],.006)}const tail=grp(r,-.32,1.0,-.15);const t=add(tail,new THREE.TorusGeometry(.15,.05,5,10),f,-.05,.16,0);t.rotation.y=Math.PI/2;p.push({obj:tail,axis:"z",amp:.3});bow(r,-.26,2.08,.14)});
+// Rabbits
+function rabbit(r,p,fur,acc,floppy){baseBody(r,fur);head(r,fur,.38);for(const x of [-.17,.17]){const ear=grp(r,x,2.04,0);capsule(ear,fur,0,.19,0,.08,.34);capsule(ear,M.pink,0,.19,.065,.04,.29);ear.rotation.z=floppy?x*2.7:x*.8;p.push({obj:ear,axis:"z",amp:.12})}eyes(r,.32,1.84,.15,.043);ball(r,M.pink,0,1.71,.37,.035,.025,.02);ball(r,M.white,.28,1.0,-.12,.10,.10,.10);scarf(r,acc)}
+make("うさぎ",3,(r,p)=>rabbit(r,p,M.white,M.purple,false));
+// 5 クマ
+make("クマ",4,(r,p)=>{baseBody(r,M.brown,M.cream);head(r,M.brown);for(const x of [-.30,.30]){ball(r,M.brown,x,2.08,.01,.15,.15,.11);ball(r,M.pink,x,2.08,.10,.07,.07,.02)}ball(r,M.cream,0,1.67,.30,.21,.15,.08);eyes(r,.32,1.85,.17,.045);ball(r,M.dark,0,1.72,.38,.05,.04,.025);add(r,new THREE.CylinderGeometry(.10,.13,.16,8),M.yellow,.34,1.15,.12);add(r,new THREE.CylinderGeometry(.13,.13,.025,8),M.yellow,.34,1.24,.12);bow(r,.30,1.34,.20,M.red)});
+// 6 たれ耳うさぎ
+make("うさぎ",5,(r,p)=>rabbit(r,p,M.cream,M.teal,true));
+// 7 人間
+make("にんげん",6,(r,p)=>{capsule(r,M.shirt,0,1.05,0,.23,.34);ball(r,M.pants,0,.77,0,.25,.17,.23);for(const x of [-.14,.14]){capsule(r,M.pants,x,.39,0,.075,.20);ball(r,M.white,x,.20,.06,.11,.06,.12);const arm=capsule(r,M.skin,x*2.15,1.08,.01,.065,.23);arm.rotation.z=x*2;p.push({obj:arm,axis:"z",amp:.10})}ball(r,M.skin,0,1.79,.02,.36,.39,.32);ball(r,M.hair,0,1.98,-.01,.37,.25,.33);ball(r,M.skin,0,1.78,.12,.32,.32,.27);ball(r,M.hair,-.13,1.98,.26,.18,.12,.09);ball(r,M.hair,.11,1.99,.26,.16,.11,.09);eyes(r,.35,1.80,.14,.043);box(r,M.red,0,1.10,-.24,.30,.31,.12);scarf(r,M.yellow)});
+// 8 野球帽の宇宙人
+make("宇宙人",7,(r,p)=>{baseBody(r,M.alien);head(r,M.alien);for(const x of [-.17,.17]){ball(r,M.dark,x,1.82,.31,.09,.14,.05);ball(r,M.white,x-.02,1.87,.35,.025,.03,.012);line(r,M.alien,[x,2.12,0],[x*1.3,2.30,0],.02);ball(r,M.yellow,x*1.3,2.31,0,.045,.045,.045)}ball(r,M.teal,0,1.65,.34,.05,.025,.02);const cap=grp(r,0,2.08,.02);add(cap,new THREE.SphereGeometry(.29,8,6,0,Math.PI*2,0,Math.PI/2),M.blue,0,.05,0,1,1,.85);add(cap,new THREE.CylinderGeometry(.32,.32,.035,10),M.red,0,-.03,.13,1,1,.65);ball(cap,M.yellow,0,.05,.26,.05,.05,.025);p.push({obj:cap,axis:"z",amp:.08});const tail=grp(r,.32,1.02,-.12);line(tail,M.alien,[0,0,0],[.14,.13,0],.05);line(tail,M.alien,[.14,.13,0],[.22,.25,0],.04);ball(tail,M.teal,.22,.25,0,.06,.06,.06);p.push({obj:tail,axis:"z",amp:.25});});
+
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),mat("#91bb77"));
+ground.rotation.x=-Math.PI/2;ground.position.y=-.03;scene.add(ground);
+
+const clock=new THREE.Clock();
+function tick(){requestAnimationFrame(tick);const t=clock.getElapsedTime();for(const a of floaters)a.root.position.y=.07+Math.sin(t*1.7+a.phase)*.09;for(const p of parts)p.obj.rotation[p.axis]=p.base+Math.sin(t*2.2+p.phase)*p.amp;controls.update();renderer.render(scene,camera)}
+tick();
+document.getElementById("status").textContent="8体表示中";
+
+document.getElementById("export").addEventListener("click",async()=>{
+ const btn=document.getElementById("export"),status=document.getElementById("status");
+ btn.disabled=true;status.textContent="GLBを書き出し中...";
+ try{
+  const out=new THREE.Scene(),all=new THREE.Group();all.name="AllCharacters";out.add(all);
+  for(const outer of characters){
+   const copy=outer.clone(true);
+   copy.traverse(o=>{if(o.isMesh){o.geometry=o.geometry.clone();o.material=Array.isArray(o.material)?o.material.map(m=>m.clone()):o.material.clone()}});
+   const root=copy.children[0];if(root)root.position.y=0;
+   all.add(copy);
+  }
+  const result=await new GLTFExporter().parseAsync(out,{binary:true});
+  const url=URL.createObjectURL(new Blob([result],{type:"model/gltf-binary"}));
+  const a=document.createElement("a");a.href=url;a.download="all_characters.glb";document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);status.textContent="GLBの保存を開始しました";
+ }catch(e){console.error(e);status.textContent="保存に失敗しました。ブラウザを確認してください"}
+ finally{btn.disabled=false}
+});
+addEventListener("resize",()=>{renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1));setCamera()});
+</script>
+</body>
+</html>

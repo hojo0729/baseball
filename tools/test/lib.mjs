@@ -27,6 +27,8 @@ export function startServer() {
       let file;
       if (u.pathname === '/' || u.pathname === '/game.html') {
         file = path.join(HERE, 'game.html');
+      } else if (u.pathname === '/private-playtest.html') {
+        file = path.join(ROOT, 'dist/animal-baseball-playtest.html');
       } else if (u.pathname === '/node_modules/three/build/three.min.js') {
         file = process.env.THREE_JS || path.join(ROOT, 'node_modules/three/build/three.min.js');
       } else if (u.pathname.startsWith('/node_modules/')) {

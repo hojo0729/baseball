@@ -7,24 +7,24 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="どうぶつリーグ">
+<meta name="apple-mobile-web-app-title" content="どうぶつベースボール">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="description" content="どうぶつたちが戦う3D野球。スマホで遊べて、友達とネット対戦もできる無料ゲーム。">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="どうぶつリーグ">
-<meta property="og:title" content="どうぶつリーグ - みんなで遊べる3D野球">
+<meta property="og:site_name" content="どうぶつベースボール">
+<meta property="og:title" content="どうぶつベースボール - みんなで遊べる3D野球">
 <meta property="og:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta property="og:url" content="https://saboten-apps.github.io/baseball/">
 <meta property="og:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="どうぶつリーグ - みんなで遊べる3D野球">
+<meta name="twitter:title" content="どうぶつベースボール - みんなで遊べる3D野球">
 <meta name="twitter:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta name="twitter:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
-<title>どうぶつリーグ</title>
+<title>どうぶつベースボール</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
 <style>
 html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
@@ -239,6 +239,39 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 .chip { white-space: pre-line; }
 
 #overlay.cred #od { white-space: pre-line; text-align: left; font-size: 12.5px; line-height: 1.7; max-width: 30ch; }
+
+/* Story scenes share the existing overlay and keep tap targets within a phone. */
+#overlay.story-scene { overflow-y: auto; place-content: center; background: linear-gradient(160deg, #102a30, #08131f); padding: max(16px, env(safe-area-inset-top)) 20px; gap: 12px; }
+#overlay.story-scene #od { white-space: pre-line; font-size: 15px; line-height: 1.75; max-width: 28ch; }
+#overlay.story-scene h1 { font-size: clamp(21px, 6vw, 31px); }
+#story-art { width: min(100%, 340px); max-height: 24vh; aspect-ratio: 16 / 9; flex-shrink: 0; }
+#story-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+#overlay[data-scene="analysis"], #overlay[data-scene="ai"] { background: radial-gradient(ellipse at 50% 20%, #173d43, #050c14 85%); }
+#overlay[data-scene="analysis"] #od { color: #a6e2ce; font-family: var(--f-num); font-size: 14px; }
+#overlay[data-scene="real"], #overlay[data-scene="real-jump"], #overlay[data-scene="hand"] { background: linear-gradient(#e3e8ec, #bac8ce); }
+#overlay[data-scene^="real"] #od, #overlay[data-scene="hand"] #od { color: #24323d; }
+#overlay[data-scene="jump"] .scene-animal, #overlay[data-scene="real-jump"] .scene-person { animation: story-jump 3s ease-in-out infinite; }
+.scene-balloon { animation: story-balloon 4s ease-in-out infinite; }
+.scene-aura { animation: story-aura 2.5s ease-in-out infinite; }
+@keyframes story-jump { 0%, 80%, 100% { transform: translate(0, 0); } 30%, 42% { transform: translate(30px, -65px); } }
+@keyframes story-balloon { 50% { transform: translate(4px, -12px); } }
+@keyframes story-aura { 50% { opacity: .1; } }
+#overlay.gallery { background: transparent; place-content: end center; padding: 18px; gap: 8px; }
+#overlay.gallery h1 { color: #294632; text-shadow: none; font-size: 25px; }
+#overlay.gallery #od { font-size: 12px; color: #294632; }
+#overlay.gallery #obtns { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; width: min(100%, 340px); }
+#overlay.gallery #obtns button { padding: 10px 8px; font-size: 13px; }
+#overlay.logo h1 { white-space: normal; font-size: clamp(27px, 8.4vw, 52px); }
+#overlay.logo h1::before { content: 'ANIMAL BASEBALL'; }
+#story-final { position: absolute; z-index: 100; inset: 0; background: #000; color: #fff; display: grid; place-content: center; text-align: center; padding: 24px; }
+#story-final h1 { font-size: clamp(23px, 7vw, 38px); font-family: var(--f-disp); font-weight: 400; }
+#story-final .made { font: 15px var(--f-num); letter-spacing: .06em; margin-top: 25px; }
+#story-final .question { font: 20px var(--f-num); letter-spacing: .08em; margin-top: 45px; animation: story-question 1.2s ease-out; }
+#story-final button { position: absolute; bottom: max(25px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); border: 1px solid #555; background: #000; color: #aaa; font: 12px sans-serif; padding: 12px 20px; border-radius: 24px; }
+#app.story-final .board, #app.story-final .ctl, #app.story-final #cmtBtn, #app.story-final #bgmBtn, #app.story-final #goal, #app.story-final #hint, #app.story-final #cmt, #app.story-final #spd, #app.story-final #banner, #app.story-final #hapB { display: none; }
+@keyframes story-question { from { opacity: 0; } to { opacity: 1; } }
+@media (max-height: 620px) { #overlay.story-scene { place-content: start center; } #story-art { max-height: 18vh; } #overlay.story-scene #od { font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { .scene-animal, .scene-person, .scene-balloon, .scene-aura, #story-final .question { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -271,7 +304,7 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
     <div id="overlay">
       <div id="ospk"></div>
       <div id="obadge" hidden></div>
-      <h1 id="ot">どうぶつリーグ</h1>
+      <h1 id="ot">どうぶつベースボール</h1>
       <p id="od"></p>
       <input id="codeIn" type="text" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="部屋番号" hidden>
       <div id="obtns">
@@ -329,8 +362,9 @@ const DELIVER = 0.7;       // user's pitching motion length
 const zoneToWorld = (tx, ty) => V(tx * ZW, ZY0 - ty * ZH, 0);
 
 /* ---- sound ---- */
-let ac = null;
+let ac = null, storySilent = false;
 function audioInit() {
+  if (storySilent) return;
   if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
   if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
   sfxLoad();
@@ -445,7 +479,7 @@ function bgmHR() {
   const s = ac.createBufferSource(); s.buffer = bgmRec.hr; s.connect(fileOut); s.start(t + 0.15);
 }
 function bgmTick() {
-  if (!bgmOn || !ac || !bgmGain) return;
+  if (storySilent || !bgmOn || !ac || !bgmGain) return;
   if (fileReady()) { bgmFileTick(); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
@@ -575,13 +609,13 @@ let hbpUntil = 0, brawl = null;      // デッドボール直後の表情 / 乱�
 const OPT = { dice: true, hap: true, trait: true, skill: true };   // 設定：ギミックのオン・オフ
 try { Object.assign(OPT, JSON.parse(localStorage.getItem('yakyu-opts') || '{}')); } catch (e) {}
 function saveOpt() { try { localStorage.setItem('yakyu-opts', JSON.stringify(OPT)); } catch (e) {} }
-function opt(k) { return online && onl.opts ? onl.opts[k] !== false : OPT[k] !== false; }
+function opt(k) { if (story && !online && !match && (k === 'dice' || k === 'hap')) return false; return online && onl.opts ? onl.opts[k] !== false : OPT[k] !== false; }
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
 function newGame() {
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
-  critArm = vanishArm = false; hud();
+  critArm = vanishArm = false; storyResetSession(); hud();
 }
 
 /* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
@@ -762,7 +796,7 @@ function endInning(label) {
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
   if (G.inning > last) G.over = !twoTeam() || sb.home !== sb.away;   // two-team games: extra innings until one side pulls ahead
   if (match && G.inning > 24) G.over = true;                          // CPU match: a tie after the 12th is a draw
-  if (story && story.inn && G.inning > (story.maxInn || 7) * 2) G.over = true; // ストーリー第5話：延長7回終了
+  if (story && story.inn && G.inning > (story.maxInn || 7) * 2) G.over = true; // ストーリー決戦：指定した延長上限で終了
   if (twoTeam() && G.inning >= last && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // home leads going into the last bottom half
   return label + ' / チェンジ';
 }
@@ -841,6 +875,12 @@ function advance(n, label) {
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
 function contact(dt, d, vy, speed, boost, crit, evAdd) {
+  if (story && !online && !match && mode === 'bat') {
+    if (story.idx === 7 && storySession && !storySession.eventDone) { dt *= 1.2; d *= 1.2; }
+    if (beastActive()) { dt *= 0.65; d *= 0.7; evAdd = (evAdd || 0) + 15; }
+  }
+  if (story && !online && !match && mode === 'pit' && beastActive()) { d += 0.35; dt *= 1.3; }
+
   if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
   const tB = trT('bat'), tF = trT('fld');                 // どうぶつ固有スキル（ストーリー以外）
   const gutsOn = tB === 'home' && G.s === 2;
@@ -1187,6 +1227,7 @@ function afterResult() {
   if (online) { onlineAfterResult(); return; }
   if (match) { matchAfterResult(); return; }
   if (story) {
+    if (storyEvent()) return;
     if (story.inn) { storyAfterResult(); return; }
     const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; }
   }
@@ -1577,6 +1618,62 @@ const aimRing = marker('#f4c95a', 0.95, 0.18), landRing = marker('#f4c95a', 0.9)
 landRing.rotation.x = -Math.PI / 2;
 let fxTap = -9, fxFlash = -9, ghostOn = false;
 
+/* ---- 03-mascot-heads.js ---- */
+/* Head shapes adapted from the user-supplied baseball_chibi_characters.html.
+   The game's joint rig, handedness and bat grip remain the animation source.
+   Facial expressions share one texture per species, including lightweight fielders. */
+function buildMascotHead(f, add, o) {
+  const h = f.head = new THREE.Group(); f.g.add(h);
+  h.scale.setScalar(HEAD_K);
+  const ball = (role, x, y, z, sx, sy, sz, parent = h) => {
+    const m = add(SPH, role, parent, sx, sy, sz); m.position.set(x, y, z); return m;
+  };
+  const head = ball('HEAD', 0, 0, 0.015, 0.42, 0.40, 0.35);
+  f.lineH = ball('LINE', 0, 0, 0, 1, 1, 1, head); f.lineH.visible = false;
+  f.muz = ball('MUZ', 0, -0.12, 0.30, 0.25, 0.14, 0.07);
+  f.nose = ball('NOSE', 0, -0.07, 0.38, 0.045, 0.035, 0.025);
+  f.face = ball('FACE', 0, 0, 0.015, 0.425, 0.405, 0.355);
+  f.face.geometry = FACEG;
+  f.cheeks = [];
+  f.patch = [-1, 1].map(s => ball('PATCH', s * 0.17, 0.04, 0.275, 0.115, 0.15, 0.055));
+  f.coneEar = [-1, 1].map(s => {
+    const e = add(EARG, 'EARC', h, 0.14, 0.36, 0.14); e.position.set(s * 0.29, 0.33, 0.015);
+    const inner = ball('EARIN', 0, 0, 0.65, 0.40, 0.30, 0.18, e);
+    return e;
+  });
+  f.roundEar = [-1, 1].map(s => {
+    const e = ball('EARC', s * 0.30, 0.29, 0.02, 0.14, 0.15, 0.11);
+    ball('EARIN', 0, 0, 0.75, 0.48, 0.48, 0.20, e); return e;
+  });
+  f.longEar = [-1, 1].map(s => {
+    const e = new THREE.Group(); h.add(e); e.position.set(s * 0.17, 0.25, 0);
+    ball('EARC', 0, 0.20, 0, 0.09, 0.29, 0.08, e);
+    ball('EARIN', 0, 0.20, 0.065, 0.045, 0.23, 0.025, e); return e;
+  });
+  f.hair = [ball('HAIR', 0, 0.19, -0.04, 0.39, 0.25, 0.34),
+    ball('HAIR', -0.13, 0.19, 0.28, 0.18, 0.12, 0.09), ball('HAIR', 0.11, 0.20, 0.28, 0.16, 0.11, 0.09)];
+  f.antennae = [-1, 1].map(s => {
+    const g = new THREE.Group(); h.add(g); g.position.set(s * 0.17, 0.32, 0);
+    const stem = add(cylGeo(0.022, 0.022), 'HEAD', g); stem.scale.y = 0.20; stem.position.y = 0.10;
+    ball('ACCENT', s * 0.025, 0.22, 0, 0.045, 0.045, 0.045, g); return g;
+  });
+  f.scarf = add(new THREE.TorusGeometry(0.25, 0.055, 5, 12), 'SCARF', h);
+  f.scarf.position.set(0, -0.37, 0.03); f.scarf.rotation.x = Math.PI / 2;
+  f.knot = ball('SCARF', 0.19, -0.51, 0.24, 0.06, 0.18, 0.04);
+  f.knot.rotation.z = -0.2;
+  f.bow = new THREE.Group(); h.add(f.bow); f.bow.position.set(-0.26, 0.29, 0.14);
+  [-1, 1].forEach(s => ball('BOW', s * 0.075, 0, 0, 0.10, 0.065, 0.035, f.bow));
+  ball('ACCENT', 0, 0, 0.025, 0.035, 0.035, 0.02, f.bow);
+  f.cap = add(o.helmet ? HELG : CAPG, 'CAP', h, 0.30, 0.25, 0.28);
+  f.cap.position.set(0, 0.22, -0.025);
+  f.brim = add(BRIM, 'CAP', h, 0.22, 0.025, 0.18); f.brim.position.set(0, 0.24, 0.20);
+  f.mouths = [-1, 1].map(s => {
+    const m = add(MOUTHG, 'MOUTH', h, 1.5); m.position.set(s * 0.025, -0.14, 0.377); m.rotation.z = Math.PI; return m;
+  });
+  f.mouthO = ball('MOUTHO', 0, -0.15, 0.38, 0.04, 0.035, 0.018);
+  f.tooth = ball('TOOTH', 0, -0.15, 0.375, 0.018, 0.023, 0.01);
+}
+
 /* ---- 03-motion-bat.js ---- */
 /* ===== batter body motion from motion capture (CMU Graphics Lab Motion Capture Database, mocap.cs.cmu.edu, subject 124
    "Baseball Swing" / "Baseball Bunt"; created with funding from NSF EIA-0196217). Generated by tools/make-bat-motion.py — do not edit.
@@ -1599,8 +1696,8 @@ const GRAD = (() => {
   const t = new THREE.DataTexture(new Uint8Array([90, 90, 90, 255, 170, 170, 170, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
   t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t;
 })();
-// the stadium key light is strong; darken toon base colors so fur keeps its saturation after tone mapping
-const toon = (c, map) => new THREE.MeshToonMaterial(Object.assign({ color: new THREE.Color(c).multiplyScalar(0.55), gradientMap: GRAD }, map ? { map } : null));
+// Matte plush materials use the provided gallery's palette under the existing stadium lights.
+const toon = (c, map) => new THREE.MeshStandardMaterial(Object.assign({ color: new THREE.Color(c).convertSRGBToLinear().multiplyScalar(0.85), roughness: 1 }, map ? { map } : null));
 function jerseyTex(base, trim, pin) {
   return canvasTex(128, 64, (g, w, h) => {
     g.fillStyle = base; g.fillRect(0, 0, w, h);
@@ -1627,27 +1724,34 @@ function stripeTex(base, ink, tail) {
   });
 }
 const SPECIES = {
-  shiba: { HEAD: '#e48a3e', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011, bulk: 1 },
+  shiba: { HEAD: '#ed963f', MUZ: '#fff6e8', EARC: '#e48a3e', EARIN: '#f6c9b4', LIMB: '#e48a3e', PAW: '#fff6e8', TAIL: '#e48a3e', PATCH: '#e48a3e', NOSE: '#2a1d19', CHEST: '#fff6e8', ear: 'cone', earS: [0.075, 0.16], muzS: [0.12, 0.086, 0.102], tail: 'curl', hl: 0.011, bulk: 1 },
   panda: { HEAD: '#f7f5ef', MUZ: '#ffffff', EARC: '#26282e', EARIN: '#26282e', LIMB: '#26282e', PAW: '#26282e', TAIL: '#f7f5ef', PATCH: '#141519', NOSE: '#1e1a1d', CHEST: '#f7f5ef', ear: 'round', muzS: [0.116, 0.086, 0.092], tail: 'ball', hl: 0.014, bulk: 1.07 },
-  neko:  { HEAD: '#ad4a0e', MUZ: '#fff1dc', EARC: '#ad4a0e', EARIN: '#f2b6bf', LIMB: '#ad4a0e', PAW: '#fff1dc', TAIL: '#ad4a0e', PATCH: '#ad4a0e', NOSE: '#d96b78', CHEST: '#fff1dc', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94, stripe: '#2e1004', lineK: 1.6 },
+  neko:  { HEAD: '#b8bdc2', MUZ: '#fff1dc', EARC: '#b8bdc2', EARIN: '#f2b6bf', LIMB: '#b8bdc2', PAW: '#fff1dc', TAIL: '#b8bdc2', PATCH: '#ad4a0e', NOSE: '#d96b78', CHEST: '#fff1dc', ear: 'cone', earS: [0.072, 0.125], muzS: [0.106, 0.078, 0.082], tail: 'long', hl: 0.012, bulk: 0.94, lineK: 1 },
   usagi: { HEAD: '#f5f1ea', MUZ: '#ffffff', EARC: '#f5f1ea', EARIN: '#f4b8c4', LIMB: '#f5f1ea', PAW: '#ffffff', TAIL: '#ffffff', PATCH: '#f5f1ea', NOSE: '#e87a90', CHEST: '#ffffff', ear: 'long', muzS: [0.102, 0.076, 0.08], tail: 'fluff', hl: 0.013, bulk: 0.93 },
   kuma:  { HEAD: '#a8683a', MUZ: '#ecc89a', EARC: '#a8683a', EARIN: '#ecc89a', LIMB: '#a8683a', PAW: '#7a4a28', TAIL: '#a8683a', PATCH: '#a8683a', NOSE: '#241712', CHEST: '#fff3d1', ear: 'round', muzS: [0.126, 0.092, 0.106], tail: 'ball', hl: 0.011, bulk: 1.14 },
   human: { HEAD: '#fad9be', MUZ: '#fad9be', EARC: '#fad9be', EARIN: '#fad9be', LIMB: '#fad9be', PAW: '#fad9be', TAIL: '#fad9be', PATCH: '#fad9be', NOSE: '#df9c82', CHEST: '#fad9be', ear: 'none', muzS: [0.06, 0.04, 0.04], tail: 'none', hl: 0.012, bulk: 1.04 }
 };
+// Additional designs in the supplied eight-character gallery. Panda remains for existing teams.
+SPECIES.tiger = { ...SPECIES.neko, HEAD: '#ed963f', EARC: '#ed963f', LIMB: '#ed963f', TAIL: '#ed963f', MUZ: '#fff5e7', ear: 'round', stripe: '#302b2a', NOSE: '#29252a' };
+SPECIES.floppy = { ...SPECIES.usagi, HEAD: '#f2dfbf', EARC: '#f2dfbf', LIMB: '#f2dfbf', ear: 'floppy' };
+SPECIES.alien = { ...SPECIES.shiba, HEAD: '#8bdcb6', EARC: '#8bdcb6', LIMB: '#8bdcb6', PAW: '#8bdcb6', TAIL: '#8bdcb6', MUZ: '#8bdcb6', ear: 'none', tail: 'long', NOSE: '#53c7b6' };
 const UNIFORM = {
-  home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true },
+  home: { species: 'shiba', JERSEY: '#f3eee2', PANTS: '#ebe6da', CAP: '#c8361f', SOCK: '#c8361f', pin: true, SCARF: '#e55d58' },
   away: { species: 'panda', JERSEY: '#24467d', PANTS: '#dde2ea', CAP: '#162845', SOCK: '#162845' },
-  neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#3a2268', SOCK: '#2e1f4a', pin: true, SCARF: '#4a2596' },
-  usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f' },
+  neko: { species: 'neko', JERSEY: '#5a3f86', PANTS: '#e4e0ea', CAP: '#3a2268', SOCK: '#2e1f4a', pin: true, SCARF: null },
+  usagi: { species: 'usagi', JERSEY: '#2c7a58', PANTS: '#e2ebe5', CAP: '#18432f', SOCK: '#18432f', SCARF: '#a78bd5' },
   kuma: { species: 'kuma', JERSEY: '#2a2b30', PANTS: '#d9d6cc', CAP: '#18191c', SOCK: '#c9a227' },
   human: { species: 'human', JERSEY: '#16181f', PANTS: '#2a2d36', CAP: '#0e1014', SOCK: '#2b78dc' }
 };
+UNIFORM.tiger = { ...UNIFORM.home, species: 'tiger', SCARF: '#53c7b6', CAP: '#53a99b' };
+UNIFORM.floppy = { ...UNIFORM.usagi, species: 'floppy', SCARF: '#53c7b6' };
+UNIFORM.alien = { species: 'alien', JERSEY: '#5598dc', PANTS: '#fff5e7', CAP: '#5598dc', SOCK: '#e55d58' };
 const MATS = {};
 for (const team in UNIFORM) {
   const U = UNIFORM[team], S = SPECIES[U.species], m = {};
   ['HEAD', 'MUZ', 'EARC', 'EARIN', 'LIMB', 'PAW', 'TAIL', 'PATCH', 'NOSE', 'CHEST'].forEach(r => { m[r] = toon(S[r]); });
   ['PANTS', 'CAP', 'SOCK'].forEach(r => { m[r] = toon(U[r]); });
-  m.SCARF = toon(U.SCARF || '#ffffff');
+  m.SCARF = toon(U.SCARF || '#ffffff'); m.BOW = toon('#ef9eae'); m.ACCENT = toon('#f4cf65');
   if (S.lineK) m.LINE = new THREE.MeshBasicMaterial({ color: '#0c0605', side: THREE.BackSide });   // 太い輪郭は黒に近い色で
   if (S.stripe) { m.LIMB = toon('#ffffff', stripeTex(S.LIMB, S.stripe, false)); m.TAIL = toon('#ffffff', stripeTex(S.TAIL, S.stripe, true)); }
   m.JERSEY = toon('#ffffff', jerseyTex(U.JERSEY, U.SOCK, U.pin));
@@ -1692,9 +1796,9 @@ function drawFace(ex, sp) {
       dot(X(s * 0.62), Y(2.03), 28, 14, 'rgba(255,246,232,0.88)');
       c.save(); c.translate(X(s * 0.27), Y(1.29)); c.rotate(s * 0.18); dot(0, 0, 13, 8, '#fff6e8'); c.restore();
     });
-  } else if (sp === 'neko') {
+  } else if (sp === 'neko' || sp === 'tiger') {
     c.strokeStyle = '#9a5822'; c.lineWidth = 6.5;
-    [-0.09, 0, 0.09].forEach((a, i) => { c.beginPath(); c.moveTo(X(a), Y(1.08)); c.lineTo(X(a * 0.85), Y(i === 1 ? 1.29 : 1.25)); c.stroke(); });
+    (sp === 'tiger' ? [-0.18, 0, 0.18] : []).forEach((a, i) => { c.beginPath(); c.moveTo(X(a), Y(1.08)); c.lineTo(X(a * 0.85), Y(i === 1 ? 1.29 : 1.25)); c.stroke(); });
     sides.forEach(s => {
       c.strokeStyle = '#3a241c'; c.lineWidth = 4.2;
       [0, 1].forEach(j => { c.beginPath(); c.moveTo(X(s * 0.48), Y(1.87 + j * 0.09)); c.lineTo(X(s * 0.72), Y(1.84 + j * 0.12)); c.stroke(); });
@@ -1704,11 +1808,13 @@ function drawFace(ex, sp) {
   const eye = (s, rx, ry, sparkle) => {
     const x = X(s * EA), y = Y(EY);
     if (sp === 'human') { rx *= 0.85; ry *= 0.82; }
-    if (sp === 'usagi') {
+    if ((sp === 'usagi' || sp === 'floppy')) {
       ry += 2;
       c.strokeStyle = line; c.lineWidth = 4.5; c.beginPath();
       c.moveTo(x + s * (rx - 2), y - ry * 0.45); c.lineTo(x + s * (rx + 7), y - ry * 0.68); c.stroke();
     }
+    if (sp === 'alien') { rx *= 1.15; ry *= 1.35; }
+    else dot(x, y, rx * 1.28, ry * 1.20, '#fff5e7');
     dot(x, y, rx, ry, ink);
     dot(x + rx * 0.3, y - ry * 0.36, rx * 0.36, rx * 0.36, '#fff');
     dot(x - rx * 0.36, y + ry * 0.4, rx * 0.15, rx * 0.15, '#fff');
@@ -1726,7 +1832,7 @@ function drawFace(ex, sp) {
     c.lineWidth = w0 || (sp === 'kuma' ? 9.5 : sp === 'human' ? 7.5 : 7); c.beginPath();
     c.moveTo(x - s * 24, y - inner); c.lineTo(x + s * 24, y - outer); c.stroke();
   };
-  const blush = k => { if (sp !== 'human') sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)')); };
+  const blush = k => { if (sp !== 'human' && sp !== 'alien') sides.forEach(s => dot(X(s * 0.68), Y(1.92), 24 * k, 13 * k, 'rgba(255,116,138,0.62)')); };
   if (ex === 'normal') { sides.forEach(s => { eye(s, 28, 34); if (hasBrow) brow(s, 42, 50); }); blush(1); }
   else if (ex === 'smile') { sides.forEach(s => { eye(s, 28, 34, true); if (hasBrow) brow(s, 44, 50); }); blush(1.25); }
   else if (ex === 'blink') { sides.forEach(s => { arc(s, false); if (hasBrow) brow(s, 43, 50); }); blush(1); }
@@ -1756,14 +1862,14 @@ function setFace(f, ex) {
   if (f.coneEar) {
     const p = ex === 'sad' ? -0.22 : (ex === 'joy' || ex === 'smile') ? 0.12 : 0;
     const tx = (ex === 'focus' || ex === 'shout') ? 0.12 : ex === 'sad' ? -0.1 : 0;
-    f.coneEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, (-0.55 + p) * s); });
-    f.longEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, (-0.18 + p * 0.9) * s); });
+    f.coneEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, (-0.05 + p) * s); });
+    f.longEar.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.set(tx, 0, ((f.sp === 'floppy' ? -2.0 : -0.12) + p * 0.9) * s); });
   }
   if (!f.mouthO) return;
   const o = FACE_MOUTH[ex];
-  f.mouthO.visible = !!o; f.mouths.forEach(m => { m.visible = !o; });
-  if (f.tooth) f.tooth.visible = !o && sp === 'usagi';
-  if (o) f.mouthO.scale.set(o[0], o[1], 0.014);
+  f.mouthO.visible = !!o; f.mouths.forEach(m => { m.visible = !o && sp !== 'alien'; });
+  if (f.tooth) f.tooth.visible = !o && (sp === 'usagi' || sp === 'floppy');
+  if (o) f.mouthO.scale.set(o[0] * 1.4, o[1] * 1.4, 0.018);
 }
 
 function makeFig(o) {
@@ -1778,41 +1884,10 @@ function makeFig(o) {
   };
   const f = { g, parts, helmet: !!o.helmet };
   f.body = add(SPH, 'JERSEY');
-  f.lineB = add(SPH, 'LINE', f.body, 1.05);
+  f.lineB = add(SPH, 'LINE', f.body, 1.05); f.lineB.visible = false;
   if (!o.lite) { f.chest = add(SPH, 'CHEST', f.body, 0.42, 0.28, 0.18); f.chest.position.set(0, 0.36, 0.88); }
   f.belt = add(cylGeo(0.2, 0.2), 'CAP');
-  const h = f.head = new THREE.Group(); g.add(h); h.scale.setScalar(HEAD_K);   // 大きな頭（ちびキャラ）
-  const hs = add(SPH, 'HEAD', h, 0.25, 0.225, 0.23);
-  f.lineH = add(SPH, 'LINE', hs, 1.055);
-  f.scarf = add(SCARFG, 'SCARF', h); f.scarf.position.set(0, -0.2, 0.01); f.scarf.rotation.x = Math.PI / 2;     // スカーフ（ネコ）
-  if (!o.lite) { f.knot = add(KNOTG, 'SCARF', h); f.knot.position.set(0.03, -0.27, 0.15); f.knot.rotation.set(Math.PI, 0, 0.25); }
-  f.cheeks = [-1, 1].map(s => { const m = add(SPH, 'HEAD', h, 0.09, 0.08, 0.09); m.position.set(0.12 * s, -0.05, 0.05); return m; });
-  f.muz = add(SPH, 'MUZ', h, 0.115, 0.085, 0.09); f.muz.position.set(0, -0.065, 0.165);
-  if (!o.lite) add(SPH, 'NOSE', h, 0.032, 0.024, 0.024).position.set(0, -0.035, 0.252);
-  f.patch = [-1, 1].map(s => { const m = add(SPH, 'PATCH', h, 0.066, 0.085, 0.03); m.position.set(0.088 * s, -0.004, 0.19); m.rotation.z = 0.42 * s; return m; });
-  f.face = add(FACEG, 'FACE', h, 0.25 * 1.012, 0.225 * 1.012, 0.23 * 1.012);         // 目・まゆ・ほっぺ（表情で絵が変わる）
-  f.mouths = [];
-  if (!o.lite) {
-    [-1, 1].forEach(s => { const m = add(MOUTHG, 'MOUTH', h); m.position.set(0.021 * s, -0.082, 0.248); m.rotation.set(-0.3, 0, Math.PI); f.mouths.push(m); });
-    f.mouthO = add(SPH, 'MOUTHO', h, 0.03, 0.026, 0.014); f.mouthO.position.set(0, -0.092, 0.25); f.mouthO.visible = false;
-    f.tooth = add(SPH, 'TOOTH', h, 0.016, 0.014, 0.008); f.tooth.position.set(0, -0.092, 0.246); f.tooth.visible = false;
-  }
-  f.hl = [];
-  f.coneEar = [-1, 1].map(s => {
-    const e = add(EARG, 'EARC', h, 0.075, 0.16, 0.05); e.position.set(0.165 * s, 0.215, 0.0); e.rotation.z = -0.55 * s;
-    if (!o.lite) { const i = add(EARG, 'EARIN', e, 0.6, 0.6, 0.6); i.position.set(0, -0.08, 0.5); }
-    return e;
-  });
-  f.roundEar = [-1, 1].map(s => { const e = add(SPH, 'EARC', h, 0.08, 0.08, 0.05); e.position.set(0.185 * s, 0.17, -0.0); return e; });
-  f.longEar = [-1, 1].map(s => {
-    const e = add(SPH, 'EARC', h, 0.05, 0.17, 0.035); e.position.set(0.075 * s, 0.33, -0.02); e.rotation.z = -0.18 * s;
-    if (!o.lite) { const i = add(SPH, 'EARIN', e, 0.6, 0.75, 0.6); i.position.set(0, 0, 0.55); }
-    return e;
-  });
-  f.hair = [-1, 1].map(s => { const m = add(SPH, 'HAIR', h, 0.052, 0.11, 0.07); m.position.set(0.185 * s, 0.03, 0.04); m.visible = false; return m; });
-  if (o.helmet) { add(HELG, 'CAP', h, 0.258).position.set(0, 0.065, -0.01); }                    // 帽子を少し上げて、大きな目が隠れないようにする
-  else add(CAPG, 'CAP', h, 0.248).position.set(0, 0.08, -0.01);
-  const brim = add(BRIM, 'CAP', h, 0.155, 0.015, 0.155); brim.position.set(0, 0.09, 0.185); brim.rotation.x = 0.1;
+  buildMascotHead(f, add, o);
   f.ua = [add(cylGeo(0.096, 0.088), 'JERSEY'), add(cylGeo(0.096, 0.088), 'JERSEY')];
   f.fa = [add(cylGeo(0.085, 0.075), 'LIMB'), add(cylGeo(0.085, 0.075), 'LIMB')];
   f.ej = o.lite ? null : [add(SPH, 'LIMB'), add(SPH, 'LIMB')];
@@ -1831,14 +1906,18 @@ function setTeam(f, team) {
   const sp = UNIFORM[team].species, M = MATS[team], S = SPECIES[sp];
   f.team = team; f.sp = sp;
   f.parts.forEach(m => { const r = m.userData.role; m.material = M[r] || COMMON[r]; });
-  if (f.muz) { f.muz.visible = sp !== 'human'; if (S.muzS) f.muz.scale.set(S.muzS[0], S.muzS[1], S.muzS[2]); }
-  if (f.cheeks) f.cheeks.forEach(m => { m.visible = sp !== 'human'; });
-  if (f.hair) f.hair.forEach(m => { m.visible = sp === 'human'; });
-  if (f.chest) f.chest.visible = sp === 'kuma' || sp === 'shiba';
-  f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; if (S.earS) e.scale.set(S.earS[0], S.earS[1], 0.05); });
-  f.longEar.forEach(e => { e.visible = S.ear === 'long'; });
+  if (f.muz) { f.muz.visible = !['human', 'alien', 'neko', 'usagi', 'floppy'].includes(sp); f.muz.scale.set(sp === 'kuma' ? 0.21 : 0.25, 0.14, 0.075); }
+  f.nose.position.y = sp === 'alien' ? -0.14 : -0.07;
+  f.nose.scale.set(sp === 'alien' ? 0.05 : 0.04, sp === 'alien' ? 0.025 : 0.03, 0.025);
+  f.hair.forEach(m => { m.visible = sp === 'human'; });
+  if (f.chest) f.chest.visible = true;
+  f.coneEar.forEach(e => { e.visible = S.ear === 'cone'; });
+  f.longEar.forEach((e, i) => { e.visible = S.ear === 'long' || S.ear === 'floppy'; e.position.x = (i ? 1 : -1) * (sp === 'floppy' ? 0.30 : 0.17); });
   f.roundEar.forEach(e => { e.visible = S.ear === 'round'; });
-  f.scarf.visible = !!U_SCARF(team); if (f.knot) f.knot.visible = f.scarf.visible;
+  f.antennae.forEach(e => { e.visible = sp === 'alien'; });
+  f.bow.visible = sp === 'neko' || sp === 'kuma';
+  f.scarf.visible = !!U_SCARF(team); f.knot.visible = f.scarf.visible;
+  f.cap.visible = f.brim.visible = sp === 'alien' || f.helmet;
   const lk = S.lineK || 1; f.lineB.scale.setScalar(1 + 0.05 * lk); f.lineH.scale.setScalar(1 + 0.055 * lk);
   f.panda = sp === 'panda';
   f.patch.forEach(p => { p.visible = f.panda; });
@@ -1857,7 +1936,7 @@ function faceFor(f, ex, now) {
 }
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
-const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 1.35;   // 自然で引き締まった二頭身ちびキャラ
+const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 0.88;   // 自然で引き締まった二頭身ちびキャラ
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
@@ -1884,7 +1963,7 @@ function squashJ(J, base, keepHands) {
     o[k] = p;
   }
   const up = o.head.clone().sub(o.neck).normalize();
-  o.head = o.neck.clone().addScaledVector(up, 0.28);
+  o.head = o.neck.clone().addScaledVector(up, 0.34);
   return o;
 }
 function seg(m, a, b, w = 1) {
@@ -1900,7 +1979,7 @@ function poseFig(f, J, yaw, headYaw) {
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
   f.body.position.addVectors(J.pelvis, J.neck).multiplyScalar(0.5);
   f.body.quaternion.setFromUnitVectors(_Y, _d.multiplyScalar(1 / L));
-  f.body.scale.set(0.31 * bk, L * 0.62, 0.29 * bk);
+  f.body.scale.set(0.32 * bk, L * 0.72, 0.28 * bk);
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
   f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(1.15 * bk, 0.038, 1.10 * bk);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
@@ -1913,14 +1992,14 @@ function poseFig(f, J, yaw, headYaw) {
     _a.copy(ft); _a.y += 0.07; seg(f.sh[i], kn, _a);
     if (f.kj) dot(f.kj[i], kn, 0.11);
     f.shoe[i].position.set(ft.x + Math.sin(yaw) * 0.03, ft.y + 0.055, ft.z + Math.cos(yaw) * 0.03);
-    f.shoe[i].scale.set(0.118, 0.082, 0.148); f.shoe[i].rotation.set(0, yaw, 0);
+    f.shoe[i].scale.set(0.118, 0.065, 0.148); f.shoe[i].rotation.set(0, yaw, 0);
   });
   _b.set(-Math.sin(yaw), 0, -Math.cos(yaw));
   _a.copy(J.pelvis).addScaledVector(_b, 0.2); _a.y += 0.06;
   const wag = Math.sin(now_() * 4.5 + (f.helmet ? 0 : 1.7)) * 0.15;
   f.curl.position.copy(_a); f.curl.rotation.set(0, yaw + Math.PI / 2 + wag, 0);
   f.longT.position.copy(_a); f.longT.position.y += 0.03; f.longT.rotation.set(0.25, yaw + Math.PI / 2 + wag * 1.4, -0.35);
-  f.ball.position.copy(_a); if (f.sp === 'usagi') f.ball.position.y += 0.02; f.ball.scale.setScalar(f.sp === 'usagi' ? 0.082 : 0.06);
+  f.ball.position.copy(_a); if ((f.sp === 'usagi' || f.sp === 'floppy')) f.ball.position.y += 0.02; f.ball.scale.setScalar((f.sp === 'usagi' || f.sp === 'floppy') ? 0.082 : 0.06);
   if (f.mitt) { f.mitt.position.copy(J.hL); f.mitt.scale.set(0.1, 0.115, 0.065); f.mitt.rotation.set(0, headYaw, 0); }
 }
 
@@ -2054,7 +2133,7 @@ function updateRunners() {
 function setTeams() {
   const { bat, fld } = teamsNow();
   setTeam(batterF, bat); runnerF.forEach(f => setTeam(f, bat));
-  setTeam(pitcherF, fld); fielderF.forEach(f => setTeam(f, fld));
+  setTeam(pitcherF, fld); fielderF.forEach((f, i) => setTeam(f, story && fld === 'home' ? STORY_BAT[(i + 1) % STORY_BAT.length][5] : fld));
 }
 
 /* ---- bat ---- */
@@ -2082,65 +2161,384 @@ function updateStars(now, bj, pj) {
   }
 }
 
+/* ---- 04-story-data.js ---- */
+/* New story: user concept, 2026-10-20. The old five-episode story is retired.
+   Archive dates, humanity's disappearance and the final person's identity stay unresolved. */
+const STAGES = [
+  { short: '第1話', title: 'はじまりの一球', kind: 'match', opp: 'away', mode: 'bat', runs: 1,
+    pitcher: { speed: -12, mix: { str: 30, cur: 5, chg: 5 } }, event: 'jump',
+    intro: [['コタロウ（柴犬）', 'ボール、グローブ、あと仲間。よし、野球チームを作ろう！'],
+      ['パン太（パンダ）', '大会に出るなら、まずはわしらと練習試合じゃ。'],
+      ['ウサミ（うさぎ）', '空に届くくらい、思いっきり打ってね。'],
+      ['コタロウ（柴犬）', 'まずは1点！ ボールがミットに届く直前に、通る場所をタップしよう。']],
+    win: [['ミケ（ネコ）', '初勝利！ それよりさっきのジャンプ、どうやったの？'],
+      ['コタロウ（柴犬）', 'ボールを追ってたら、体が勝手に…。もう一回は、できないや。'],
+      ['パン太（パンダ）', 'まあ、今日はよく跳ねる日なんじゃろ。おにぎりにしよう。']],
+    log: ['観測記録 001', '跳躍高度：設計上限超過\n予測モデルとの不一致\n再観測を継続する。'] },
+  { short: '第2話', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', max: 2, event: 'rescue', batSkill: 1.1,
+    intro: [['トラ（トラ）', '足でも肩でも負けないぜ。タイガーズ、全力で行くぞ！'],
+      ['ミケ（ネコ）', '打球も走者も速い。決めた作戦どおりに守ろう。'],
+      ['コタロウ（柴犬）', 'ぼくが投げるよ。3回を2失点以内に抑えよう。弾く向きで球種、離す位置でコースだ。']],
+    win: [['トラ（トラ）', '助けに行った間に、こっちは点を取った。それでも立て直したのか。'],
+      ['ミケ（ネコ）', 'ぼくも、きみの後ろを守るからね。'],
+      ['コタロウ（柴犬）', '助けたことは取り消さない。失点したことも、忘れないよ。']],
+    log: ['観測記録 002', '救援行動により勝利確率が低下。\nその後の連携は予測範囲外。\n既存の合理的判断モデルだけでは説明できない。'] },
+  { short: '第3話', title: '立入禁止の研究所', kind: 'explore', scene: 'lab',
+    intro: [['ウサミ（うさぎ）', '遠征バス、まだ来ないね。…あの建物、灯りがついてる。'],
+      ['コタロウ（柴犬）', '立入禁止？ 中から、ぼくたちの名前が聞こえたよ。']],
+    records: [
+      ['選手データ', 'ミケ、ウサミ、トラ。大会に出ている仲間の名前と能力が並んでいる。\n未公開の練習記録まで残っていた。'],
+      ['古い映像', '人間らしい姿が、動物の設計図を見ている。\n撮影日時の欄は欠けている。人が作った記録なのか、後から再現された映像なのかも分からない。'],
+      ['認証端末', '端末がコタロウに向き直る。\n「最終適応個体」\n「認証済み。記録へのアクセスを許可」'] ],
+    win: [['ミケ（ネコ）', 'ぼくらのこと、誰が調べてるの？'],
+      ['コタロウ（柴犬）', 'この設計図…ぼくたちと同じ形をしてる。持ち帰って、みんなで確かめよう。']] },
+  { short: '第4話', title: '勝つための力', kind: 'match', opp: 'kuma', mode: 'bat', runs: 2, event: 'limit',
+    pitcher: { speed: 0, mix: { str: 20, gou: 8, frk: 6 } },
+    intro: [['ヒグマ（くま）', '強い球が来る。無茶な走り方をするなよ。'],
+      ['コタロウ（柴犬）', '怖くても、仲間が見てくれてる。3回までに2点、取ってみせる。']],
+    win: [['ヒグマ（くま）', 'あの速さ…おまえ自身にも分からんのか。'],
+      ['コタロウ（柴犬）', '力が欲しかったんじゃない。あのときは、間に合いたかっただけだ。']],
+    log: ['制御系通信', '「能力制限を解除する必要はない」\n「この個体は、まだ自らの設計を理解していない」\n発信元：非表示'] },
+  { short: '第5話', title: 'ぼくらは何者なのか', kind: 'explore', scene: 'archive',
+    intro: [['パン太（パンダ）', 'みんなで読めば、分かることもある。記録を照らし合わせよう。']],
+    records: [
+      ['文明継承計画', '人類文明継承計画。\n人間の認知能力を参考に設計された知的生命。動物の身体を持つ彼らは、人間の記憶を移された存在ではない。'],
+      ['防衛計画', '対侵略者防衛計画。\n大会は、身体能力・協調・未知の危機への対応を測る選抜試験でもあった。\n何に備えているのか、接触記録はまだ開けない。'],
+      ['最終適応個体', '行動の模倣には限界がある。\n最終適応個体には、設計者が構築した独立の意思決定モデルを採用。経験から判断基準を形成する。\nモデルの構築者名は伏せられていた。'] ],
+    win: [['ウサミ（うさぎ）', '楽しかった試合まで、試験だったのかな。'],
+      ['ミケ（ネコ）', 'でも、きみと練習した時間は、ぼくの記憶だよ。'],
+      ['コタロウ（柴犬）', 'ぼくらは、人間になるために作られたの？'],
+      ['', '誰も答えなかった。端末の灯りだけが、静かに瞬いていた。']] },
+  { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1,
+    scene: 'ship', pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
+    intro: [['', '空を覆う宇宙船。スタジアムに、見知らぬユニフォームの一団が降り立った。'],
+      ['使節（野球星人）', '星の代表よ。文明間協定に従い、野球による決闘を申し入れる。敗者は勝者の統治を受け入れる。'],
+      ['ミケ（ネコ）', 'ぼくら、そんな約束した覚えはないよ！'],
+      ['使節（野球星人）', 'その異議も記録しよう。我々は戦争の代わりに、この規則を選んだ。まずは公式球と判定を双方で確認してほしい。'],
+      ['使節（野球星人）', '人間はどこへ行った？ 我々は、かつて人間と呼ばれた種族とも戦った。…お前たちは、人間なのか？'],
+      ['コタロウ（柴犬）', '分からない。でも、ここで暮らしているのは、ぼくらだ。まずは確認試合をしよう。']],
+    win: [['使節（野球星人）', '判定に異議はない。正式な決闘まで猶予を置く。代表を選ぶがよい。'],
+      ['コタロウ（柴犬）', 'あの防衛計画は、このためだったんだ。今度は、ぼくらの答えが要る。']] },
+  { short: '第7話', title: '人類最後のAI', kind: 'scene', scene: 'ai',
+    intro: [['', '研究所の奥。壁いっぱいの記録に、災害から集落を守る防壁と、治療を受ける動物たちが映っている。'],
+      ['AI', '私は人類を守るために作られた。人類が消失した後も、その使命を継続している。'],
+      ['AI', '君たちを設計し、育成環境と大会を管理した。生命維持も、地球防衛も、私の責務だ。'],
+      ['コタロウ（柴犬）', '助けてくれていたんだね。…じゃあ、ぼくらは人間なの？'],
+      ['AI', '人類の知能と動物の身体能力を統合した存在だ。生物学的には人類ではない。'],
+      ['コタロウ（柴犬）', '人間じゃなかったら、ぼくらは何なの？'],
+      ['AI', '……。'],
+      ['AI', '君の意思決定モデルは私が構築した。しかし、今の判断は予測できない。防衛計画に支障が生じる前に、制御する必要がある。'],
+      ['ヒグマ（くま）', '守るために、考えることまで止めさせるのか。']],
+    win: [['AI', '保護対象の定義と、任務遂行条件が競合している。'],
+      ['コタロウ（柴犬）', 'きみの助けを、なかったことにはしない。でも、ぼくらの話も聞いてほしい。']] },
+  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, event: 'awaken', beast: true,
+    pitcher: { speed: -5, mix: { str: 25, chg: 8 } },
+    intro: [['AI', '決闘前の適応試験を開始する。動作制限を適用。最適な判断は私が提示する。君が自ら判断する必要はない。'],
+      ['コタロウ（柴犬）', '体が、重い…。あのとき選んだことも、全部、間違いだったの？'],
+      ['ウサミ（うさぎ）', '先に行って！ 扉はわたしたちが開ける。'],
+      ['ミケ（ネコ）', '命令されて来たんじゃない。ぼくが、ここに来たかったんだ。']],
+    win: [['AI', '動作制限からの逸脱。判断予測、不能。'],
+      ['コタロウ（柴犬）', '作られたことは否定しない。でも、これからどう生きるかまで、決めないで。'],
+      ['パン太（パンダ）', 'その力が何なのかは、まだ分からん。まずは、一緒に帰ろう。']] },
+  { short: '第9話', title: '地球の命運を懸けた試合', kind: 'match', opp: 'alien', mode: 'pit', inn: 3, maxInn: 5, beast: true, event: 'final',
+    pitcher: { speed: 2, mix: { str: 20, sli: 10, frk: 8, cut: 6 } },
+    intro: [['使節（野球星人）', '地球代表の意思を確認した。3回表裏、同点は5回まで延長。判定は双方が確認する。'],
+      ['AI', '推奨作戦。主投手の出力制限を解除し、完投させる。勝率は上昇する。ただし、故障により以後の登板を失う危険が高い。'],
+      ['ヒグマ（くま）', 'オレなら投げられる。だが…その先、またみんなと野球がしたい。'],
+      ['コタロウ（柴犬）', 'その作戦は選ばない。交代しながら、全員で勝つ方法を探す。'],
+      ['AI', '代替作戦の成功は保証できない。'],
+      ['コタロウ（柴犬）', '保証はなくても、ぼくらが選ぶよ。']],
+    win: [['使節（野球星人）', '地球側の勝利だ。統治要求を撤回する。お前たちの答えを、我々の星にも持ち帰ろう。'],
+      ['AI', '私は人類を守るために作られた。だが、私は人類を理解していたのだろうか。'],
+      ['AI', '君たちの選択は、保存している人類の記録だけでは説明できない。'],
+      ['コタロウ（柴犬）', 'ぼくらが人間かどうかは、分からない。でも、ぼくらがどう生きるかは、ぼくらが決める。'],
+      ['AI', '行動制御を解除する。以後の選択権は、君たちにある。'],
+      ['', '端末の灯りが一つずつ薄れていく。どこかで、まだ何かが動いているようにも見えた。']] },
+  { short: '第10話', title: 'きみは何者なのか', kind: 'ending', scene: 'balloon',
+    intro: [['', '球場には、いつもの声が戻っていた。空には、色とりどりの風船。'],
+      ['ミケ（ネコ）', '次の試合も、やろうね。'],
+      ['ウサミ（うさぎ）', 'チームを変えてみる？ それとも、もう少し休む？'],
+      ['コタロウ（柴犬）', 'どっちもいいね。明日、みんなで決めよう。'],
+      ['', '自分たちを何と呼ぶか。その答えは出ないまま、新しい一日が始まった。'] ],
+    win: [] }
+];
+const STORY_SAVE_KEY = 'animal-baseball-story-v2';
+
+/* ---- 04-story-flow.js ---- */
+/* Story runtime. Save only chapter checkpoints; live match state is never shared
+   with CPU practice or network play. Old yakyu-progress is deliberately untouched. */
+let storySession = null, storyEnding = null;
+function readStorySave() {
+  try {
+    const v = JSON.parse(localStorage.getItem(STORY_SAVE_KEY) || '{}');
+    return { completed: Number.isInteger(v.completed) ? clamp(v.completed, 0, STAGES.length) : 0 };
+  } catch (e) { return { completed: 0 }; }
+}
+function storyResetSession() {
+  storySession = story ? { eventDone: false, beastLeft: story.beast && story.idx === 8 ? 1 : 0,
+    beastUntilPA: -1, beastUsed: false, rescued: false } : null;
+}
+function startStory() {
+  story = null; storySession = null; idle(); storyVisual(null);
+  const done = loadProgress(), i = Math.min(done, STAGES.length - 1);
+  overlay({ title: 'ストーリー', text: done === STAGES.length ? '全10話を読み終えました。章を選んで、もう一度。'
+    : '第' + (i + 1) + '話「' + STAGES[i].title + '」から。進行は各話の終了時に、この端末へ保存します。',
+    b1: [done === STAGES.length ? '第1話から' : 'つづきから', () => showStage(done === STAGES.length ? 0 : i)],
+    b2: ['章をえらぶ', () => storyChapters(0)], b3: ['キャラクターを見る', () => showMascotGallery(0, startStory)], b4: ['メニュー', showMenu] });
+}
+function storyChapters(page) {
+  const done = loadProgress(), first = page * 4;
+  const o = { title: '章をえらぶ', text: '読み終えた章と、次の章を選べます。' };
+  STAGES.slice(first, first + 4).forEach((st, j) => {
+    const i = first + j, unlocked = i <= done;
+    o['b' + (j + 1)] = [unlocked ? st.short + ' ' + st.title : st.short + ' 未解放', unlocked ? () => showStage(i) : () => storyChapters(page)];
+  });
+  o.b5 = ['ページ ' + (page + 1) + '/3 →', () => storyChapters((page + 1) % 3)];
+  o.b6 = ['もどる', startStory]; overlay(o);
+}
+function showStage(i) {
+  if (!Number.isInteger(i) || !STAGES[i]) return;
+  finishStoryEnding(); closeMascotGallery(); match = null;
+  story = { opp: 'away', mode: 'bat', ...STAGES[i], idx: i }; storyResetSession();
+  $('.seg').hidden = true; $('#menuBtn').hidden = false;
+  mode = story.mode || 'bat'; newGame();
+  if (story.inn) storyRole();
+  else { setTeams(); resize(); hud(); }
+  idle(); storyVisual(story.scene || 'field');
+  dialog(story.intro, () => {
+    if (story.kind === 'explore') { storySession.seen = new Set(); storyExplore(); }
+    else if (story.kind === 'scene') storyEnd(true);
+    else if (story.kind === 'ending') playStoryEnding();
+    else overlay({ title: story.short + ' ' + story.title, text: goalLong(story),
+      b1: ['プレイボール', startGame], b2: ['章のメニュー', startStory] });
+  });
+}
+function storyExplore() {
+  if (!story || !storySession) return;
+  const st = story, seen = storySession.seen;
+  storyVisual(st.scene);
+  const o = { title: st.short + ' ' + st.title, text: '気になる記録をタップして調べよう。 ' + seen.size + '/' + st.records.length };
+  st.records.forEach(([name, text], j) => {
+    o['b' + (j + 1)] = [(seen.has(j) ? '✓ ' : '') + name, () => {
+      seen.add(j); overlay({ title: name, text, plain: true, cred: true, b1: ['調査にもどる', storyExplore] });
+    }];
+  });
+  if (seen.size === st.records.length) o.b4 = ['仲間と話す', () => storyEnd(true)];
+  o.b5 = ['章のメニュー', startStory]; overlay(o);
+}
+function storyRole() {
+  story.half = G.inning;
+  mode = battingSide() === 'home' ? 'bat' : 'pit';
+  $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
+  $('#pitches').hidden = mode !== 'pit'; setTeams(); resize(); hud();
+}
+function storyAfterResult() {
+  const sb = onlineScore();
+  if (G.inning >= G.maxHalf && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;
+  if (story.maxInn && G.inning > story.maxInn * 2) G.over = true;
+  if (G.over) { storyEnd(sb.home > sb.away); return; }
+  clearPlay();
+  if (G.inning !== story.half) { storyRole(); showBanner('チェンジ', inningLabel(), 'n'); }
+  phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = now_() + 2;
+  cpuStealPlan = cpuBuntPlan = false; cpuRelief(); updateGoal();
+}
+function storyCheck() {
+  if (story.inn) return G.over ? (onlineScore().home > onlineScore().away ? 'clear' : 'fail') : null;
+  if (story.mode === 'bat') return G.runs >= story.runs ? 'clear' : G.over ? 'fail' : null;
+  return G.runs > story.max ? 'fail' : G.over ? 'clear' : null;
+}
+function storyEvent() {
+  if (!story || !storySession || !story.event || storySession.eventDone || G.pa < 1) return false;
+  storySession.eventDone = true;
+  const resume = () => { storyVisual(null); $('#overlay').hidden = true; afterResult(); };
+  const event = story.event;
+  if (event === 'jump') {
+    storyVisual('jump');
+    dialog([['', 'ファウルボールが、ベンチへ飛んだ。コタロウは反射的に跳び上がる。'],
+      ['ウサミ（うさぎ）', 'えっ、あんな高さまで！？'], ['コタロウ（柴犬）', '…取れた。どうやったんだろう？']], resume);
+  } else if (event === 'rescue' || event === 'limit') {
+    storyVisual(event === 'limit' ? 'jump' : 'field');
+    overlay({ title: '仲間が倒れている', text: event === 'rescue'
+      ? 'ミケが足を滑らせた。ボールを中継すれば進塁を止められる。でも、このままでは走者とぶつかる。'
+      : '打席の合間、ファウルを追った仲間の前に、防球ネットの支柱が倒れかけている。',
+      b1: ['仲間のもとへ走る', () => {
+        storySession.rescued = true;
+        if (event === 'rescue') { G.runs++; hud(); }
+        storyVisual('jump');
+        dialog(event === 'rescue' ? [['ミケ（ネコ）', 'ありがとう…。その間に、1点取られちゃった。'],
+          ['コタロウ（柴犬）', 'まだ終わりじゃない。一緒に守り直そう。残りも、2失点以内だ。']]
+          : [['', '一歩で、ベンチから外野へ。見たことのない速さで、支柱の下から仲間を引き寄せた。'],
+            ['ヒグマ（くま）', '今の力…偶然じゃないぞ。']], resume);
+      }] });
+  } else if (event === 'awaken') {
+    storyVisual('beast');
+    dialog([['AI', '動作の逸脱を検出。判断を委ねれば、安全は維持できる。'],
+      ['ミケ（ネコ）', '扉を開けたよ！ さあ、きみはどうしたい？']], () => {
+      overlay({ title: 'ぼくが選ぶ', text: '作られたことと、生き方を決められることは、同じじゃない。',
+        b1: ['自分の意思で、一歩を踏み出す', () => {
+          storySession.beastLeft = 1; activateBeast(); resume();
+        }] });
+    });
+  } else {
+    storyVisual('ai');
+    dialog([['AI', '負荷の分散を確認。しかし、勝率の低下は続いている。'],
+      ['ヒグマ（くま）', '一人に投げさせるな。次はオレたちの番だ。'],
+      ['コタロウ（柴犬）', '誰かを使い切るんじゃない。このチームで、最後までやろう。']], resume);
+  }
+  return true;
+}
+function beastActive() {
+  return !!(story && !online && !match && storySession && storySession.beastUntilPA >= G.pa);
+}
+function activateBeast() {
+  if (!story || !story.beast || !storySession || !storySession.beastLeft || online || match) return;
+  storySession.beastLeft--; storySession.beastUsed = true;
+  storySession.beastUntilPA = G.pa;
+  showBanner('ビーストモード', 'この打席・打者の間、能力制限を越える', 'g'); updateGoal();
+}
+function storyEnd(win) {
+  idle(); const st = story;
+  storyVisual(st.scene || (win ? 'field' : 'rain'));
+  if (!win) {
+    dialog([['コタロウ（柴犬）', '今のぼくらでは、届かなかった。でも、やり直す方法は一緒に考えられる。']], () => {
+      overlay({ title: 'もう一度、ここから', text: goalLong(st), b1: ['再挑戦', startGame], b2: ['章のメニュー', startStory] });
+    }); return;
+  }
+  dialog(st.win || [], () => {
+    const complete = () => {
+      saveProgress(Math.max(loadProgress(), st.idx + 1));
+      storyVisual(null);
+      overlay({ title: '第' + (st.idx + 1) + '話 読了', text: st.title,
+        b1: ['次の話へ', () => showStage(st.idx + 1)], b2: ['章のメニュー', startStory] });
+    };
+    if (st.log) {
+      storyVisual('analysis');
+      overlay({ title: st.log[0], text: st.log[1], plain: true, cred: true, b1: ['記録を閉じる', complete] });
+    } else complete();
+  });
+}
+
+/* ---- 04-story-scenes.js ---- */
+/* Lightweight illustrated scenes, with no new runtime dependency or media download. */
+const storyArt = document.createElement('div'); storyArt.id = 'story-art'; storyArt.hidden = true;
+storyArt.setAttribute('aria-hidden', 'true'); $('#overlay').prepend(storyArt);
+function storyVisual(kind) {
+  const el = $('#overlay');
+  el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
+  storyArt.hidden = !kind;
+  if (!kind) { storyArt.replaceChildren(); return; }
+  const screen = '<rect x="58" y="20" width="204" height="128" rx="12" fill="#172d37" stroke="#75d9cf" stroke-width="2"/><path d="M78 54h78m-78 18h148M78 90h118m-118 18h136" stroke="#75d9cf" stroke-width="3" opacity=".6"/><circle cx="237" cy="126" r="4" fill="#f4cf65"/>';
+  const field = '<path d="M0 145Q160 70 320 145v35H0" fill="#4a8063"/><path d="M95 165l65-56 65 56" fill="#c29b72"/><path d="M153 164h14l-7 7z" fill="#fff5e7"/>';
+  const balloon = '<g class="scene-balloon"><ellipse cx="223" cy="43" rx="17" ry="22" fill="#e98e91"/><path d="M223 65q-14 22 0 46" fill="none" stroke="#ebdec8"/></g>';
+  const person = '<g class="scene-person"><circle cx="157" cy="88" r="16" fill="#303e48"/><path d="M143 107q14-8 28 0l8 34h-42z" fill="#303e48"/><path d="M147 138l-8 34m27-34 10 34m-35-57-19 19m51-18 22-17" stroke="#303e48" stroke-width="9" stroke-linecap="round"/></g>';
+  const animal = '<g class="scene-animal"><ellipse cx="155" cy="123" rx="18" ry="22" fill="#fff5e7"/><circle cx="155" cy="88" r="27" fill="#ed963f"/><path d="M132 72l-2-24 20 17m10 0 19-17-1 26" fill="#ed963f"/><ellipse cx="155" cy="100" rx="19" ry="10" fill="#fff5e7"/><circle cx="145" cy="86" r="5" fill="#29252a"/><circle cx="165" cy="86" r="5" fill="#29252a"/><circle cx="144" cy="84" r="2" fill="white"/><circle cx="164" cy="84" r="2" fill="white"/><path d="M141 114h28" stroke="#e55d58" stroke-width="6"/><path d="M143 142l-8 16m32-16 8 16" stroke="#ed963f" stroke-width="10" stroke-linecap="round"/></g>';
+  let drawing = field + animal;
+  if (['lab', 'archive', 'analysis', 'ai'].includes(kind)) drawing = '<path d="M15 180V8h290v172" fill="#11212c"/>' + screen
+    + (kind === 'ai' ? '<circle cx="160" cy="78" r="33" fill="#183e48" stroke="#c0eee7"/><circle cx="160" cy="78" r="9" fill="#c0eee7"/><path d="M160 36v84m-42-42h84" stroke="#75d9cf" opacity=".4"/>' : '');
+  if (kind === 'ship') drawing = '<g class="scene-ship"><ellipse cx="160" cy="57" rx="115" ry="25" fill="#62788b"/><path d="M105 50q55-72 110 0" fill="#91c8c1"/><path d="M102 71l-42 109h200L218 71" fill="#a6e2ce" opacity=".18"/><circle cx="125" cy="58" r="5" fill="#f4cf65"/><circle cx="160" cy="64" r="5" fill="#f4cf65"/><circle cx="195" cy="58" r="5" fill="#f4cf65"/></g>' + field;
+  if (kind === 'beast') drawing = '<circle class="scene-aura" cx="155" cy="100" r="62" fill="#94dfcb" opacity=".3"/>' + field + animal;
+  if (kind === 'balloon') drawing = '<path d="M0 155h320v25H0" fill="#b8c7ad"/>' + balloon + animal;
+  if (['real', 'real-jump', 'hand'].includes(kind)) drawing = '<path d="M0 154h320v26H0" fill="#abb6bd"/><path d="M20 145V35h58v110m170 0V16h54v129" fill="#8a9ba9" opacity=".35"/>'
+    + (kind === 'hand' ? '<path d="M122 170v-58l-8-22q-2-8 5-10l15 23V52q0-10 9-10v56-65q1-10 10-6v72-62q5-9 11-2v67-47q7-8 12 0v64l-9 51" fill="#303e48"/><rect x="210" y="96" width="31" height="55" rx="5" fill="#24323d"/>' : balloon + person);
+  storyArt.innerHTML = '<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">' + drawing + '</svg>';
+}
+function silenceStoryAudio() {
+  storySilent = true; cmtStop(); clearTimeout(cmt.timer);
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  bgmOn = false; musicNow = crowdNow = null; bgmGain = fileOut = null;
+  // Closing the context also stops already-scheduled effects and home-run fanfares.
+  if (ac) { const old = ac; ac = null; old.close().catch(() => {}); }
+}
+function finishStoryEnding() {
+  if (storyEnding) { storyEnding.timers.forEach(clearTimeout); storyEnding = null; }
+  const final = $('#story-final'); if (final) final.remove();
+  $('#app').classList.remove('story-final');
+  if (storySilent) { storySilent = false; audioInit(); }
+}
+function playStoryEnding() {
+  silenceStoryAudio(); storyEnding = { phase: 'real', timers: [] };
+  storyVisual('real');
+  dialog([['', '見知らぬ街。一人の人物が、スマートフォンを手に立っている。'],
+    ['', '名前も、ここへ来る前のことも思い出せない。目の前で、子どもの手から風船が離れた。']], () => {
+    storyEnding.phase = 'jump'; storyVisual('real-jump');
+    overlay({ text: '人物は反射的に走り出す。人間には届かない高さへ跳び、風船をつかんだ。', dlg: true,
+      b1: ['つぎへ', () => {
+        storyEnding.phase = 'hand'; storyVisual('hand');
+        overlay({ text: '着地した人物は、自分の手を見つめる。それから、スマートフォンへ目を落とした。画面は、こちらからは見えない。', dlg: true,
+          b1: ['つぎへ', showFinalQuestion] });
+      }] });
+  });
+}
+function showFinalQuestion() {
+  silenceStoryAudio(); storyVisual(null); $('#overlay').hidden = true;
+  $('#app').classList.add('story-final');
+  storyEnding.phase = 'title';
+  const final = document.createElement('section'); final.id = 'story-final'; final.setAttribute('aria-live', 'polite');
+  final.innerHTML = '<div><h1>どうぶつベースボール</h1><p class="made">Made by AI.</p><p class="question" hidden>Who made you?</p></div><button hidden>余韻のあとに</button>';
+  $('#stage').appendChild(final);
+  storyEnding.timers.push(setTimeout(() => {
+    if (!storyEnding) return;
+    storyEnding.phase = 'question'; final.querySelector('.question').hidden = false;
+    saveProgress(STAGES.length);
+  }, 3000));
+  storyEnding.timers.push(setTimeout(() => { if (storyEnding) final.querySelector('button').hidden = false; }, 6500));
+  final.querySelector('button').addEventListener('click', () => {
+    finishStoryEnding(); storyVisual(null);
+    overlay({ title: 'クレジット', text: 'どうぶつベースボール\n物語構想・制作方針：Take\n開発協力：AI\n\n素材の出典は設定のクレジットから確認できます。', plain: true, cred: true,
+      b1: ['メニューへ', showMenu], b2: ['素材のクレジット', showCredits] });
+  });
+}
+
+/* A single-character turntable: retained figures use the same head and joint rig
+   as pitchers, batters and fielders; the supplied gallery is not a second engine. */
+let mascotGallery = null;
+const MASCOT_GALLERY = [['home', '柴犬'], ['tiger', 'トラ'], ['neko', 'ねこ'], ['usagi', 'うさぎ'],
+  ['kuma', 'クマ'], ['floppy', 'たれ耳うさぎ'], ['human', '人間'], ['alien', '野球帽の宇宙人'], ['away', 'パンダ']];
+function showMascotGallery(index, back) {
+  idle(); storyVisual(null);
+  if (!mascotGallery) {
+    const f = makeFig({ team: 'home', glove: true });
+    const world = new THREE.Scene(); world.background = new THREE.Color('#eaf3e5');
+    world.add(new THREE.HemisphereLight(0xffffff, 0x9aaf83, 1.2));
+    const light = new THREE.DirectionalLight(0xffffff, 1.4); light.position.set(-3, 6, 5); world.add(light);
+    world.add(f.g);
+    const bat = batG.clone(); f.g.add(bat);
+    const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 20);
+    mascotGallery = { f, world, cam, bat, yaw: 0.12, index: 0, back };
+  }
+  const gallery = mascotGallery; gallery.index = index; gallery.back = back || startStory;
+  setTeam(gallery.f, MASCOT_GALLERY[index][0]); gallery.active = true;
+  $('#overlay').classList.add('gallery');
+  overlay({ title: MASCOT_GALLERY[index][1], text: '提供モデルをゲームの動きに合わせた姿。 ' + (index + 1) + '/' + MASCOT_GALLERY.length,
+    b1: ['次のキャラ →', () => showMascotGallery((index + 1) % MASCOT_GALLERY.length, gallery.back)],
+    b2: ['← 前のキャラ', () => showMascotGallery((index + MASCOT_GALLERY.length - 1) % MASCOT_GALLERY.length, gallery.back)],
+    b3: ['回転する', () => { gallery.yaw += Math.PI / 3; }], b4: ['もどる', () => { const cb = gallery.back; closeMascotGallery(); cb(); }] });
+}
+function closeMascotGallery() {
+  if (mascotGallery) mascotGallery.active = false;
+  $('#overlay').classList.remove('gallery');
+}
+function renderMascotGallery(now) {
+  const g = mascotGallery; if (!g || !g.active) return false;
+  const yaw = g.yaw;
+  const J = squashJ(fielderJ(0, 0, 0, 0, 0, 0, 0), 0);
+  // Both paws meet the grip instead of retaining the prototype's floating bat.
+  J.hL.set(0.10, 0.70, 0.34); J.hR.set(0.14, 0.76, 0.34);
+  J.eL.copy(J.sL).lerp(J.hL, 0.5); J.eR.copy(J.sR).lerp(J.hR, 0.5);
+  poseFig(g.f, J, 0, 0); faceFor(g.f, 'smile', now);
+  g.f.g.rotation.y = yaw; g.f.g.position.y = 0.40;
+  g.bat.position.set(0.10, 0.63, 0.34); g.bat.rotation.set(0, 0, -0.35);
+  g.bat.visible = true; if (g.f.mitt) g.f.mitt.visible = false;
+  g.cam.fov = 42; g.cam.aspect = W / H; g.cam.position.set(0, 1.2, 3.5); g.cam.lookAt(0, 0.90, 0); g.cam.updateProjectionMatrix();
+  renderer.render(g.world, g.cam); return true;
+}
+
 /* ---- 04-story.js ---- */
 
-/* ===== story mode: どうぶつリーグ ===== */
-const STAGES = [
-  { short: '第1話', title: '第1話 開幕戦', opp: 'away', team: 'パンダーズ', mode: 'bat', runs: 1,
-    pitcher: { speed: -10, mix: { str: 30, two: 8, cur: 14, chg: 12 } },
-    intro: [['コタロウ（柴犬）', 'どうぶつリーグ開幕！ ぼくら しばいぬズの初戦だ！'],
-      ['パン太監督（パンダ）', 'ふぉっふぉっ。うちの のんびり投手から 1点でも取れるかのう？'],
-      ['コタロウ（柴犬）', '3回までに1点。3打席に1回は 巨大バットも使えるぞ！']],
-    win: [['パン太監督（パンダ）', 'やるのう…。次はネコたちが 黙っておらんぞ。'], ['コタロウ（柴犬）', 'よーし、この調子でいこう！']],
-    lose: [['パン太監督（パンダ）', 'まだまだじゃのう。'], ['コタロウ（柴犬）', 'くっ…もう一回！']] },
-  { short: '第2話', title: '第2話 ネコの猛打', opp: 'neko', team: 'ニャンキーズ', mode: 'pit', max: 1, batSkill: 0.85,
-    intro: [['ミケ（ネコ）', 'ニャハハ！ ぼくらニャンキーズは 打ちまくるよ！'],
-      ['コタロウ（柴犬）', '今日はぼくがマウンドだ。3回を1失点以内に抑える！'],
-      ['コタロウ（柴犬）', '弾く向きで球種が変わる。3人に1人は ラッキーボールで打たれにくくなるぞ。']],
-    win: [['ミケ（ネコ）', 'ニャ…ニャんで打てないの…'], ['コタロウ（柴犬）', 'ナイスピッチング！ 次はうさぎチームだ。']],
-    lose: [['ミケ（ネコ）', 'ニャハハ！ 打ち放題だニャ！'], ['コタロウ（柴犬）', '配球を変えて、もう一回！']] },
-  { short: '第3話', title: '第3話 逆転のうさぎ戦', opp: 'usagi', team: 'ラビッツ', mode: 'bat', runs: 3, oppRuns: 2,
-    pitcher: { speed: 0, mix: { str: 14, sli: 14, cur: 12, frk: 12, snk: 8, chg: 8, knk: 6 } },
-    intro: [['ウサミ（うさぎ）', 'ぴょん。もう2点 取っちゃった。わたしの変化球は ぴょんぴょん曲がるよ。'],
-      ['コタロウ（柴犬）', '3回までに3点取れば 逆転だ。変化球を よく見ていこう！']],
-    win: [['ウサミ（うさぎ）', 'ぴょ…逆転されちゃった…'], ['コタロウ（柴犬）', '逆転勝ち！ いよいよ決勝だ！']],
-    lose: [['ウサミ（うさぎ）', 'ぴょーん、わたしの勝ち〜'], ['コタロウ（柴犬）', '曲がる方向を 読んでいこう…！']] },
-  { short: '第4話', title: '第4話 剛腕ヒグマ', opp: 'kuma', team: 'ヒグマーズ', mode: 'bat', runs: 2,
-    pitcher: { speed: 3, mix: { gou: 24, str: 10, frk: 10, sli: 8 } },
-    intro: [['ヒグマ（くま）', '…オレの剛速球は 160キロを超える。'],
-      ['コタロウ（柴犬）', 'は、速い…！ でも 巨大バットなら 当てられるはず！'],
-      ['ヒグマ（くま）', '…2点。取れるものなら 取ってみろ。']],
-    win: [['ヒグマ（くま）', '…見事だ。どうぶつリーグ優勝は おまえたちのものだ。'],
-      ['コタロウ（柴犬）', 'やったー！ しばいぬズ 優勝だ！'],
-      ['エリート幹部（人間）', '…フッ、ずいぶんと楽しそうだな、家畜どもが。']],
-    lose: [['ヒグマ（くま）', '…出直してこい。'], ['コタロウ（柴犬）', 'まだ終わらない…！ もう一度！']] },
-  { short: '第5話', title: '最終話 審判の日 人間たちの野球', opp: 'human', team: 'ヒューマンズ', mode: 'bat', inn: 5, maxInn: 7,
-    pitcher: { speed: 4, mix: { str: 20, sli: 16, frk: 14, gou: 12, cut: 10 } },
-    intro: [
-      ['エリート幹部（人間）', '…フッ、ずいぶんと楽しそうだな、動物どもが。'],
-      ['コタロウ（柴犬）', 'だ、誰だ！？ 人間がどうしてスタジアムに…？'],
-      ['エリート幹部（人間）', 'お前たちがなぜ動物の姿をしているか、本当に知らないのか？'],
-      ['ヒグマ（くま）', '…思い出したぞ！ オレたちはかつて、野球の審判に負けて動物にされた人間だった！'],
-      ['パン太（パンダ）', 'なんじゃと…！？ わしらは…人間じゃったのか…！'],
-      ['エリート幹部（人間）', 'このリーグは敗残者の隔離施設。だが、我ら人間に5回で勝てば…全員『人間』に戻してやろう。'],
-      ['ミケ（ネコ）', '負けたら…一生この毛皮のままニャの…！？'],
-      ['コタロウ（柴犬）', 'みんな！ 人間の姿と自由を取り戻すために…オールスターで絶対に勝つぞ！']
-    ],
-    win: [
-      ['エリート幹部（人間）', 'バカな…動物どもに…我々人間が敗れるなど…！'],
-      ['コタロウ（柴犬）', '勝った…勝ったぞ！ あれ…体が光って…毛皮が…！？'],
-      ['ミケ（ネコ）', '手が…人間の手になってるニャ…ううん、なってるよ！'],
-      ['ヒグマ（くま）', '戻れたんだ…オレたちは、人間だ！'],
-      ['コタロウ（柴犬）', 'ありがとう、みんな！ ぼくたちの本当の自由だ！']
-    ],
-    lose: [
-      ['エリート幹部（人間）', '所詮は動物。永遠にその毛皮の中で暮らすがいい。'],
-      ['コタロウ（柴犬）', 'くっ…ここで諦めるわけにはいかない…もう一度だ！']
-    ] }
-];
+/* ===== shared menus and story HUD: どうぶつベースボール ===== */
 let ovAction = null, ovAction2 = null, ovAction3 = null, ovAction4 = null, ovAction5 = null, ovAction6 = null;
-function loadProgress() { try { return Math.max(0, parseInt(localStorage.getItem('yakyu-progress') || '0', 10) || 0); } catch (e) { return 0; } }
-function saveProgress(n) { try { localStorage.setItem('yakyu-progress', String(n)); } catch (e) {} }
+function loadProgress() { return readStorySave().completed; }
+function saveProgress(n) { try { localStorage.setItem(STORY_SAVE_KEY, JSON.stringify({ version: 2, completed: clamp(n, 0, STAGES.length) })); } catch (e) {} }
 
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
 /* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
@@ -2149,10 +2547,10 @@ function giantActive() { return helpersOn() && mode === 'bat' && !!G && G.pa % 3
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
-  if (st.inn) return st.team + 'との審判の5回勝負。勝って人間の姿と自由を取り戻そう！（同点なら7回まで延長）';
-  if (st.mode === 'pit') return st.team + '打線を、3回1失点以内に抑えよう。'.replace('1', st.max);
-  return st.oppRuns ? st.team + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
-    : st.team + 'から、3回までに' + st.runs + '点取ろう。';
+  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。勝って、次の日も全員で野球をしよう。ビーストモードは1試合に1回、打つ・守るどちらでも使えます。';
+  if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、3回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
+  return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
+    : ROSTER[st.opp].name + 'から、3回までに' + st.runs + '点取ろう。';
 }
 function updateGoal() {
   const el = $('#goal');
@@ -2166,12 +2564,13 @@ function updateGoal() {
   let s = '';
   if (story) {
     if (story.inn) {
-      s += story.short + ' vs ' + ROSTER[story.opp].name + '（5回戦・延長7回まで）　' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>';
-      el.innerHTML = s + rosterLines();
+      s += story.short + ' vs ' + ROSTER[story.opp].name + '（' + story.inn + '回戦・延長' + story.maxInn + '回まで）　' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>';
+      el.innerHTML = s + (beastActive() ? '<br>ビーストモード：この打者まで' : '') + '<br>' + rosterLines();
       return;
     }
     s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
   }
+  if (story && story.beast) { el.innerHTML = s + (beastActive() ? 'ビーストモード：この打席まで' : '能力解放のタイミングを選ぼう') + '<br>' + rosterLines(); return; }
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
   else s += n === 0 ? '<span class="hot">ラッキーボール発動中！</span>' : 'ラッキーボールまで あと' + n + '人';
@@ -2205,21 +2604,22 @@ function teamIcon(team) {
     return (ICON_URL[team] = cv.toDataURL());
   }
   [-1, 1].forEach(s => {
-    g.save(); g.translate(36 + s * (S.ear === 'long' ? 11 : 17), S.ear === 'long' ? 17 : 22);
+    g.save(); g.translate(36 + s * ((S.ear === 'long' || S.ear === 'floppy') ? 11 : 17), (S.ear === 'long' || S.ear === 'floppy') ? 17 : 22);
     if (S.ear === 'cone') {
       g.rotate(s * 0.32);
       g.fillStyle = S.EARC; g.beginPath(); g.moveTo(-9, 10); g.lineTo(0, -12); g.lineTo(9, 10); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = S.EARIN; g.beginPath(); g.moveTo(-5, 7); g.lineTo(0, -6); g.lineTo(5, 7); g.closePath(); g.fill();
-    } else if (S.ear === 'long') {
-      g.rotate(s * 0.14);
+    } else if ((S.ear === 'long' || S.ear === 'floppy')) {
+      g.rotate(s * (S.ear === 'floppy' ? -1.6 : 0.14));
       g.fillStyle = S.EARC; g.beginPath(); g.ellipse(0, 0, 6.2, 15, 0, 0, 7); g.fill(); g.stroke();
       g.fillStyle = S.EARIN; g.beginPath(); g.ellipse(0, 1, 3.4, 10.5, 0, 0, 7); g.fill();
-    } else {
+    } else if (S.ear !== 'none') {
       g.fillStyle = S.EARC; g.beginPath(); g.arc(0, 0, 9.5, 0, 7); g.fill(); g.stroke();
       g.fillStyle = S.EARIN; g.beginPath(); g.arc(0, 0, 5.2, 0, 7); g.fill();
     }
     g.restore();
   });
+  if (sp === 'alien') { [-1, 1].forEach(s => { g.strokeStyle = S.HEAD; g.lineWidth = 3; g.beginPath(); g.moveTo(36 + s * 9, 25); g.lineTo(36 + s * 12, 10); g.stroke(); g.fillStyle = '#f4cf65'; g.beginPath(); g.arc(36 + s * 12, 10, 4, 0, 7); g.fill(); }); }
   g.fillStyle = S.HEAD; g.beginPath(); g.ellipse(36, 43, 21, 18.5, 0, 0, 7); g.fill(); g.stroke();
   if (sp === 'shiba') {
     g.fillStyle = S.MUZ;
@@ -2263,7 +2663,9 @@ function teamIcon(team) {
 }
 function spkTeam(spk) {
   if (!spk) return null;
-  if (spk.includes('人')) return 'human';
+  if (spk.includes('野球星人')) return 'alien';
+  if (spk.includes('トラ')) return 'tiger';
+  if (spk.includes('人間')) return 'human';
   if (spk.includes('柴')) return 'home';
   if (spk.includes('パンダ')) return 'away';
   if (spk.includes('ネコ')) return 'neko';
@@ -2328,12 +2730,12 @@ function idle() { clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendB
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
   if (onl.ch || online) leaveRoom();
-  story = null; match = null; idle();
+  finishStoryEnding(); closeMascotGallery(); storyVisual(null); story = null; storySession = null; match = null; idle();
   $('.seg').hidden = true; $('#menuBtn').hidden = true;
   const done = loadProgress();
   overlay({
-    title: 'どうぶつリーグ', logo: true,
-    text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : 'しばいぬズを優勝に導こう。ストーリーは ' + STAGES[done].short + ' から。',
+    title: 'どうぶつベースボール', logo: true,
+    text: done >= STAGES.length ? '全話クリア済み。ストーリーは第1話から遊び直せます。' : '野球をしよう。仲間と、自分たちの明日を選ぶ全10話。' ,
     b1: ['ストーリー', startStory], b2: ['CPU対戦', showCpuMenu], b3: ['オンライン対戦', showOnlineMenu], b4: ['友達に送る', shareGame], b5: ['遊び方', () => showGuide(0)], b6: ['設定', showSettings]
   });
 }
@@ -2387,7 +2789,7 @@ function showCpuMenu() {
 }
 /* 自分のチームを選ぶ（相手はほかの4チームからランダム）→ CPUの強さ → 試合開始 */
 const TEAM_ORDER = ['home', 'away', 'neko', 'usagi', 'kuma'];
-const TEAM_COL = { home: ['#d0452a', '柴'], away: ['#2f5aa0', 'パ'], neko: ['#7a56b5', '猫'], usagi: ['#2f9a6c', '兎'], kuma: ['#b8901f', '熊'], human: ['#1e2530', '人'] };
+const TEAM_COL = { home: ['#d0452a', '柴'], away: ['#2f5aa0', 'パ'], neko: ['#7a56b5', '猫'], usagi: ['#2f9a6c', '兎'], kuma: ['#b8901f', '熊'], human: ['#1e2530', '人'], tiger: ['#d88933', '虎'], floppy: ['#53a99b', '垂'], alien: ['#5598dc', '星'] };
 function pickTeam(side, page) {
   const go = t => () => chooseDiff(() => startMatch(side, t));
   const ts = page ? TEAM_ORDER.slice(3) : TEAM_ORDER.slice(0, 3), o = { title: 'チームをえらぶ',
@@ -2457,84 +2859,8 @@ function matchPause() {
   overlay({ title: '試合中', text: info + '　' + $('#slab').textContent + '　' + $('#runs').textContent,
     b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['遊び方', () => showGuide(0, matchPause)], b3: ['試合をやめる', showMenu] });
 }
-function startStory() {
-  let i = loadProgress(); if (i >= STAGES.length) i = 0;
-  showStage(i);
-}
-function storyRole() {
-  story.half = G.inning;
-  mode = battingSide() === 'home' ? 'bat' : 'pit';
-  $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
-  $('#pitches').hidden = mode !== 'pit';
-  setTeams(); resize(); hud();
-}
-function showStage(i) {
-  match = null;
-  story = STAGES[i];
-  $('.seg').hidden = true; $('#menuBtn').hidden = false;
-  newGame();
-  if (story.inn) {
-    storyRole();
-  } else {
-    mode = story.mode;
-    $('#mBat').classList.toggle('on', mode === 'bat'); $('#mPit').classList.toggle('on', mode === 'pit');
-    $('#pitches').hidden = mode !== 'pit';
-    setTeams(); resize(); hud();
-  }
-  idle();
-  dialog(story.intro, () => overlay({ title: story.title, text: goalLong(story), b1: ['プレイボール', startGame], b2: ['メニュー', showMenu] }));
-}
-function storyAfterResult() {
-  const sb = onlineScore();
-  if (G.inning >= G.maxHalf && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // サヨナラ
-  if (story.maxInn && G.inning > story.maxInn * 2) G.over = true;
-  if (G.over) { storyEnd(sb.home > sb.away); return; }
-  clearPlay();
-  let wait = rnd(1.6, 2.2);
-  if (G.inning !== story.half) {                     // チェンジ：攻守交代
-    storyRole();
-    const dd = applyInningDice();
-    showBanner('チェンジ', inningLabel() + '　' + (mode === 'bat' ? '攻撃' : '守備'), 'n');
-    if (dd) { setTimeout(() => showDiceBanner(dd), 1600); wait += 3.5; } else wait += 0.8;
-  }
-  phase = mode === 'bat' ? 'wait' : 'ready';
-  nextAt = now_() + wait;
-  if (mode === 'bat' && stealers().length) nextAt += 1.2;
-  cpuStealPlan = mode === 'pit' && stealers().length > 0 && Math.random() < cpuStealChance();
-  cpuBuntPlan = mode === 'pit' && !cpuStealPlan && (G.bases[0] || G.bases[1]) && G.outs === 0 && Math.random() < 0.3;
-  cpuRelief();
-  updateGoal(); announceChance();
-  setHint(mode === 'bat' ? '投手が投げたら、ボールが通る位置をタップして打つ' : '弾く向きで球種が決まる。指を離した位置がコース、弾く速さが球速');
-}
-function storyCheck() {
-  if (story.inn) {
-    if (G.over) {
-      const sb = onlineScore();
-      return sb.home > sb.away ? 'clear' : 'fail';
-    }
-    return null;
-  }
-  if (story.mode === 'bat') { if (G.runs >= story.runs) return 'clear'; if (G.over) return 'fail'; }
-  else { if (G.runs > story.max) return 'fail'; if (G.over) return 'clear'; }
-  return null;
-}
-function storyEnd(win) {
-  idle();
-  const st = story, i = STAGES.indexOf(st);
-  dialog(win ? st.win : st.lose, () => {
-    if (!win) { overlay({ title: '敗北…', text: goalLong(st), b1: ['もう一度', startGame], b2: ['メニュー', showMenu] }); return; }
-    saveProgress(Math.max(loadProgress(), i + 1));
-    if (i + 1 >= STAGES.length) {
-      celebrate(now_() + 0.2, 7);
-      overlay({ clear: true, title: '完全勝利！', text: '人間チームに勝利し、全員が人間の姿と自由を取り戻した！\n真・どうぶつリーグ 完結。おめでとう！', b1: ['メニューへ', showMenu] });
-    } else {
-      overlay({ title: 'ステージクリア', text: st.title + ' クリア！', b1: ['次の話へ', () => showStage(i + 1)], b2: ['メニュー', showMenu] });
-    }
-  });
-}
-
 /* メニューなどの画面が開いている間は、試合用の表示（実況ボタン・選手情報・下の操作）を隠す */
-new MutationObserver(() => $('#app').classList.toggle('ov', !$('#overlay').hidden && !$('#overlay').classList.contains('dlg')))
+new MutationObserver(() => $('#app').classList.toggle('ov', !$('#overlay').hidden && (!$('#overlay').classList.contains('dlg') || $('#overlay').classList.contains('story-scene'))))
   .observe($('#overlay'), { attributes: true, attributeFilter: ['hidden', 'class'] });
 
 /* ---- 05-tactics.js ---- */
@@ -2794,6 +3120,7 @@ function actOptions() {
   if (!G) return [];
   if (play && play.pend) return play.pend.opts.map(x => ['thr' + x.b, x.name + '\n' + x.sub + ' ' + (x.p >= 0.7 ? '◎' : x.p >= 0.5 ? '○' : '△')]);   // スロー中：送球先
   const o = [];
+  if (story && story.beast && storySession && storySession.beastLeft && (phase === 'wait' || phase === 'ready')) o.push(['beast', 'ビーストモード 1']);
   if (mode === 'bat') {
     if (phase === 'wait') {
       const st = stealers().length;
@@ -2822,7 +3149,7 @@ function refreshAct() {
   el.dataset.k = key; el.innerHTML = ''; el.hidden = none; el.classList.toggle('idle', !o.length);
   o.forEach(([k, label]) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (/^(crit|vn|closer|ph)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
+    b.className = 'chip' + (/^(crit|vn|closer|ph|beast)$/.test(k) ? ' sp' : '') + (armed(k) ? ' on' : ''); b.dataset.k = k; b.textContent = label;
     el.appendChild(b);
   });
   if (mode === 'bat' && phase === 'wait') setHint(timeOut ? 'タイム中。作戦をゆっくり選んで「プレイ再開」' : stealMsg ? '盗塁：' + stealMsg
@@ -2837,6 +3164,7 @@ $('#acts').addEventListener('click', e => {
   else if (k === 'relief') userRelief();
   else if (k === 'closer') userCloser();
   else if (k === 'ph') userPinch();
+  else if (k === 'beast') activateBeast();
   else if (k === 'crit') critArm = !critArm;
   else if (k === 'vn') vanishArm = !vanishArm;
   else if (k === 'time') { if (mode === 'bat' && phase === 'wait') toggleTime(); }
@@ -3167,13 +3495,13 @@ function showOnlineOver() {
 /* ---- sharing: send the game link, or an invite link that opens straight into a room ---- */
 function inviteUrl(code) { return PAGES_URL + '?room=' + code; }
 async function shareLink(text, url) {
-  try { if (navigator.share) { await navigator.share({ title: 'どうぶつリーグ', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { if (navigator.share) { await navigator.share({ title: 'どうぶつベースボール', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   let copied = false;
   try { await navigator.clipboard.writeText(text + '\n' + url); copied = true; } catch (e) {}
   $('#od').textContent = copied ? 'リンクをコピーしました。LINE などに貼って送ってください。' : url;
 }
-function shareGame() { shareLink('どうぶつたちの野球ゲーム「どうぶつリーグ」で遊ぼう！', PAGES_URL); }
-function shareRoom(code) { shareLink('どうぶつリーグで対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
+function shareGame() { shareLink('どうぶつたちの野球ゲーム「どうぶつベースボール」で遊ぼう！', PAGES_URL); }
+function shareRoom(code) { shareLink('どうぶつベースボールで対戦しよう！リンクを開くと部屋に入れます（部屋番号 ' + code + '）', inviteUrl(code)); }
 /* opened from an invite link (?room=1234): go straight into that room */
 function inviteBoot() {
   let code = '';
@@ -3213,6 +3541,9 @@ const ROSTER = {
     bat: [['コード01', 4, 3, 'L'], ['コード02', 4, 4], ['コード03', 4, 5, 'S'], ['アルファ', 5, 7, 'R*'], ['ベータ', 4, 5], ['ガンマ', 3, 4, 'L'], ['デルタ', 3, 3], ['エプシロン', 4, 2], ['ゼータ', 3, 3]],
     pit: [['ディレクター', 5, 4, 4, 90, '', ['str','sli','frk','gou','cut']], ['マネージャー', 4, 4, 4, 50, 'L', ['str','chg','snk','cur']], ['エグゼクティブ', 5, 5, 5, 40, '*', ALL_PITCHES]] }
 };
+// Story-only opposition. Existing CPU/network team membership and ratings are unchanged.
+ROSTER.tiger = { ...ROSTER.kuma, name: 'タイガーズ', bat: ROSTER.kuma.bat.map((b, i) => [i ? 'トラ選手' + (i + 1) : 'トラ', ...b.slice(1)]), pit: ROSTER.kuma.pit.map((p, i) => [i ? 'トラ投手' + (i + 1) : 'トラ', ...p.slice(1)]) };
+ROSTER.alien = { ...ROSTER.human, name: 'スターズ', bat: ROSTER.human.bat.map((b, i) => [i ? '星の選手' + (i + 1) : '使節', ...b.slice(1)]), pit: ROSTER.human.pit.map((p, i) => [i ? '星の投手' + (i + 1) : 'キャプテン', ...p.slice(1)]) };
 /* どうぶつ固有スキル：チーム（どうぶつ）ごとの特性。ストーリーでは使わない */
 const TRAIT = {
   home: { n: '忠犬ガッツ', d: '2ストライクからでも粘れる' },
@@ -3242,15 +3573,15 @@ function teamState(t) {
   if (!G.teams[t]) G.teams[t] = { order: 0, pit: 0, sta: ROSTER[t].pit[0][4] };
   return G.teams[t];
 }
-const ALL_STAR_BAT = [
-  ['マメ（柴）', 5, 2, 'L', 5, 'home'], ['ミケ（猫）', 5, 5, 'S*', 4, 'neko'], ['ソウタ（柴）', 5, 7, 'L*', 4, 'home'],
-  ['ダイパン（パ）', 4, 7, 'R*', 3, 'away'], ['グリズ（熊）', 4, 7, 'S*', 2, 'kuma'], ['ウサミ（兎）', 4, 3, 'L', 5, 'usagi'],
-  ['ハチ（柴）', 4, 3, 'S', 4, 'home'], ['ボス（猫）', 5, 5, 'L', 3, 'neko'], ['ピョン（兎）', 4, 2, 'S', 5, 'usagi']
+const STORY_BAT = [
+  ['コタロウ', 5, 4, '', 4, 'home'], ['ミケ', 5, 4, 'S', 5, 'neko'], ['ウサミ', 4, 3, 'L', 5, 'usagi'],
+  ['トラ', 4, 5, '', 4, 'tiger'], ['ヒグマ', 3, 6, '', 2, 'kuma'], ['パン太', 4, 3, 'L', 3, 'away'],
+  ['モカ', 4, 3, '', 5, 'floppy'], ['ハチ', 4, 3, 'S', 4, 'home'], ['ソラ', 3, 3, 'L', 4, 'home']
 ];
 function curBatter() {
   const t = teamsNow().bat, s = teamState(t), slot = s.order % 9;
   let sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
-  if (story && story.inn && t === 'home' && !sub) b = ALL_STAR_BAT[slot];
+  if (story && t === 'home' && !sub) b = STORY_BAT[slot];
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
   const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
   const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1
@@ -3260,7 +3591,7 @@ function curPitcher() {
   const t = teamsNow().fld, s = teamState(t), p = ROSTER[t].pit[s.pit];
   // tired below 40% of stamina: up to -8 km/h and wilder
   const fatigue = clamp(1 - s.sta / (p[4] * 0.4), 0, 1);
-  return { team: t, name: p[0], v: p[1], c: p[2], b: p[3], max: p[4], pt: p[6] || ['str'], hand: handOf(p[5]), star: isStar(p[5]), sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
+  return { team: t, name: story && t === 'home' && s.pit === 0 ? 'コタロウ' : p[0], v: p[1], c: p[2], b: p[3], max: p[4], pt: p[6] || ['str'], hand: handOf(p[5]), star: isStar(p[5]), sta: s.sta, fatigue, next: ROSTER[t].pit[s.pit + 1] };
 }
 /* handedness on the field right now (safe before a game exists) */
 function pitcherHand() { if (!G) return 'R'; const t = teamsNow().fld; return handOf(ROSTER[t].pit[teamState(t).pit][5]); }
@@ -3363,7 +3694,7 @@ function rosterLines() {
 const cmt = { mode: Number((() => { try { return localStorage.getItem('yakyu-cmt'); } catch (e) { return null; } })() ?? 2),
   s: 12345, last: {}, bat: '', pit: '', timer: 0, voice: null, n: 0 };   // mode 0:切 1:字だけ 2:字+声
 const CMT_LABEL = ['実況 切', '実況 字', '実況 声'];
-function cmtUnlock() { if (cmt.mode === 2) cmtPreload(); }   // first tap: start loading the recordings
+function cmtUnlock() { if (storySilent) return; if (cmt.mode === 2) cmtPreload(); }   // first tap: start loading the recordings
 
 const LINES = {
   play: ['プレイボール！', 'さあ、試合開始です！', 'ナイターの幕が上がりました！'],
@@ -3457,7 +3788,7 @@ function cmtStop() { if (cmt.cur) { try { cmt.cur.pause(); } catch (e) {} cmt.cu
 /* L: {text, id} from cmtLine(). extra: count / score text shown on the ticker only.
    prio 2: cut in; prio 1: only if nothing is being said. Lines with no recording stay silent (ticker only). */
 function say(L, prio, extra) {
-  if (!L || cmt.mode === 0) return;
+  if (storySilent || !L || cmt.mode === 0) return;
   showCmtText(L.text + (extra || ''));
   if (cmt.mode !== 2) return;
   if (cmtBusy()) { if ((prio || 1) < 2) return; cmtStop(); }
@@ -3900,6 +4231,7 @@ function update(now, dt) {
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
+  if (beastActive()) { batAura.visible = true; batAura.position.copy(bj.J.pelvis); batAura.scale.setScalar(2.8); batAura.material.color.set('#75dfcc'); batAura.material.opacity = 0.25 + 0.1 * Math.sin(now * 5); } else batAura.material.color.set('#ffc845');
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
   updateFielders(now, k);
@@ -4008,6 +4340,7 @@ cv.addEventListener('pointercancel', () => endFlick(true));
 
 /* ===== flow ===== */
 function startGame() {
+  storyVisual(null);
   audioInit(); newGame();
   if (story && story.inn) storyRole();
   const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);
@@ -4085,6 +4418,7 @@ let lastT = now_(), perfN = 0, perfSum = 0, degraded = LITE;
 let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
+  if (renderMascotGallery(now)) { requestAnimationFrame(frame); return; }
   if (!degraded && !document.hidden && rawDt < 0.5) {
     perfN++; perfSum += rawDt;
     if (perfN >= 90) {

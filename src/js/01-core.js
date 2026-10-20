@@ -28,8 +28,9 @@ const DELIVER = 0.7;       // user's pitching motion length
 const zoneToWorld = (tx, ty) => V(tx * ZW, ZY0 - ty * ZH, 0);
 
 /* ---- sound ---- */
-let ac = null;
+let ac = null, storySilent = false;
 function audioInit() {
+  if (storySilent) return;
   if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
   if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
   sfxLoad();
@@ -144,7 +145,7 @@ function bgmHR() {
   const s = ac.createBufferSource(); s.buffer = bgmRec.hr; s.connect(fileOut); s.start(t + 0.15);
 }
 function bgmTick() {
-  if (!bgmOn || !ac || !bgmGain) return;
+  if (storySilent || !bgmOn || !ac || !bgmGain) return;
   if (fileReady()) { bgmFileTick(); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
@@ -274,13 +275,13 @@ let hbpUntil = 0, brawl = null;      // デッドボール直後の表情 / 乱�
 const OPT = { dice: true, hap: true, trait: true, skill: true };   // 設定：ギミックのオン・オフ
 try { Object.assign(OPT, JSON.parse(localStorage.getItem('yakyu-opts') || '{}')); } catch (e) {}
 function saveOpt() { try { localStorage.setItem('yakyu-opts', JSON.stringify(OPT)); } catch (e) {} }
-function opt(k) { return online && onl.opts ? onl.opts[k] !== false : OPT[k] !== false; }
+function opt(k) { if (story && !online && !match && (k === 'dice' || k === 'hap')) return false; return online && onl.opts ? onl.opts[k] !== false : OPT[k] !== false; }
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
 function newGame() {
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
-  critArm = vanishArm = false; hud();
+  critArm = vanishArm = false; storyResetSession(); hud();
 }
 
 /* ---- ハプニング：回の頭にたまに起きる。両端末とも同じものが起きる（オンラインは共有の乱数） ---- */
@@ -461,7 +462,7 @@ function endInning(label) {
   G.outs = 0; G.bases = [0, 0, 0]; G.inning++;
   if (G.inning > last) G.over = !twoTeam() || sb.home !== sb.away;   // two-team games: extra innings until one side pulls ahead
   if (match && G.inning > 24) G.over = true;                          // CPU match: a tie after the 12th is a draw
-  if (story && story.inn && G.inning > (story.maxInn || 7) * 2) G.over = true; // ストーリー第5話：延長7回終了
+  if (story && story.inn && G.inning > (story.maxInn || 7) * 2) G.over = true; // ストーリー決戦：指定した延長上限で終了
   if (twoTeam() && G.inning >= last && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;   // home leads going into the last bottom half
   return label + ' / チェンジ';
 }
@@ -540,6 +541,12 @@ function advance(n, label) {
 
 /* ---- contact model: timing (dt, seconds) and position (d, zone units) decide quality ---- */
 function contact(dt, d, vy, speed, boost, crit, evAdd) {
+  if (story && !online && !match && mode === 'bat') {
+    if (story.idx === 7 && storySession && !storySession.eventDone) { dt *= 1.2; d *= 1.2; }
+    if (beastActive()) { dt *= 0.65; d *= 0.7; evAdd = (evAdd || 0) + 15; }
+  }
+  if (story && !online && !match && mode === 'pit' && beastActive()) { d += 0.35; dt *= 1.3; }
+
   if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
   const tB = trT('bat'), tF = trT('fld');                 // どうぶつ固有スキル（ストーリー以外）
   const gutsOn = tB === 'home' && G.s === 2;
@@ -886,6 +893,7 @@ function afterResult() {
   if (online) { onlineAfterResult(); return; }
   if (match) { matchAfterResult(); return; }
   if (story) {
+    if (storyEvent()) return;
     if (story.inn) { storyAfterResult(); return; }
     const r = storyCheck(); if (r) { storyEnd(r === 'clear'); return; }
   }
