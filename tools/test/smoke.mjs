@@ -248,8 +248,10 @@ async function playPA(p, errs, hitObj, label) {
     await p.evaluate(() => { window.__dbg.throwP('str', 140, 0, 0); window.__dbg.ff(); });
     await p2.waitForFunction(() => window.__dbg.phase === 'deliver' || window.__dbg.phase === 'fly', null, wfOpts);
     await p2.evaluate(c => { window.__dbg.ff(); window.__dbg.hit(c); }, SINGLE);
-    await p.waitForFunction(() => window.__dbg.phase === 'result', null, wfOpts);
-    await p2.waitForFunction(() => window.__dbg.phase === 'result', null, wfOpts);
+    // The result overlay is transient. Both plate-appearance counters advancing
+    // proves the fixed hit was processed even if a slow tab has resumed waiting.
+    await p.waitForFunction(() => window.__dbg.G.pa === 1, null, wfOpts);
+    await p2.waitForFunction(() => window.__dbg.G.pa === 1, null, wfOpts);
 
     const snapOnline = page => page.evaluate(() => {
       const d = window.__dbg, G = d.G;
