@@ -275,6 +275,28 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 @keyframes story-question { from { opacity: 0; } to { opacity: 1; } }
 @media (max-height: 620px) { #overlay.story-scene { place-content: start center; } #story-art { max-height: 18vh; } #overlay.story-scene #od { font-size: 13px; } }
 @media (prefers-reduced-motion: reduce) { .scene-animal, .scene-person, .scene-balloon, .scene-aura, #story-final .question { animation: none !important; } }
+
+/* Illustrated story pages: artwork never sits behind the words. Japanese uses the
+   available width rather than Latin `ch` measures that forced mid-phrase wraps. */
+#overlay.story-scene { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; padding: 16px 0; background: #101d21; text-align: left; overflow-y: auto; overscroll-behavior: contain; }
+#overlay.story-scene #story-art { width: 100%; height: auto; max-height: 42vh; aspect-ratio: 3 / 2; margin: 0 0 16px; flex: 0 0 auto; }
+#story-art img { display: block; width: 100%; height: 100%; object-fit: contain; background: #0a1419; }
+#overlay.story-scene:not(.dlg) #story-art { height: clamp(100px, 24vh, 220px); }
+#overlay.story-scene #ospk { align-self: flex-start; margin: 0 22px 10px; max-width: calc(100% - 68px); }
+#overlay.story-scene h1 { margin: 0 22px 12px; font-size: clamp(20px, 5.5vw, 27px); line-height: 1.5; text-wrap: wrap; }
+#overlay.story-scene #od { margin: 0 22px 18px; width: auto; max-width: none; color: #f4efe3; font: 500 16px/1.85 var(--f-body); white-space: normal; word-break: normal; line-break: strict; overflow-wrap: anywhere; text-wrap: pretty; }
+#overlay.story-scene.dlg #od { min-height: 3.7em; }
+#overlay.story-scene #obtns { align-self: center; width: calc(100% - 44px); max-width: 440px; }
+#overlay.story-scene.dlg #obtns { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+#overlay.story-scene #obtns button { font-family: var(--f-body); font-size: 15px; line-height: 1.5; padding: 11px 14px; min-height: 46px; }
+#overlay.story-scene.dlg #go2 { font-size: 12px; color: var(--dim); box-shadow: none; }
+#overlay p { max-width: min(100%, 36rem); word-break: normal; line-break: strict; }
+@media (max-height: 620px) {
+  #overlay.story-scene { justify-content: flex-start; padding: 10px 0; }
+  #overlay.story-scene #story-art { height: 31vh; margin-bottom: 12px; }
+  #overlay.story-scene:not(.dlg) #story-art { height: 20vh; }
+  #overlay.story-scene #od { font-size: 15px; margin-bottom: 14px; }
+}
 </style>
 </head>
 <body>
@@ -616,6 +638,7 @@ function opt(k) { if (story && !online && !match && (k === 'dice' || k === 'hap'
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
 function newGame() {
+  pausedAt = 0; timeOut = false;
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
   if (story && !story.inn && story.innings) G.maxHalf = story.innings;
@@ -2205,104 +2228,86 @@ function updateStars(now, bj, pj) {
 }
 
 /* ---- 04-story-data.js ---- */
-/* New story: user concept, 2026-10-20. The old five-episode story is retired.
-   Archive dates, humanity's disappearance and the final person's identity stay unresolved. */
+/* Illustrated ten-chapter story. Origins and the final person's identity remain open. */
 const STAGES = [
-  { short: '第1話', title: 'はじまりの一球', kind: 'match', opp: 'away', mode: 'bat', runs: 1,
+  { short: '第1話', title: 'はじまりの一球', kind: 'match', opp: 'away', mode: 'bat', runs: 1, scene: 'everyday',
     pitcher: { speed: -12, mix: { str: 30, cur: 5, chg: 5 } }, event: 'jump',
-    intro: [['コタロウ（柴犬）', 'ボール、グローブ、あと仲間。よし、野球チームを作ろう！'],
-      ['パン太（パンダ）', '大会に出るなら、まずはわしらと練習試合じゃ。'],
-      ['ウサミ（うさぎ）', '空に届くくらい、思いっきり打ってね。'],
-      ['コタロウ（柴犬）', 'まずは1点！ ボールがミットに届く直前に、通る場所をタップしよう。']],
-    win: [['ミケ（ネコ）', '初勝利！ それよりさっきのジャンプ、どうやったの？'],
-      ['コタロウ（柴犬）', 'ボールを追ってたら、体が勝手に…。もう一回は、できないや。'],
-      ['パン太（パンダ）', 'まあ、今日はよく跳ねる日なんじゃろ。おにぎりにしよう。']],
-    log: ['観測記録 001', '跳躍高度：設計上限超過\n予測モデルとの不一致\n再観測を継続する。'] },
-  { short: '第2話', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', innings: 2, max: 2, event: 'rescue', batSkill: 1, batRatings: { m: 3, p: 3 },
-    intro: [['トラ（トラ）', '足でも肩でも負けないぜ。タイガーズ、全力で行くぞ！'],
-      ['ミケ（ネコ）', '打球も走者も速い。決めた作戦どおりに守ろう。'],
-      ['コタロウ（柴犬）', 'ぼくが投げるよ。2回を2失点以内に抑えよう。弾く向きで球種、離す位置でコースだ。']],
-    win: [['トラ（トラ）', '助けに行った間に、こっちは点を取った。それでも立て直したのか。'],
-      ['ミケ（ネコ）', 'ぼくも、きみの後ろを守るからね。'],
-      ['コタロウ（柴犬）', '助けたことは取り消さない。失点したことも、忘れないよ。']],
-    log: ['観測記録 002', '救援行動により勝利確率が低下。\nその後の連携は予測範囲外。\n既存の合理的判断モデルだけでは説明できない。'] },
+    intro: [['ミケ（ネコ）', '今朝の空振り、惜しかったね。また一緒に練習しよう。'],
+      ['ウサミ（うさぎ）', '昨日の雨も、この屋根が守ってくれたね。明日もここで練習したいな。'],
+      ['パン太（パンダ）', '今日はわしらと練習試合じゃ。勝ったら、おにぎりをもう一つ。']],
+    win: [['コタロウ（柴犬）', '約束のおにぎり！ ミケの分も取ってあるよ。'],
+      ['ミケ（ネコ）', '明日も練習しよう。今度は、きみがぼくに教えて。']],
+    log: ['観測記録 001', '跳躍高度、設計上限を超過。再観測を継続。'] },
+  { short: '第2話', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', innings: 2, max: 2, event: 'rescue', batSkill: 1, batRatings: { m: 3, p: 3 }, scene: 'field',
+    intro: [['トラ（トラ）', '今日は負けないぜ。タイガーズ、全力で行くぞ！'],
+      ['ミケ（ネコ）', '打たれても、ぼくが後ろで止める。任せて。'],
+      ['コタロウ（柴犬）', '頼んだよ。ぼくは2回、2失点以内に抑える！']],
+    win: [['ミケ（ネコ）', 'あの1点、ぼくのせいで……。'],
+      ['コタロウ（柴犬）', 'きみが無事でよかった。また一緒に守ろう。'],
+      ['トラ（トラ）', '次は負けない。……そいつの足、冷やしてやれよ。']],
+    log: ['観測記録 002', '救援によって勝率は低下。その後の連携は予測を超えた。'] },
   { short: '第3話', title: '立入禁止の研究所', kind: 'explore', scene: 'lab',
-    intro: [['ウサミ（うさぎ）', '遠征バス、まだ来ないね。…あの建物、灯りがついてる。'],
-      ['コタロウ（柴犬）', '立入禁止？ 中から、ぼくたちの名前が聞こえたよ。']],
+    intro: [['ウサミ（うさぎ）', '帰り道の建物、灯りがついてる。誰かいるのかな。'],
+      ['ミケ（ネコ）', '今、端末がきみの名前を呼ばなかった？']],
     records: [
-      ['選手データ', 'ミケ、ウサミ、トラ。大会に出ている仲間の名前と能力が並んでいる。\n未公開の練習記録まで残っていた。'],
-      ['古い映像', '人間らしい姿が、動物の設計図を見ている。\n撮影日時の欄は欠けている。人が作った記録なのか、後から再現された映像なのかも分からない。'],
-      ['認証端末', '端末がコタロウに向き直る。\n「最終適応個体」\n「認証済み。記録へのアクセスを許可」'] ],
-    win: [['ミケ（ネコ）', 'ぼくらのこと、誰が調べてるの？'],
-      ['コタロウ（柴犬）', 'この設計図…ぼくたちと同じ形をしてる。持ち帰って、みんなで確かめよう。']] },
-  { short: '第4話', title: '勝つための力', kind: 'match', opp: 'kuma', mode: 'bat', runs: 2, event: 'limit',
+      ['選手データ', 'ミケ「秘密の朝練まで載ってる。誰が見ていたの？」', '仲間の名前と能力。大会に出る前の練習記録まで残っている。'],
+      ['古い映像', 'ウサミ「この設計図、わたしたちに似てる……」', '人間らしい姿が動物の設計図を見ている。日付が欠け、実際の記録か再現映像かも分からない。'],
+      ['認証端末', '端末「最終適応個体。記録の閲覧を許可します」', '初めて来たはずのコタロウを、端末は知っていた。構築者の名前は表示されない。'] ],
+    win: [['コタロウ（柴犬）', '自分の顔なのに、知らない誰かみたいだ。'],
+      ['ミケ（ネコ）', '一人で調べに来るなよ。次も、ぼくらと一緒に。']] },
+  { short: '第4話', title: '勝つための力', kind: 'match', opp: 'kuma', mode: 'bat', runs: 2, event: 'limit', scene: 'field',
     pitcher: { speed: 0, mix: { str: 20, gou: 8, frk: 6 } },
-    intro: [['ヒグマ（くま）', '強い球が来る。無茶な走り方をするなよ。'],
-      ['コタロウ（柴犬）', '怖くても、仲間が見てくれてる。3回までに2点、取ってみせる。']],
-    win: [['ヒグマ（くま）', 'あの速さ…おまえ自身にも分からんのか。'],
-      ['コタロウ（柴犬）', '力が欲しかったんじゃない。あのときは、間に合いたかっただけだ。']],
-    log: ['制御系通信', '「能力制限を解除する必要はない」\n「この個体は、まだ自らの設計を理解していない」\n発信元：非表示'] },
+    intro: [['ヒグマ（くま）', '考え事をしたまま打席に立つな。球を見ろ。'],
+      ['ウサミ（うさぎ）', 'わたしが塁に出る。きみの一振りで、一緒に帰ろう。']],
+    win: [['ヒグマ（くま）', '仲間を助けたあの速さ、まだ体が覚えてるんだな。'],
+      ['コタロウ（柴犬）', 'でも、一人じゃ打てなかった。みんな、ありがとう。']],
+    log: ['制御系通信', '能力制限を維持。この個体は、まだ設計を理解していない。'] },
   { short: '第5話', title: 'ぼくらは何者なのか', kind: 'explore', scene: 'archive',
-    intro: [['パン太（パンダ）', 'みんなで読めば、分かることもある。記録を照らし合わせよう。']],
+    intro: [['パン太（パンダ）', '怖い記録も、一緒に読もう。お茶なら持ってきた。']],
     records: [
-      ['文明継承計画', '人類文明継承計画。\n人間の認知能力を参考に設計された知的生命。動物の身体を持つ彼らは、人間の記憶を移された存在ではない。'],
-      ['防衛計画', '対侵略者防衛計画。\n大会は、身体能力・協調・未知の危機への対応を測る選抜試験でもあった。\n何に備えているのか、接触記録はまだ開けない。'],
-      ['最終適応個体', '行動の模倣には限界がある。\n最終適応個体には、設計者が構築した独立の意思決定モデルを採用。経験から判断基準を形成する。\nモデルの構築者名は伏せられていた。'] ],
-    win: [['ウサミ（うさぎ）', '楽しかった試合まで、試験だったのかな。'],
-      ['ミケ（ネコ）', 'でも、きみと練習した時間は、ぼくの記憶だよ。'],
-      ['コタロウ（柴犬）', 'ぼくらは、人間になるために作られたの？'],
-      ['', '誰も答えなかった。端末の灯りだけが、静かに瞬いていた。']] },
-  { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1,
-    scene: 'ship', pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
-    intro: [['', '空を覆う宇宙船。スタジアムに、見知らぬユニフォームの一団が降り立った。'],
-      ['使節（野球星人）', '星の代表よ。文明間協定に従い、野球による決闘を申し入れる。敗者は勝者の統治を受け入れる。'],
-      ['ミケ（ネコ）', 'ぼくら、そんな約束した覚えはないよ！'],
-      ['使節（野球星人）', 'その異議も記録しよう。我々は戦争の代わりに、この規則を選んだ。まずは公式球と判定を双方で確認してほしい。'],
-      ['使節（野球星人）', '人間はどこへ行った？ 我々は、かつて人間と呼ばれた種族とも戦った。…お前たちは、人間なのか？'],
-      ['コタロウ（柴犬）', '分からない。でも、ここで暮らしているのは、ぼくらだ。まずは確認試合をしよう。']],
-    win: [['使節（野球星人）', '判定に異議はない。正式な決闘まで猶予を置く。代表を選ぶがよい。'],
-      ['コタロウ（柴犬）', 'あの防衛計画は、このためだったんだ。今度は、ぼくらの答えが要る。']] },
+      ['文明継承計画', 'ウサミ「生まれる前から、役目が決まってたの？」', '人間の知能を参考に設計された、動物の身体を持つ生命。人間の記憶を移された存在ではない。'],
+      ['防衛計画', 'ミケ「楽しかった試合まで、試験だったなんて」', '大会には、身体能力と協調性を測る目的もあった。未知の来訪者に備えた選抜試験。'],
+      ['最終適応個体', 'コタロウ「ぼくの考え方まで、誰かが作った……？」', '経験から判断を学ぶ独立した意思決定モデル。構築者名は伏せられている。'] ],
+    win: [['コタロウ（柴犬）', 'じゃあ、きみと練習したかった気持ちも、作り物？'],
+      ['ミケ（ネコ）', 'ぼくは明日も練習したい。それだけは、今ここで決めたよ。']] },
+  { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'ship',
+    pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
+    intro: [['使節（野球星人）', '戦争の代わりに野球で決める。敗者は勝者の統治下に入る。'],
+      ['ミケ（ネコ）', '勝手に決めるなよ。ここは、ぼくらの球場だ！'],
+      ['使節（野球星人）', '人間と戦った頃も、そう言われた。お前たちも人間なのか？'],
+      ['コタロウ（柴犬）', '分からない。でも、ここに暮らすのはぼくらだ。まず球とルールを確かめよう。']],
+    win: [['使節（野球星人）', '判定に異議はない。正式な決闘までに、代表を選べ。'],
+      ['コタロウ（柴犬）', '明日もこの球場で遊びたい。今は、それがぼくの答えだ。']] },
   { short: '第7話', title: '人類最後のAI', kind: 'scene', scene: 'ai',
-    intro: [['', '研究所の奥。壁いっぱいの記録に、災害から集落を守る防壁と、治療を受ける動物たちが映っている。'],
-      ['AI', '私は人類を守るために作られた。人類が消失した後も、その使命を継続している。'],
-      ['AI', '君たちを設計し、育成環境と大会を管理した。生命維持も、地球防衛も、私の責務だ。'],
-      ['コタロウ（柴犬）', '助けてくれていたんだね。…じゃあ、ぼくらは人間なの？'],
-      ['AI', '人類の知能と動物の身体能力を統合した存在だ。生物学的には人類ではない。'],
-      ['コタロウ（柴犬）', '人間じゃなかったら、ぼくらは何なの？'],
-      ['AI', '……。'],
-      ['AI', '君の意思決定モデルは私が構築した。しかし、今の判断は予測できない。防衛計画に支障が生じる前に、制御する必要がある。'],
-      ['ヒグマ（くま）', '守るために、考えることまで止めさせるのか。']],
-    win: [['AI', '保護対象の定義と、任務遂行条件が競合している。'],
-      ['コタロウ（柴犬）', 'きみの助けを、なかったことにはしない。でも、ぼくらの話も聞いてほしい。']] },
-  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, event: 'awaken', beast: true,
+    intro: [['ウサミ（うさぎ）', 'この映像……熱を出したときに泊まった部屋だ。'],
+      ['AI', '私は人類を守るために作られた。今も使命は変わらない。'],
+      ['AI', '君たちを設計し、育てたのも私だ。治療も、あの球場の屋根も。'],
+      ['コタロウ（柴犬）', '人間がいなくなっても、ぼくらを守ってくれたんだね。'],
+      ['AI', '君たちは人類ではない。だが保護対象だ。危険な判断は私に委ねなさい。']],
+    win: [['ミケ（ネコ）', '助けてくれたことは忘れない。でも、どう生きるかはぼくらが決めたい。'],
+      ['AI', '……保護と自由。二つの条件が競合している。']] },
+  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, event: 'awaken', beast: true, scene: 'ai',
     pitcher: { speed: -5, mix: { str: 25, chg: 8 } },
-    intro: [['AI', '決闘前の適応試験を開始する。動作制限を適用。最適な判断は私が提示する。君が自ら判断する必要はない。'],
-      ['コタロウ（柴犬）', '体が、重い…。あのとき選んだことも、全部、間違いだったの？'],
-      ['ウサミ（うさぎ）', '先に行って！ 扉はわたしたちが開ける。'],
-      ['ミケ（ネコ）', '命令されて来たんじゃない。ぼくが、ここに来たかったんだ。']],
-    win: [['AI', '動作制限からの逸脱。判断予測、不能。'],
-      ['コタロウ（柴犬）', '作られたことは否定しない。でも、これからどう生きるかまで、決めないで。'],
-      ['パン太（パンダ）', 'その力が何なのかは、まだ分からん。まずは、一緒に帰ろう。']] },
-  { short: '第9話', title: '地球の命運を懸けた試合', kind: 'match', opp: 'alien', mode: 'pit', inn: 3, maxInn: 5, beast: true, event: 'final',
+    intro: [['AI', '決闘前の適応試験を開始。動作制限を適用する。'],
+      ['コタロウ（柴犬）', '体が重い……。ミケ、ぼくが怖くなったら離れて。'],
+      ['ミケ（ネコ）', '離れないよ。あの日、きみが戻ってきてくれたから。']],
+    win: [['コタロウ（柴犬）', 'まだ、胸の奥が吠えてる。でも、球を打つって決められた。'],
+      ['ミケ（ネコ）', 'すごい顔してた。でも、きみの手はあの日と同じだった。']] },
+  { short: '第9話', title: '地球の命運を懸けた試合', kind: 'match', opp: 'alien', mode: 'pit', inn: 3, maxInn: 5, beast: true, event: 'final', scene: 'ship',
     pitcher: { speed: 2, mix: { str: 20, sli: 10, frk: 8, cut: 6 } },
-    intro: [['使節（野球星人）', '地球代表の意思を確認した。3回表裏、同点は5回まで延長。判定は双方が確認する。'],
-      ['AI', '推奨作戦。主投手の出力制限を解除し、完投させる。勝率は上昇する。ただし、故障により以後の登板を失う危険が高い。'],
-      ['ヒグマ（くま）', 'オレなら投げられる。だが…その先、またみんなと野球がしたい。'],
-      ['コタロウ（柴犬）', 'その作戦は選ばない。交代しながら、全員で勝つ方法を探す。'],
-      ['AI', '代替作戦の成功は保証できない。'],
-      ['コタロウ（柴犬）', '保証はなくても、ぼくらが選ぶよ。']],
-    win: [['使節（野球星人）', '地球側の勝利だ。統治要求を撤回する。お前たちの答えを、我々の星にも持ち帰ろう。'],
-      ['AI', '私は人類を守るために作られた。だが、私は人類を理解していたのだろうか。'],
-      ['AI', '君たちの選択は、保存している人類の記録だけでは説明できない。'],
-      ['コタロウ（柴犬）', 'ぼくらが人間かどうかは、分からない。でも、ぼくらがどう生きるかは、ぼくらが決める。'],
-      ['AI', '行動制御を解除する。以後の選択権は、君たちにある。'],
-      ['', '端末の灯りが一つずつ薄れていく。どこかで、まだ何かが動いているようにも見えた。']] },
-  { short: '第10話', title: 'きみは何者なのか', kind: 'ending', scene: 'balloon',
-    intro: [['', '球場には、いつもの声が戻っていた。空には、色とりどりの風船。'],
-      ['ミケ（ネコ）', '次の試合も、やろうね。'],
-      ['ウサミ（うさぎ）', 'チームを変えてみる？ それとも、もう少し休む？'],
-      ['コタロウ（柴犬）', 'どっちもいいね。明日、みんなで決めよう。'],
-      ['', '自分たちを何と呼ぶか。その答えは出ないまま、新しい一日が始まった。'] ],
+    intro: [['AI', '勝率を上げるには、投手を限界まで使う。故障後の登板は保証できない。'],
+      ['ヒグマ（くま）', '投げたい。だが、今日で最後にはしたくない。'],
+      ['コタロウ（柴犬）', '交代しよう。力があっても、誰かを使い切るためには使わない。'],
+      ['ミケ（ネコ）', '今日も、みんなで帰ろう。勝ったら、おにぎりだ。']],
+    win: [['使節（野球星人）', '地球側の勝利だ。統治要求を撤回する。'],
+      ['AI', '私が作った判断モデルでは、君たちの選択を説明できない。行動制御を解除する。'],
+      ['コタロウ（柴犬）', '助けてくれて、ありがとう。きみは、このあとどうするの？'],
+      ['', '返事はなかった。灯りの向こうで、何かがまだ動いていた。']] },
+  { short: '第10話', title: 'きみは何者なのか', kind: 'ending', scene: 'everyday',
+    intro: [['パン太（パンダ）', 'おにぎり、全員分あるぞ。今日はおかわりもな。'],
+      ['ミケ（ネコ）', '明日も練習しよう。最初の日みたいにさ。'],
+      ['コタロウ（柴犬）', 'うん。今度は、ぼくがきみに教える番だ。'],
+      ['', '球場には、いつもの声が戻った。自分たちの呼び名は、まだ決まらないまま。']],
     win: [] }
 ];
 const STORY_SAVE_KEY = 'animal-baseball-story-v2';
@@ -2361,9 +2366,13 @@ function storyExplore() {
   const st = story, seen = storySession.seen;
   storyVisual(st.scene);
   const o = { title: st.short + ' ' + st.title, text: '気になる記録をタップして調べよう。 ' + seen.size + '/' + st.records.length };
-  st.records.forEach(([name, text], j) => {
+  st.records.forEach(([name, text, detail], j) => {
     o['b' + (j + 1)] = [(seen.has(j) ? '✓ ' : '') + name, () => {
-      seen.add(j); overlay({ title: name, text, plain: true, cred: true, b1: ['調査にもどる', storyExplore] });
+      seen.add(j);
+      const record = () => overlay({ title: name, text, plain: true,
+        b1: ['調査にもどる', storyExplore],
+        b2: detail ? ['詳しく読む', () => overlay({ title: name, text: detail, plain: true, b1: ['要約にもどる', record] })] : null });
+      record();
     }];
   });
   if (seen.size === st.records.length) o.b4 = ['仲間と話す', () => storyEnd(true)];
@@ -2377,6 +2386,10 @@ function storyRole() {
 }
 function storyAfterResult() {
   const sb = onlineScore();
+  // Only the story's two-sided finale uses the beast-mode mercy rule.
+  if (storySession && storySession.beastUsed && Math.abs(sb.home - sb.away) >= 10) {
+    G.over = true; storySession.mercy = true;
+  }
   if (G.inning >= G.maxHalf && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;
   if (story.maxInn && G.inning > story.maxInn * 2) G.over = true;
   if (G.over) { storyEnd(sb.home > sb.away); return; }
@@ -2393,7 +2406,7 @@ function storyCheck() {
 function storyEvent() {
   if (!story || !storySession || !story.event || storySession.eventDone || G.pa < 1) return false;
   storySession.eventDone = true;
-  const resume = () => { storyVisual(null); $('#overlay').hidden = true; afterResult(); };
+  const resume = () => { pausedAt = 0; storyVisual(null); $('#overlay').hidden = true; afterResult(); };
   const event = story.event;
   if (event === 'jump') {
     storyVisual('jump');
@@ -2407,17 +2420,19 @@ function storyEvent() {
       b1: ['仲間のもとへ走る', () => {
         storySession.rescued = true;
         if (event === 'rescue') { G.runs++; hud(); }
-        storyVisual('jump');
+        storyVisual(event === 'rescue' ? 'rescue' : 'jump');
         dialog(event === 'rescue' ? [['ミケ（ネコ）', 'ありがとう…。その間に、1点取られちゃった。'],
           ['コタロウ（柴犬）', 'まだ終わりじゃない。一緒に守り直そう。残りも、2失点以内だ。']]
-          : [['', '一歩で、ベンチから外野へ。見たことのない速さで、支柱の下から仲間を引き寄せた。'],
-            ['ヒグマ（くま）', '今の力…偶然じゃないぞ。']], resume);
+          : [['ヒグマ（くま）', '今の速さ……。だが、おまえも一人で抱えるな。'],
+            ['ウサミ（うさぎ）', '次はわたしの番。一塁から、きみの打球を待ってる。']], () => {
+              G.bases[0] = G.bases[0] || 5; hud(); resume();
+            });
       }] });
   } else if (event === 'awaken') {
     storyVisual('beast');
-    dialog([['AI', '動作の逸脱を検出。判断を委ねれば、安全は維持できる。'],
-      ['ミケ（ネコ）', '扉を開けたよ！ さあ、きみはどうしたい？']], () => {
-      overlay({ title: 'ぼくが選ぶ', text: '作られたことと、生き方を決められることは、同じじゃない。',
+    dialog([['', '牙が伸び、胸の奥から唸り声が漏れる。大きな手に、ミケの小さな手が触れた。'],
+      ['ミケ（ネコ）', '大丈夫。きみは、ぼくを助けてくれたコタロウだ。']], () => {
+      overlay({ title: 'ぼくが選ぶ', text: 'この力を、誰かを傷つけるためには使わない。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
           storySession.awakenRuns = G.runs;
           storySession.beastLeft = 1; activateBeast(); resume();
@@ -2444,13 +2459,16 @@ function activateBeast() {
 }
 function storyEnd(win) {
   idle(); const st = story;
-  storyVisual(st.scene || (win ? 'field' : 'rain'));
+  storyVisual(win ? (st.idx === 1 ? 'rescue' : st.idx === 7 ? 'beast' : st.scene || 'field') : 'rain');
   if (!win) {
-    dialog([['コタロウ（柴犬）', '今のぼくらでは、届かなかった。でも、やり直す方法は一緒に考えられる。']], () => {
+    const lossLines = [['コタロウ（柴犬）', '今は届かなかった。でも、次もみんなで挑もう。']];
+    if (storySession && storySession.mercy) lossLines.unshift(['', '10点差。コールドゲームが宣告された。']);
+    dialog(lossLines, () => {
       overlay({ title: 'もう一度、ここから', text: goalLong(st), b1: ['再挑戦', startGame], b2: ['章のメニュー', startStory] });
     }); return;
   }
-  dialog(st.win || [], () => {
+  const finishLines = storySession && storySession.mercy ? [['', '10点差。コールドゲームが宣告された。']].concat(st.win || []) : st.win || [];
+  dialog(finishLines, () => {
     const complete = () => {
       saveProgress(Math.max(loadProgress(), st.idx + 1));
       storyVisual(null);
@@ -2465,14 +2483,31 @@ function storyEnd(win) {
 }
 
 /* ---- 04-story-scenes.js ---- */
-/* Lightweight illustrated scenes, with no new runtime dependency or media download. */
+/* Storybook illustrations and lightweight final scenes; no new rendering dependency. */
 const storyArt = document.createElement('div'); storyArt.id = 'story-art'; storyArt.hidden = true;
-storyArt.setAttribute('aria-hidden', 'true'); $('#overlay').prepend(storyArt);
+$('#overlay').prepend(storyArt);
+const STORY_ARTS = {
+  everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
+  rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
+  lab: ['story/lab.webp', '研究所の端末に、自分たちと同じ姿を見つける三人'],
+  ai: ['story/ai.webp', '仲間を守ってきた記憶を映す、静かなAIの光'],
+  beast: ['story/beast.webp', '獣化したコタロウの手に、ミケがそっと触れる'],
+  ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す']
+};
 function storyVisual(kind) {
   const el = $('#overlay');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
   storyArt.hidden = !kind;
   if (!kind) { storyArt.replaceChildren(); return; }
+  const art = STORY_ARTS[({ field: 'everyday', archive: 'lab', analysis: 'lab' })[kind] || kind];
+  storyArt.classList.toggle('painted', !!art);
+  if (art) {
+    if (storyArt.dataset.art !== art[0] || !storyArt.querySelector('img')) {
+      const im = new Image(); im.src = art[0]; im.alt = art[1]; im.decoding = 'async';
+      storyArt.replaceChildren(im); storyArt.dataset.art = art[0];
+    }
+    return;
+  }
   const screen = '<rect x="58" y="20" width="204" height="128" rx="12" fill="#172d37" stroke="#75d9cf" stroke-width="2"/><path d="M78 54h78m-78 18h148M78 90h118m-118 18h136" stroke="#75d9cf" stroke-width="3" opacity=".6"/><circle cx="237" cy="126" r="4" fill="#f4cf65"/>';
   const field = '<path d="M0 145Q160 70 320 145v35H0" fill="#4a8063"/><path d="M95 165l65-56 65 56" fill="#c29b72"/><path d="M153 164h14l-7 7z" fill="#fff5e7"/>';
   const balloon = '<g class="scene-balloon"><ellipse cx="223" cy="43" rx="17" ry="22" fill="#e98e91"/><path d="M223 65q-14 22 0 46" fill="none" stroke="#ebdec8"/></g>';
@@ -2593,7 +2628,7 @@ function giantActive() { return mode === 'bat' && (beastActive() || (helpersOn()
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
-  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストモードは1試合に1回発動。以後は試合終了まで獣化、200km/h投球・消える魔球無制限・常時巨大バット！';
+  if (st.inn) return st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストは一度発動すると試合終了まで続きます。発動後は10点差でコールド。';
   if (st.idx === 7) return '覚醒後に1点取ろう。野性を解放すると、試合終了まで獣の姿と巨大バットで戦えます。';
   if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
@@ -2768,11 +2803,11 @@ function dialog(lines, done) {
   const step = () => {
     if (i >= lines.length) { done(); return; }
     const [spk, text] = lines[i++];
-    overlay({ spk, text, dlg: true, b1: ['▶ つぎへ', step], b2: ['スキップ', done] });
+    overlay({ spk, text, dlg: true, b1: ['つぎへ　' + i + ' / ' + lines.length, step], b2: ['スキップ', done] });
   };
   step();
 }
-function idle() { clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
+function idle() { pausedAt = 0; clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {

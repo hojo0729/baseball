@@ -44,6 +44,7 @@ try {
   await p.route(/^https?:\/\//, route => { if (route.request().url() === previewURL) return route.continue(); external.push(route.request().url()); return route.abort(); });
   await p.goto(previewURL);
   await p.locator('#goBtn').click(); await p.locator('#goBtn').click();
+  await p.waitForFunction(() => { const im = document.querySelector('#story-art img'); return im && im.complete && im.naturalWidth > 0 && im.src.startsWith('data:image/webp'); });
   await p.locator('#go2').click(); await p.locator('#goBtn').click();
   await p.waitForTimeout(400);
   assert.equal(await p.evaluate(() => typeof window.__dbg), 'undefined');

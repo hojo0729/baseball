@@ -279,6 +279,7 @@ function opt(k) { if (story && !online && !match && (k === 'dice' || k === 'hap'
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
 function newGame() {
+  pausedAt = 0; timeOut = false;
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
   if (story && !story.inn && story.innings) G.maxHalf = story.innings;

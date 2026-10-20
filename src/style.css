@@ -244,3 +244,25 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 @keyframes story-question { from { opacity: 0; } to { opacity: 1; } }
 @media (max-height: 620px) { #overlay.story-scene { place-content: start center; } #story-art { max-height: 18vh; } #overlay.story-scene #od { font-size: 13px; } }
 @media (prefers-reduced-motion: reduce) { .scene-animal, .scene-person, .scene-balloon, .scene-aura, #story-final .question { animation: none !important; } }
+
+/* Illustrated story pages: artwork never sits behind the words. Japanese uses the
+   available width rather than Latin `ch` measures that forced mid-phrase wraps. */
+#overlay.story-scene { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; padding: 16px 0; background: #101d21; text-align: left; overflow-y: auto; overscroll-behavior: contain; }
+#overlay.story-scene #story-art { width: 100%; height: auto; max-height: 42vh; aspect-ratio: 3 / 2; margin: 0 0 16px; flex: 0 0 auto; }
+#story-art img { display: block; width: 100%; height: 100%; object-fit: contain; background: #0a1419; }
+#overlay.story-scene:not(.dlg) #story-art { height: clamp(100px, 24vh, 220px); }
+#overlay.story-scene #ospk { align-self: flex-start; margin: 0 22px 10px; max-width: calc(100% - 68px); }
+#overlay.story-scene h1 { margin: 0 22px 12px; font-size: clamp(20px, 5.5vw, 27px); line-height: 1.5; text-wrap: wrap; }
+#overlay.story-scene #od { margin: 0 22px 18px; width: auto; max-width: none; color: #f4efe3; font: 500 16px/1.85 var(--f-body); white-space: normal; word-break: normal; line-break: strict; overflow-wrap: anywhere; text-wrap: pretty; }
+#overlay.story-scene.dlg #od { min-height: 3.7em; }
+#overlay.story-scene #obtns { align-self: center; width: calc(100% - 44px); max-width: 440px; }
+#overlay.story-scene.dlg #obtns { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+#overlay.story-scene #obtns button { font-family: var(--f-body); font-size: 15px; line-height: 1.5; padding: 11px 14px; min-height: 46px; }
+#overlay.story-scene.dlg #go2 { font-size: 12px; color: var(--dim); box-shadow: none; }
+#overlay p { max-width: min(100%, 36rem); word-break: normal; line-break: strict; }
+@media (max-height: 620px) {
+  #overlay.story-scene { justify-content: flex-start; padding: 10px 0; }
+  #overlay.story-scene #story-art { height: 31vh; margin-bottom: 12px; }
+  #overlay.story-scene:not(.dlg) #story-art { height: 20vh; }
+  #overlay.story-scene #od { font-size: 15px; margin-bottom: 14px; }
+}

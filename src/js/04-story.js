@@ -11,7 +11,7 @@ function giantActive() { return mode === 'bat' && (beastActive() || (helpersOn()
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
-  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストモードは1試合に1回発動。以後は試合終了まで獣化、200km/h投球・消える魔球無制限・常時巨大バット！';
+  if (st.inn) return st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストは一度発動すると試合終了まで続きます。発動後は10点差でコールド。';
   if (st.idx === 7) return '覚醒後に1点取ろう。野性を解放すると、試合終了まで獣の姿と巨大バットで戦えます。';
   if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
@@ -186,11 +186,11 @@ function dialog(lines, done) {
   const step = () => {
     if (i >= lines.length) { done(); return; }
     const [spk, text] = lines[i++];
-    overlay({ spk, text, dlg: true, b1: ['▶ つぎへ', step], b2: ['スキップ', done] });
+    overlay({ spk, text, dlg: true, b1: ['つぎへ　' + i + ' / ' + lines.length, step], b2: ['スキップ', done] });
   };
   step();
 }
-function idle() { clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
+function idle() { pausedAt = 0; clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {

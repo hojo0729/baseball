@@ -31,3 +31,5 @@
 実ポインター操作と配布用HTMLの確認：`node tools/build-preview.mjs` の後に `CHROME_PATH=/usr/bin/chromium node tools/test/presentation.mjs`。クラウドの管理ポリシーで file:// を開けないため、単一HTMLをHTTPで配信し他のHTTP通信を遮断して検証します。
 
 スマホ用PWA：`node tools/build-mobile-preview.mjs` の後に `CHROME_PATH=/usr/bin/chromium node tools/test/mobile-preview.mjs`。タップでの画面遷移、スワイプ投球、本番保存キーの保持、サービスワーカーによるオフライン再起動を確認します。実際のSafariや端末へのインストールは実機確認が必要です。
+
+挿絵・会話と新ルール：`node tools/test/story-design.mjs`。320×568・390×844・1280×800で画像の読み込み、文字と絵の分離、ボタンの収まり、前章の一時停止後も初球が自動で来ることを確認。ビースト未発動・9点差・発動後10点差の勝ち/負けを分けてコールド判定を確認します。

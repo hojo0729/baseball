@@ -1,11 +1,28 @@
-/* Lightweight illustrated scenes, with no new runtime dependency or media download. */
+/* Storybook illustrations and lightweight final scenes; no new rendering dependency. */
 const storyArt = document.createElement('div'); storyArt.id = 'story-art'; storyArt.hidden = true;
-storyArt.setAttribute('aria-hidden', 'true'); $('#overlay').prepend(storyArt);
+$('#overlay').prepend(storyArt);
+const STORY_ARTS = {
+  everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
+  rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
+  lab: ['story/lab.webp', '研究所の端末に、自分たちと同じ姿を見つける三人'],
+  ai: ['story/ai.webp', '仲間を守ってきた記憶を映す、静かなAIの光'],
+  beast: ['story/beast.webp', '獣化したコタロウの手に、ミケがそっと触れる'],
+  ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す']
+};
 function storyVisual(kind) {
   const el = $('#overlay');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
   storyArt.hidden = !kind;
   if (!kind) { storyArt.replaceChildren(); return; }
+  const art = STORY_ARTS[({ field: 'everyday', archive: 'lab', analysis: 'lab' })[kind] || kind];
+  storyArt.classList.toggle('painted', !!art);
+  if (art) {
+    if (storyArt.dataset.art !== art[0] || !storyArt.querySelector('img')) {
+      const im = new Image(); im.src = art[0]; im.alt = art[1]; im.decoding = 'async';
+      storyArt.replaceChildren(im); storyArt.dataset.art = art[0];
+    }
+    return;
+  }
   const screen = '<rect x="58" y="20" width="204" height="128" rx="12" fill="#172d37" stroke="#75d9cf" stroke-width="2"/><path d="M78 54h78m-78 18h148M78 90h118m-118 18h136" stroke="#75d9cf" stroke-width="3" opacity=".6"/><circle cx="237" cy="126" r="4" fill="#f4cf65"/>';
   const field = '<path d="M0 145Q160 70 320 145v35H0" fill="#4a8063"/><path d="M95 165l65-56 65 56" fill="#c29b72"/><path d="M153 164h14l-7 7z" fill="#fff5e7"/>';
   const balloon = '<g class="scene-balloon"><ellipse cx="223" cy="43" rx="17" ry="22" fill="#e98e91"/><path d="M223 65q-14 22 0 46" fill="none" stroke="#ebdec8"/></g>';

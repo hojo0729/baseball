@@ -51,9 +51,13 @@ function storyExplore() {
   const st = story, seen = storySession.seen;
   storyVisual(st.scene);
   const o = { title: st.short + ' ' + st.title, text: '気になる記録をタップして調べよう。 ' + seen.size + '/' + st.records.length };
-  st.records.forEach(([name, text], j) => {
+  st.records.forEach(([name, text, detail], j) => {
     o['b' + (j + 1)] = [(seen.has(j) ? '✓ ' : '') + name, () => {
-      seen.add(j); overlay({ title: name, text, plain: true, cred: true, b1: ['調査にもどる', storyExplore] });
+      seen.add(j);
+      const record = () => overlay({ title: name, text, plain: true,
+        b1: ['調査にもどる', storyExplore],
+        b2: detail ? ['詳しく読む', () => overlay({ title: name, text: detail, plain: true, b1: ['要約にもどる', record] })] : null });
+      record();
     }];
   });
   if (seen.size === st.records.length) o.b4 = ['仲間と話す', () => storyEnd(true)];
@@ -67,6 +71,10 @@ function storyRole() {
 }
 function storyAfterResult() {
   const sb = onlineScore();
+  // Only the story's two-sided finale uses the beast-mode mercy rule.
+  if (storySession && storySession.beastUsed && Math.abs(sb.home - sb.away) >= 10) {
+    G.over = true; storySession.mercy = true;
+  }
   if (G.inning >= G.maxHalf && G.inning % 2 === 0 && sb.home > sb.away) G.over = true;
   if (story.maxInn && G.inning > story.maxInn * 2) G.over = true;
   if (G.over) { storyEnd(sb.home > sb.away); return; }
@@ -83,7 +91,7 @@ function storyCheck() {
 function storyEvent() {
   if (!story || !storySession || !story.event || storySession.eventDone || G.pa < 1) return false;
   storySession.eventDone = true;
-  const resume = () => { storyVisual(null); $('#overlay').hidden = true; afterResult(); };
+  const resume = () => { pausedAt = 0; storyVisual(null); $('#overlay').hidden = true; afterResult(); };
   const event = story.event;
   if (event === 'jump') {
     storyVisual('jump');
@@ -97,17 +105,19 @@ function storyEvent() {
       b1: ['仲間のもとへ走る', () => {
         storySession.rescued = true;
         if (event === 'rescue') { G.runs++; hud(); }
-        storyVisual('jump');
+        storyVisual(event === 'rescue' ? 'rescue' : 'jump');
         dialog(event === 'rescue' ? [['ミケ（ネコ）', 'ありがとう…。その間に、1点取られちゃった。'],
           ['コタロウ（柴犬）', 'まだ終わりじゃない。一緒に守り直そう。残りも、2失点以内だ。']]
-          : [['', '一歩で、ベンチから外野へ。見たことのない速さで、支柱の下から仲間を引き寄せた。'],
-            ['ヒグマ（くま）', '今の力…偶然じゃないぞ。']], resume);
+          : [['ヒグマ（くま）', '今の速さ……。だが、おまえも一人で抱えるな。'],
+            ['ウサミ（うさぎ）', '次はわたしの番。一塁から、きみの打球を待ってる。']], () => {
+              G.bases[0] = G.bases[0] || 5; hud(); resume();
+            });
       }] });
   } else if (event === 'awaken') {
     storyVisual('beast');
-    dialog([['AI', '動作の逸脱を検出。判断を委ねれば、安全は維持できる。'],
-      ['ミケ（ネコ）', '扉を開けたよ！ さあ、きみはどうしたい？']], () => {
-      overlay({ title: 'ぼくが選ぶ', text: '作られたことと、生き方を決められることは、同じじゃない。',
+    dialog([['', '牙が伸び、胸の奥から唸り声が漏れる。大きな手に、ミケの小さな手が触れた。'],
+      ['ミケ（ネコ）', '大丈夫。きみは、ぼくを助けてくれたコタロウだ。']], () => {
+      overlay({ title: 'ぼくが選ぶ', text: 'この力を、誰かを傷つけるためには使わない。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
           storySession.awakenRuns = G.runs;
           storySession.beastLeft = 1; activateBeast(); resume();
@@ -134,13 +144,16 @@ function activateBeast() {
 }
 function storyEnd(win) {
   idle(); const st = story;
-  storyVisual(st.scene || (win ? 'field' : 'rain'));
+  storyVisual(win ? (st.idx === 1 ? 'rescue' : st.idx === 7 ? 'beast' : st.scene || 'field') : 'rain');
   if (!win) {
-    dialog([['コタロウ（柴犬）', '今のぼくらでは、届かなかった。でも、やり直す方法は一緒に考えられる。']], () => {
+    const lossLines = [['コタロウ（柴犬）', '今は届かなかった。でも、次もみんなで挑もう。']];
+    if (storySession && storySession.mercy) lossLines.unshift(['', '10点差。コールドゲームが宣告された。']);
+    dialog(lossLines, () => {
       overlay({ title: 'もう一度、ここから', text: goalLong(st), b1: ['再挑戦', startGame], b2: ['章のメニュー', startStory] });
     }); return;
   }
-  dialog(st.win || [], () => {
+  const finishLines = storySession && storySession.mercy ? [['', '10点差。コールドゲームが宣告された。']].concat(st.win || []) : st.win || [];
+  dialog(finishLines, () => {
     const complete = () => {
       saveProgress(Math.max(loadProgress(), st.idx + 1));
       storyVisual(null);

@@ -9,7 +9,7 @@
 - 第2話の救援には実際の1失点という代償がある。第9話では故障の危険がある投手の使い切りを拒否し、プレイヤー自身が試合に勝つ。延長5回で同点なら再挑戦。
 - ビーストモードは第8話の選択、第9話の任意のタイミングで発動し、その試合の終了まで持続する。操作側の打者・投手は逆立つ毛・牙・赤い目とオーラ・太い腕と胴の獣形態になる。攻撃は常時巨大バットと許容タイミング・ミート・打球速度の強化、守備は200km/h投球・消える魔球の回数無制限（発動時オン、切替可能）と相手ミートへの補正。CPU・練習・オンラインには作用しない。第8話は覚醒前の得点と別に、覚醒後1点を取ってクリアする。
 - 元HTMLの頭・瞳・鼻・耳・尻尾・スカーフ・リボンなどを既存リグへ適合。ユニフォームとグローブ、バット握り、投打・走塁の動作をゲームに合わせる。柴犬・トラ・猫・ウサギ・クマ・たれ耳ウサギ・人間・宇宙人に、既存パンダを同じ作風で加えた。トラ・宇宙人の対戦相手はストーリー専用で、既存のCPU/オンラインのチーム構成は維持。
-- 研究所・解析画面・宇宙船・跳躍・最後の人物は軽量なSVGとアニメーションで演出。3Dの探索マップや動画素材は新設していない。
+- 日常・救援・研究所・AI・宇宙船・覚醒の6枚を絵本調の挿絵にし、会話と絵を分離。1200px幅のWebPで合計約0.82MiB。跳躍と終幕の人物・風船は既存の軽量SVGを維持。改訂プロットは `story-plot.md`、生成指示と保存先は `story-art-prompts.md`。
 - 最後は音声コンテキストごと停止し、黒地でタイトルと `Made by AI.`、3秒後に `Who made you?`、さらに余韻を置いてクレジットへ進む。正体を説明する文は加えない。
 
 ## 保存と再開
@@ -38,8 +38,8 @@ CHROME_PATH=/usr/bin/chromium node tools/test/presentation.mjs
 
 ## スマホ配信の追記
 
-スマホはZIP内のHTMLを直接開く方法ではなく、HTTPSのURLで開くPWAを使う。`node tools/build-mobile-preview.mjs` で `dist/mobile-preview/` とルートにindex.htmlを含む `dist/mobile-preview.zip` を生成する。GitHub Pagesなら本番とは別の `saboten-apps/baseball-preview` リポジトリの `preview` ブランチを配信する構成。現時点ではそのリポジトリ・Pagesは未作成で、URLを発行できたとは扱わない。
+スマホはHTTPSのURLで開くPWAを使う。`node tools/build-mobile-preview.mjs` で画像・音声を埋め込んだ `dist/mobile-preview/` と `dist/mobile-preview.zip` を生成する。本番と別の `saboten-apps/baseball-preview` リポジトリの `preview` ブランチをGitHub Pagesで配信済み。確認URLは https://saboten-apps.github.io/baseball-preview/ 。
 
 同一のGitHub Pagesドメインでも本番と混ざらないよう、保存キーを `mobile-preview-` で分け、オンラインルームも別の接頭辞にする。共有URLは確認版自身のパスを使用し、キャッシュ名はサービスワーカーのスコープごとに分ける。タッチ対応ChromiumでAndroidおよびiPhone相当の画面、スワイプ投球、保存領域の分離、キャッシュからのオフライン再起動を検証済み。iPhoneのSafari実機・ホーム画面への実インストールは未確認。
 
-GitHub認証の環境変数は存在するが、GitHub APIへの通信が現在の環境ポリシーで403となっている。`api.github.com` と確認ページ検証用の `saboten-apps.github.io` の通信許可を設定ドラフトへ追加済み。設定反映後に既存認証でAPIの権限を確認し、別リポジトリの作成とPages配信へ進む。本番リポジトリのPagesソースやmainは変更しない。
+本番リポジトリのPagesソースやmainは変更しない。作業ブランチのソースと生成結果を保存し、確認用リポジトリには `dist/mobile-preview/` の内容だけを反映する。

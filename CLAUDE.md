@@ -22,6 +22,7 @@
 - `docs/sfx/*.bin` — 効果音ラボの打球音・ミット音・スライディング音（`tools/make-sfx.py` が mp3 を XOR で固定化して作る。元の mp3 はコミットしない。サイトの規約: 商用可・クレジット不要・AI学習利用禁止・素材ファイルの再配布禁止）。`01-core.js` の `sfxLoad`/`playRec` で再生。音まわりに Math.random は使わず `sfxRnd` を使う
 - `build.mjs` — `node build.mjs` で `docs/index.html`（GitHub Pages 公開用）と `dist/artifact.html`（Claude内プレビュー用）を作る
 - `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）。アプリ化（PWA）用の `manifest.webmanifest` と `sw.js` もビルドで作られる。`docs/icons/` のアイコンは `python3 tools/make-icons.py` で作る。`docs/audio/<id>.mp3` を置いてビルドすると、実況の声として自動で使われる（スマホの機械音声は使わない）
+- `docs/story/` — 承認された絵本調の挿絵6枚（圧縮WebP）。通常は画像として読み、スマホ確認版には `tools/build-preview.mjs` が埋め込む。改訂の意図は `design/story-plot.md`、生成記録は `design/story-art-prompts.md`。ビースト発動後の最終戦は10点差でコールド。
 
 ## 動作確認
 

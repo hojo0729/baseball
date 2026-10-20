@@ -131,7 +131,9 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
         }
         assert.equal(await p.evaluate(() => window.__dbg.G.over), true);
       } else if (def.mode === 'bat') {
-        for (let n = 0; n < def.runs; n++) await playPA(p, errs, HOMERUN, '第' + (i + 1) + '話 得点');
+        const target = await p.evaluate(() => { const d = window.__dbg; return d.story.idx === 7 ? d.session.awakenRuns + 1 : d.story.runs; });
+        for (let n = 0; n < 6 && await p.evaluate(goal => window.__dbg.G.runs < goal, target); n++) await playPA(p, errs, HOMERUN, '第' + (i + 1) + '話 得点');
+        assert.ok(await p.evaluate(goal => window.__dbg.G.runs >= goal, target), 'Batting chapter must reach its goal');
       } else {
         for (let n = 0; n < 4; n++) await playPA(p, errs, FLYOUT, '第2話 2回終了前');
         assert.equal(await p.evaluate(() => window.__dbg.G.over), false, 'Chapter 2 continues until six outs');

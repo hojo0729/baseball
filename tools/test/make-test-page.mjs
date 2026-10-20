@@ -23,6 +23,9 @@ if (count(s, 'camera.lookAt(camLook);') !== 1) throw new Error('Expected 1 occur
 s = s.replace('  faceFor(pitcherF,', '  if(!window.__fh)faceFor(pitcherF,');
 s = s.replace('camera.lookAt(camLook);', 'if(window.__hold){camera.position.set(...window.__hold.p);camera.lookAt(...window.__hold.l);camera.fov=window.__hold.f;camera.near=0.1;camera.updateProjectionMatrix();}else camera.lookAt(camLook);');
 s = s.replace('requestAnimationFrame(frame);\n})();', hook.replace('requestAnimationFrame(frame);', `window.__dbg.beastView=()=>({giant:giantActive(),speed:ball&&ball.speed,vanish:ball&&ball.vn,armed:vanishArm,pitcher:!!pitcherF.beastOn,batter:!!batterF.beastOn,batScale:batG.scale.x});
+window.__dbg.clock=()=>({now:now_(),nextAt,pausedAt,timeOut});
+window.__dbg.storyAfterResult=storyAfterResult;
+window.__dbg.lobby=()=>({code:onl.code,side:onl.side,me:onl.me,started:onl.started,peers:onl.ch?onl.ch.presenceState():null});
 requestAnimationFrame(frame);`));
 
 const i = s.indexOf('<script>');

@@ -233,8 +233,14 @@ async function playPA(p, errs, hitObj, label) {
     await p2.fill('#codeIn', code);
     await p2.click('#goBtn'); // 入る
 
-    const wfOpts = { polling: 50, timeout: 10000 };
-    await p.waitForFunction(() => window.__dbg && window.__dbg.online, null, wfOpts);
+    // Two software-rendered tabs can briefly stall the headless event loop while
+    // decoding story art; allow the same handshake budget as tac7.js.
+    const wfOpts = { polling: 50, timeout: 30000 };
+    await p.waitForFunction(() => window.__dbg && window.__dbg.online, null, wfOpts).catch(async error => {
+      const info = page => page.evaluate(() => ({ title: document.querySelector('#ot').textContent, text: document.querySelector('#od').textContent, lobby: window.__dbg.lobby() }));
+      console.error('Online lobby timeout', { host: await info(p), guest: await info(p2), errors: errs });
+      throw error;
+    });
     await p2.waitForFunction(() => window.__dbg && window.__dbg.online, null, wfOpts);
     await p.waitForFunction(() => window.__dbg.phase === 'ready', null, wfOpts);
     await p2.waitForFunction(() => window.__dbg.phase === 'wait', null, wfOpts);
