@@ -29,3 +29,5 @@
 `story.mjs` は smoke から実行される新ストーリーの回帰テストです。10話通し・探索の記録確認・救援の失点・延長引き分けからの再挑戦・ビーストモード・無音の終幕・旧セーブ分離・再読込・9種のモデルを確認します。画像は `/tmp/baseball-*.png` に出力します。実機の操作感とリアルタイムの外部オンライン対戦は別途確認が必要です。
 
 実ポインター操作と配布用HTMLの確認：`node tools/build-preview.mjs` の後に `CHROME_PATH=/usr/bin/chromium node tools/test/presentation.mjs`。クラウドの管理ポリシーで file:// を開けないため、単一HTMLをHTTPで配信し他のHTTP通信を遮断して検証します。
+
+スマホ用PWA：`node tools/build-mobile-preview.mjs` の後に `CHROME_PATH=/usr/bin/chromium node tools/test/mobile-preview.mjs`。タップでの画面遷移、スワイプ投球、本番保存キーの保持、サービスワーカーによるオフライン再起動を確認します。実際のSafariや端末へのインストールは実機確認が必要です。

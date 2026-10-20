@@ -34,6 +34,16 @@ node tools/check.mjs --full               # 上記に加えて thr / hbp / tac7 
 
 公開は GitHub Pages（main ブランチの `/docs`）。構成と約束ごとは `CLAUDE.md` を参照。
 
+## スマホで確認する開発版
+
+`node tools/build-mobile-preview.mjs` で `dist/mobile-preview/` と `dist/mobile-preview.zip` を作れます。これは本番と別のHTTPS URLで配信するPWA確認版です。AndroidのChrome、iPhoneのSafariでURLを開き、ブラウザの「ホーム画面に追加」から使います。HTMLファイルをスマホのファイルアプリから開く配布方法には依存しません。
+
+GitHub Pagesを使う場合は、本番の `baseball` とは別の `baseball-preview` リポジトリを用意し、`preview` ブランチのルートへ生成されたファイルを置く構成を推奨します。現在の本番Pagesのソース設定は変更しません。`.nojekyll` は生成物に含まれます。公開操作はビルドスクリプトに含めていません。
+
+同じ `saboten-apps.github.io` 内でも本番とデータが混ざらないよう、確認版の保存キー・対戦ルーム・共有URLと、サービスワーカーのキャッシュを分離しています。最初にオンラインで開くとキャッシュされ、次回はストーリーをオフラインでも開始できます。
+
+検証：`CHROME_PATH=/usr/bin/chromium node tools/test/mobile-preview.mjs`（タッチ対応ChromiumでAndroidとiPhone相当の画面を検証。Safari実機の検証を意味しません）。
+
 ## 実況の音声ファイル
 
 実況は、`docs/audio/<id>.mp3` があればそのファイルを再生する（無いセリフは字幕だけ）。ファイルを足したら `node build.mjs` で一覧が更新される。

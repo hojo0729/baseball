@@ -35,3 +35,11 @@ CHROME_PATH=/usr/bin/chromium node tools/test/presentation.mjs
 ## 運用
 
 作業ブランチは `feature/story-and-mascots`。mainの変更・push・merge・本番公開は、Takeのプレイ確認後の明示的な指示まで行わない。参考資料にある古い運用・旧ストーリーは、この方針に優先しない。
+
+## スマホ配信の追記
+
+スマホはZIP内のHTMLを直接開く方法ではなく、HTTPSのURLで開くPWAを使う。`node tools/build-mobile-preview.mjs` で `dist/mobile-preview/` とルートにindex.htmlを含む `dist/mobile-preview.zip` を生成する。GitHub Pagesなら本番とは別の `saboten-apps/baseball-preview` リポジトリの `preview` ブランチを配信する構成。現時点ではそのリポジトリ・Pagesは未作成で、URLを発行できたとは扱わない。
+
+同一のGitHub Pagesドメインでも本番と混ざらないよう、保存キーを `mobile-preview-` で分け、オンラインルームも別の接頭辞にする。共有URLは確認版自身のパスを使用し、キャッシュ名はサービスワーカーのスコープごとに分ける。タッチ対応ChromiumでAndroidおよびiPhone相当の画面、スワイプ投球、保存領域の分離、キャッシュからのオフライン再起動を検証済み。iPhoneのSafari実機・ホーム画面への実インストールは未確認。
+
+GitHub認証の環境変数は存在するが、GitHub APIへの通信が現在の環境ポリシーで403となっている。`api.github.com` と確認ページ検証用の `saboten-apps.github.io` の通信許可を設定ドラフトへ追加済み。設定反映後に既存認証でAPIの権限を確認し、別リポジトリの作成とPages配信へ進む。本番リポジトリのPagesソースやmainは変更しない。
