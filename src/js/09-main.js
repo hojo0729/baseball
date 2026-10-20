@@ -363,7 +363,12 @@ function update(now, dt) {
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
-  if (beastActive()) { batAura.visible = true; batAura.position.copy(bj.J.pelvis); batAura.scale.setScalar(2.8); batAura.material.color.set('#75dfcc'); batAura.material.opacity = 0.25 + 0.1 * Math.sin(now * 5); } else batAura.material.color.set('#ffc845');
+  batAura.material.color.set('#ffc845'); pitAura.material.color.set('#ffc845');
+  if (beastActive()) {
+    const aura = mode === 'pit' ? pitAura : batAura, pos = mode === 'pit' ? pj.pelvis : bj.J.pelvis;
+    aura.visible = true; aura.position.copy(pos); aura.scale.setScalar(3.8);
+    aura.material.color.set('#ff4626'); aura.material.opacity = .5 + .15 * Math.sin(now * 7);
+  }
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
   updateFielders(now, k);
@@ -463,7 +468,7 @@ function endFlick(cancel) {
   const sig = ((0.01 + f * 0.03) * (1 + (3 - P.c) * 0.1) + P.fatigue * 0.04);
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
   pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2), vn: vanishArm };
-  if (vanishArm) { vanishArm = false; G.skill.vn--; }
+  if (vanishArm && !beastActive()) { vanishArm = false; G.skill.vn--; }
   phase = 'deliver'; deliverStart = now_(); setHint(icoOf(key) + '  ' + T.name);
   if (online) { pending.sg = onl.oppSign; send('pitch', { p: pending }); }
 }

@@ -269,7 +269,7 @@ function actOptions() {
   }
   if (phase === 'ready') {
     if (G.bases[0] || G.bases[1]) o.push(['pick', '牽制する']);
-    if (G.skill.vn > 0) o.push(['vn', '消える魔球 ' + G.skill.vn]);
+    if (beastActive() || G.skill.vn > 0) o.push(['vn', '消える魔球 ' + (beastActive() ? '∞' : G.skill.vn)]);
     const cl = closerOption(); if (cl) o.push(cl);
     const rl = reliefOption(); if (rl) o.push(rl);
   }

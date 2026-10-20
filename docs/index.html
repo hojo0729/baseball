@@ -941,6 +941,7 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
+  if (beastActive() && mode === 'pit') o = { ...o, speed: 200 };
   let dk = false;
   const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
@@ -959,7 +960,7 @@ function launchBall(o) {
   trailPts.length = 0;
   hideBanner();
   $('#spd').textContent = Math.round(o.speed) + ' km/h';
-  const hot = o.key === 'gou', magic = magicActive();
+  const hot = o.key === 'gou' || (beastActive() && mode === 'pit'), magic = magicActive();
   $('#spd').classList.toggle('hot', hot);
   ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#34342e');
   ballGlow.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#ffffff');
@@ -1939,6 +1940,7 @@ let faceS = 777;
 const faceRnd = () => (faceS = (Math.imul(faceS, 1664525) + 1013904223) >>> 0) / 4294967296;
 const BLINKABLE = { normal: 1, smile: 1, wow: 1, sad: 1 };
 function faceFor(f, ex, now) {
+  if (f.beastOn) ex = 'shout';
   const b = f.bk || (f.bk = { next: now + 0.5 + faceRnd() * 3, until: 0 });
   if (now >= b.next) { b.until = now + 0.13; b.next = now + 2 + faceRnd() * 4; }
   setFace(f, now < b.until && BLINKABLE[ex] ? 'blink' : ex);
@@ -1983,6 +1985,37 @@ function seg(m, a, b, w = 1) {
 }
 function dot(m, p, r) { m.position.copy(p); m.scale.setScalar(r); }
 const _a = V(), _b = V();
+// Shared low-poly geometry; only the player's active pitcher/batter gains a beast form.
+const BEAST_SPIKE = new THREE.ConeGeometry(1, 1, 5);
+const BEAST_FUR = mat('#302536'), BEAST_FANG = mat('#fff1ce');
+const BEAST_EYE = mat('#ff583d', { emissive: '#ff3210', emissiveIntensity: 1.5 });
+function beastForm(f, active) {
+  if (active && !f.beastForm) {
+    const group = new THREE.Group(); f.head.add(group);
+    const piece = (geo, material, x, y, z, sx, sy, sz, angle = 0) => {
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.rotation.z = angle;
+      group.add(mesh);
+    };
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 4; i++) piece(BEAST_SPIKE, BEAST_FUR, s * (.32 + i * .025), .22 - i * .14, .05, .12, .29, .13, -s * (1.0 + i * .35));
+      piece(BEAST_SPIKE, BEAST_FANG, s * .12, -.23, .39, .045, .18, .045, Math.PI);
+      piece(SPL, BEAST_EYE, s * .16, .055, .35, .10, .028, .035, -s * .25);
+      piece(BEAST_SPIKE, BEAST_FUR, s * .17, .13, .36, .07, .25, .035, s * 1.2);
+    }
+    f.beastForm = group;
+  }
+  if (f.beastForm) f.beastForm.visible = active;
+  f.head.scale.setScalar(HEAD_K * (active ? 1.18 : 1));
+  f.beastOn = active;
+  f.cap.visible = f.brim.visible = !active && (f.sp === 'alien' || f.helmet);
+  if (active) {
+    f.body.scale.x *= 1.5; f.body.scale.z *= 1.35;
+    [...f.ua, ...f.fa].forEach(m => { m.scale.x *= 1.4; m.scale.z *= 1.4; });
+    f.paw.forEach(m => m.scale.multiplyScalar(1.35));
+    f.coneEar.forEach(m => m.scale.y = .48);
+  } else f.coneEar.forEach(m => m.scale.y = .36);
+}
 function poseFig(f, J, yaw, headYaw) {
   const bk = ((SPECIES[f.sp] && SPECIES[f.sp].bulk) || 1) * (f.star ? 1.06 : 1);
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
@@ -2010,6 +2043,7 @@ function poseFig(f, J, yaw, headYaw) {
   f.longT.position.copy(_a); f.longT.position.y += 0.03; f.longT.rotation.set(0.25, yaw + Math.PI / 2 + wag * 1.4, -0.35);
   f.ball.position.copy(_a); if ((f.sp === 'usagi' || f.sp === 'floppy')) f.ball.position.y += 0.02; f.ball.scale.setScalar((f.sp === 'usagi' || f.sp === 'floppy') ? 0.082 : 0.06);
   if (f.mitt) { f.mitt.position.copy(J.hL); f.mitt.scale.set(0.1, 0.115, 0.065); f.mitt.rotation.set(0, headYaw, 0); }
+  beastForm(f, beastActive() && ((f === pitcherF && mode === 'pit') || (f === batterF && mode === 'bat')));
 }
 
 /* ---- right-handed batter ---- */
@@ -2353,7 +2387,7 @@ function storyAfterResult() {
 }
 function storyCheck() {
   if (story.inn) return G.over ? (onlineScore().home > onlineScore().away ? 'clear' : 'fail') : null;
-  if (story.mode === 'bat') return G.runs >= story.runs ? 'clear' : G.over ? 'fail' : null;
+  if (story.mode === 'bat') return G.runs >= storyRunGoal() ? 'clear' : G.over ? 'fail' : null;
   return G.runs > story.max ? 'fail' : G.over ? 'clear' : null;
 }
 function storyEvent() {
@@ -2385,6 +2419,7 @@ function storyEvent() {
       ['ミケ（ネコ）', '扉を開けたよ！ さあ、きみはどうしたい？']], () => {
       overlay({ title: 'ぼくが選ぶ', text: '作られたことと、生き方を決められることは、同じじゃない。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
+          storySession.awakenRuns = G.runs;
           storySession.beastLeft = 1; activateBeast(); resume();
         }] });
     });
@@ -2397,13 +2432,15 @@ function storyEvent() {
   return true;
 }
 function beastActive() {
-  return !!(story && !online && !match && storySession && storySession.beastUntilPA >= G.pa);
+  return !!(story && !online && !match && G && !G.over && phase !== 'idle' && storySession && storySession.beastUntilPA >= G.pa);
 }
+function storyRunGoal() { return story.idx === 7 && storySession && storySession.awakenRuns !== undefined ? storySession.awakenRuns + 1 : story.runs; }
 function activateBeast() {
   if (!story || !story.beast || !storySession || !storySession.beastLeft || online || match) return;
   storySession.beastLeft--; storySession.beastUsed = true;
-  storySession.beastUntilPA = G.pa;
-  showBanner('ビーストモード', 'この打席・打者の間、能力制限を越える', 'g'); updateGoal();
+  storySession.beastUntilPA = Infinity;
+  vanishArm = true;
+  showBanner('野性解放！', '試合終了まで獣化・200km/h・消える魔球∞・巨大バット', 'g'); updateGoal();
 }
 function storyEnd(win) {
   idle(); const st = story;
@@ -2552,11 +2589,12 @@ function saveProgress(n) { try { localStorage.setItem(STORY_SAVE_KEY, JSON.strin
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
 /* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
 const helpersOn = () => !online && !match && !(story && story.inn);
-function giantActive() { return helpersOn() && mode === 'bat' && !!G && G.pa % 3 === 2; }
+function giantActive() { return mode === 'bat' && (beastActive() || (helpersOn() && !!G && G.pa % 3 === 2)); }
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
-  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。勝って、次の日も全員で野球をしよう。ビーストモードは1試合に1回、打つ・守るどちらでも使えます。';
+  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストモードは1試合に1回発動。以後は試合終了まで獣化、200km/h投球・消える魔球無制限・常時巨大バット！';
+  if (st.idx === 7) return '覚醒後に1点取ろう。野性を解放すると、試合終了まで獣の姿と巨大バットで戦えます。';
   if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
     : ROSTER[st.opp].name + 'から、3回までに' + st.runs + '点取ろう。';
@@ -2574,12 +2612,12 @@ function updateGoal() {
   if (story) {
     if (story.inn) {
       s += story.short + ' vs ' + ROSTER[story.opp].name + '（' + story.inn + '回戦・延長' + story.maxInn + '回まで）　' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>';
-      el.innerHTML = s + (beastActive() ? '<br>ビーストモード：この打者まで' : '') + '<br>' + rosterLines();
+      el.innerHTML = s + (beastActive() ? '<br>野性解放中：200km/h・魔球∞・巨大バット' : '　ビーストモード発動可能') + '<br>' + rosterLines();
       return;
     }
-    s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
+    s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + storyRunGoal() + '点（いま' + G.runs + '点）') + '<br>';
   }
-  if (story && story.beast) { el.innerHTML = s + (beastActive() ? 'ビーストモード：この打席まで' : '能力解放のタイミングを選ぼう') + '<br>' + rosterLines(); return; }
+  if (story && story.beast) { el.innerHTML = s + (beastActive() ? '野性解放中：常時巨大バット' : '能力解放のタイミングを選ぼう') + '<br>' + rosterLines(); return; }
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
   else s += n === 0 ? '<span class="hot">ラッキーボール発動中！</span>' : 'ラッキーボールまで あと' + n + '人';
@@ -3144,7 +3182,7 @@ function actOptions() {
   }
   if (phase === 'ready') {
     if (G.bases[0] || G.bases[1]) o.push(['pick', '牽制する']);
-    if (G.skill.vn > 0) o.push(['vn', '消える魔球 ' + G.skill.vn]);
+    if (beastActive() || G.skill.vn > 0) o.push(['vn', '消える魔球 ' + (beastActive() ? '∞' : G.skill.vn)]);
     const cl = closerOption(); if (cl) o.push(cl);
     const rl = reliefOption(); if (rl) o.push(rl);
   }
@@ -4244,7 +4282,12 @@ function update(now, dt) {
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
-  if (beastActive()) { batAura.visible = true; batAura.position.copy(bj.J.pelvis); batAura.scale.setScalar(2.8); batAura.material.color.set('#75dfcc'); batAura.material.opacity = 0.25 + 0.1 * Math.sin(now * 5); } else batAura.material.color.set('#ffc845');
+  batAura.material.color.set('#ffc845'); pitAura.material.color.set('#ffc845');
+  if (beastActive()) {
+    const aura = mode === 'pit' ? pitAura : batAura, pos = mode === 'pit' ? pj.pelvis : bj.J.pelvis;
+    aura.visible = true; aura.position.copy(pos); aura.scale.setScalar(3.8);
+    aura.material.color.set('#ff4626'); aura.material.opacity = .5 + .15 * Math.sin(now * 7);
+  }
   const gb = giantActive() && phase !== 'idle' ? 1 : 0;
   batG.scale.set(1 + gb * 1.6, 1 + gb * 0.55, 1 + gb * 1.6);
   updateFielders(now, k);
@@ -4344,7 +4387,7 @@ function endFlick(cancel) {
   const sig = ((0.01 + f * 0.03) * (1 + (3 - P.c) * 0.1) + P.fatigue * 0.04);
   const tx = a.x / ZW + gauss() * sig, ty = (ZY0 - a.y) / ZH + gauss() * sig;
   pending = { key, speed: clamp(T.min + (T.max - T.min) * f + (P.v - 3) * 4 - P.fatigue * 8, 70, 170), tx: clamp(tx, -2, 2), ty: clamp(ty, -2, 2), vn: vanishArm };
-  if (vanishArm) { vanishArm = false; G.skill.vn--; }
+  if (vanishArm && !beastActive()) { vanishArm = false; G.skill.vn--; }
   phase = 'deliver'; deliverStart = now_(); setHint(icoOf(key) + '  ' + T.name);
   if (online) { pending.sg = onl.oppSign; send('pitch', { p: pending }); }
 }

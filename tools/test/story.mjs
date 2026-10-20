@@ -104,10 +104,12 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
         assert.ok(defense.after < defense.before, 'Defensive beast mode must reduce opposing contact quality');
         assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true);
       }
-      await playPA(p, errs, FLYOUT, '第' + (i + 1) + '話 最初の打席'); await event(p);
-      if (i === 8) assert.equal(await p.evaluate(() => window.__dbg.beastActive()), false, 'Boost expires after one plate appearance');
+      await playPA(p, errs, i === 7 ? HOMERUN : FLYOUT, '第' + (i + 1) + '話 最初の打席'); await event(p);
+      if (i === 8) assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true, 'Beast mode lasts across plate appearances');
       if (i === 1) assert.equal(await p.evaluate(() => window.__dbg.G.runs), 1, 'Rescue must have a real run cost');
       if (i === 7) {
+        assert.equal(await p.evaluate(() => window.__dbg.G.over), false, 'Opening HR must still allow batting after awakening');
+        assert.equal(await p.evaluate(() => window.__dbg.beastView().giant), true);
         const attack = await p.evaluate(() => {
           const d = window.__dbg, boosted = d.contact(0.11, 0.5, 0, 130, false, false).q;
           const until = d.session.beastUntilPA; d.session.beastUntilPA = -1;

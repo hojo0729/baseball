@@ -7,11 +7,12 @@ function saveProgress(n) { try { localStorage.setItem(STORY_SAVE_KEY, JSON.strin
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
 /* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
 const helpersOn = () => !online && !match && !(story && story.inn);
-function giantActive() { return helpersOn() && mode === 'bat' && !!G && G.pa % 3 === 2; }
+function giantActive() { return mode === 'bat' && (beastActive() || (helpersOn() && !!G && G.pa % 3 === 2)); }
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
-  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。勝って、次の日も全員で野球をしよう。ビーストモードは1試合に1回、打つ・守るどちらでも使えます。';
+  if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストモードは1試合に1回発動。以後は試合終了まで獣化、200km/h投球・消える魔球無制限・常時巨大バット！';
+  if (st.idx === 7) return '覚醒後に1点取ろう。野性を解放すると、試合終了まで獣の姿と巨大バットで戦えます。';
   if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
     : ROSTER[st.opp].name + 'から、3回までに' + st.runs + '点取ろう。';
@@ -29,12 +30,12 @@ function updateGoal() {
   if (story) {
     if (story.inn) {
       s += story.short + ' vs ' + ROSTER[story.opp].name + '（' + story.inn + '回戦・延長' + story.maxInn + '回まで）　' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>';
-      el.innerHTML = s + (beastActive() ? '<br>ビーストモード：この打者まで' : '') + '<br>' + rosterLines();
+      el.innerHTML = s + (beastActive() ? '<br>野性解放中：200km/h・魔球∞・巨大バット' : '　ビーストモード発動可能') + '<br>' + rosterLines();
       return;
     }
-    s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + story.runs + '点（いま' + G.runs + '点）') + '<br>';
+    s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + storyRunGoal() + '点（いま' + G.runs + '点）') + '<br>';
   }
-  if (story && story.beast) { el.innerHTML = s + (beastActive() ? 'ビーストモード：この打席まで' : '能力解放のタイミングを選ぼう') + '<br>' + rosterLines(); return; }
+  if (story && story.beast) { el.innerHTML = s + (beastActive() ? '野性解放中：常時巨大バット' : '能力解放のタイミングを選ぼう') + '<br>' + rosterLines(); return; }
   const n = 2 - G.pa % 3;
   if (mode === 'bat') s += n === 0 ? '<span class="hot">巨大バット発動中！</span>' : '巨大バットまで あと' + n + '打席';
   else s += n === 0 ? '<span class="hot">ラッキーボール発動中！</span>' : 'ラッキーボールまで あと' + n + '人';

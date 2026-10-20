@@ -604,6 +604,7 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
+  if (beastActive() && mode === 'pit') o = { ...o, speed: 200 };
   let dk = false;
   const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
@@ -622,7 +623,7 @@ function launchBall(o) {
   trailPts.length = 0;
   hideBanner();
   $('#spd').textContent = Math.round(o.speed) + ' km/h';
-  const hot = o.key === 'gou', magic = magicActive();
+  const hot = o.key === 'gou' || (beastActive() && mode === 'pit'), magic = magicActive();
   $('#spd').classList.toggle('hot', hot);
   ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#34342e');
   ballGlow.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#ffffff');

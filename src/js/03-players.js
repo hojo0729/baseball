@@ -240,6 +240,7 @@ let faceS = 777;
 const faceRnd = () => (faceS = (Math.imul(faceS, 1664525) + 1013904223) >>> 0) / 4294967296;
 const BLINKABLE = { normal: 1, smile: 1, wow: 1, sad: 1 };
 function faceFor(f, ex, now) {
+  if (f.beastOn) ex = 'shout';
   const b = f.bk || (f.bk = { next: now + 0.5 + faceRnd() * 3, until: 0 });
   if (now >= b.next) { b.until = now + 0.13; b.next = now + 2 + faceRnd() * 4; }
   setFace(f, now < b.until && BLINKABLE[ex] ? 'blink' : ex);
@@ -284,6 +285,37 @@ function seg(m, a, b, w = 1) {
 }
 function dot(m, p, r) { m.position.copy(p); m.scale.setScalar(r); }
 const _a = V(), _b = V();
+// Shared low-poly geometry; only the player's active pitcher/batter gains a beast form.
+const BEAST_SPIKE = new THREE.ConeGeometry(1, 1, 5);
+const BEAST_FUR = mat('#302536'), BEAST_FANG = mat('#fff1ce');
+const BEAST_EYE = mat('#ff583d', { emissive: '#ff3210', emissiveIntensity: 1.5 });
+function beastForm(f, active) {
+  if (active && !f.beastForm) {
+    const group = new THREE.Group(); f.head.add(group);
+    const piece = (geo, material, x, y, z, sx, sy, sz, angle = 0) => {
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.rotation.z = angle;
+      group.add(mesh);
+    };
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 4; i++) piece(BEAST_SPIKE, BEAST_FUR, s * (.32 + i * .025), .22 - i * .14, .05, .12, .29, .13, -s * (1.0 + i * .35));
+      piece(BEAST_SPIKE, BEAST_FANG, s * .12, -.23, .39, .045, .18, .045, Math.PI);
+      piece(SPL, BEAST_EYE, s * .16, .055, .35, .10, .028, .035, -s * .25);
+      piece(BEAST_SPIKE, BEAST_FUR, s * .17, .13, .36, .07, .25, .035, s * 1.2);
+    }
+    f.beastForm = group;
+  }
+  if (f.beastForm) f.beastForm.visible = active;
+  f.head.scale.setScalar(HEAD_K * (active ? 1.18 : 1));
+  f.beastOn = active;
+  f.cap.visible = f.brim.visible = !active && (f.sp === 'alien' || f.helmet);
+  if (active) {
+    f.body.scale.x *= 1.5; f.body.scale.z *= 1.35;
+    [...f.ua, ...f.fa].forEach(m => { m.scale.x *= 1.4; m.scale.z *= 1.4; });
+    f.paw.forEach(m => m.scale.multiplyScalar(1.35));
+    f.coneEar.forEach(m => m.scale.y = .48);
+  } else f.coneEar.forEach(m => m.scale.y = .36);
+}
 function poseFig(f, J, yaw, headYaw) {
   const bk = ((SPECIES[f.sp] && SPECIES[f.sp].bulk) || 1) * (f.star ? 1.06 : 1);
   _d.subVectors(J.neck, J.pelvis); const L = _d.length() || 1e-4;
@@ -311,6 +343,7 @@ function poseFig(f, J, yaw, headYaw) {
   f.longT.position.copy(_a); f.longT.position.y += 0.03; f.longT.rotation.set(0.25, yaw + Math.PI / 2 + wag * 1.4, -0.35);
   f.ball.position.copy(_a); if ((f.sp === 'usagi' || f.sp === 'floppy')) f.ball.position.y += 0.02; f.ball.scale.setScalar((f.sp === 'usagi' || f.sp === 'floppy') ? 0.082 : 0.06);
   if (f.mitt) { f.mitt.position.copy(J.hL); f.mitt.scale.set(0.1, 0.115, 0.065); f.mitt.rotation.set(0, headYaw, 0); }
+  beastForm(f, beastActive() && ((f === pitcherF && mode === 'pit') || (f === batterF && mode === 'bat')));
 }
 
 /* ---- right-handed batter ---- */

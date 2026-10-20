@@ -77,7 +77,7 @@ function storyAfterResult() {
 }
 function storyCheck() {
   if (story.inn) return G.over ? (onlineScore().home > onlineScore().away ? 'clear' : 'fail') : null;
-  if (story.mode === 'bat') return G.runs >= story.runs ? 'clear' : G.over ? 'fail' : null;
+  if (story.mode === 'bat') return G.runs >= storyRunGoal() ? 'clear' : G.over ? 'fail' : null;
   return G.runs > story.max ? 'fail' : G.over ? 'clear' : null;
 }
 function storyEvent() {
@@ -109,6 +109,7 @@ function storyEvent() {
       ['ミケ（ネコ）', '扉を開けたよ！ さあ、きみはどうしたい？']], () => {
       overlay({ title: 'ぼくが選ぶ', text: '作られたことと、生き方を決められることは、同じじゃない。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
+          storySession.awakenRuns = G.runs;
           storySession.beastLeft = 1; activateBeast(); resume();
         }] });
     });
@@ -121,13 +122,15 @@ function storyEvent() {
   return true;
 }
 function beastActive() {
-  return !!(story && !online && !match && storySession && storySession.beastUntilPA >= G.pa);
+  return !!(story && !online && !match && G && !G.over && phase !== 'idle' && storySession && storySession.beastUntilPA >= G.pa);
 }
+function storyRunGoal() { return story.idx === 7 && storySession && storySession.awakenRuns !== undefined ? storySession.awakenRuns + 1 : story.runs; }
 function activateBeast() {
   if (!story || !story.beast || !storySession || !storySession.beastLeft || online || match) return;
   storySession.beastLeft--; storySession.beastUsed = true;
-  storySession.beastUntilPA = G.pa;
-  showBanner('ビーストモード', 'この打席・打者の間、能力制限を越える', 'g'); updateGoal();
+  storySession.beastUntilPA = Infinity;
+  vanishArm = true;
+  showBanner('野性解放！', '試合終了まで獣化・200km/h・消える魔球∞・巨大バット', 'g'); updateGoal();
 }
 function storyEnd(win) {
   idle(); const st = story;
