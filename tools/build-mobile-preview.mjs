@@ -60,7 +60,10 @@ fs.writeFileSync(out + '/sw.js', worker);
 fs.writeFileSync(out + '/.nojekyll', '');
 fs.writeFileSync(out + '/_headers', '/index.html\n  Cache-Control: no-cache\n/sw.js\n  Cache-Control: no-cache\n/manifest.webmanifest\n  Cache-Control: no-cache\n');
 // Netlify Drop and other static hosts recognize index.html at the ZIP root.
-execFileSync('python3', ['-c', `from pathlib import Path
+if (process.platform === 'win32') {
+  execFileSync('powershell.exe', ['-NoProfile', '-Command',
+    "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [IO.Path]::GetFullPath('dist/mobile-preview.zip'); if ([IO.File]::Exists($zip)) { [IO.File]::Delete($zip) }; [IO.Compression.ZipFile]::CreateFromDirectory([IO.Path]::GetFullPath('dist/mobile-preview'), $zip)"], { stdio: 'inherit' });
+} else execFileSync('python3', ['-c', `from pathlib import Path
 import zipfile
 root = Path('dist/mobile-preview')
 with zipfile.ZipFile('dist/mobile-preview.zip', 'w', zipfile.ZIP_DEFLATED) as archive:

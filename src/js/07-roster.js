@@ -68,6 +68,10 @@ function curBatter() {
   const t = teamsNow().bat, s = teamState(t), slot = s.order % 9;
   let sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
   if (story && t === 'home' && !sub) b = STORY_BAT[slot];
+  if (story && t === story.opp && story.batRatings) {
+    b = [...b]; b[1] = story.batRatings.m; b[2] = story.batRatings.p;
+    b[3] = (b[3] || '').replace('*', '');
+  }
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
   const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
   const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1

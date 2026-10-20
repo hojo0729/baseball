@@ -142,8 +142,11 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #cmtBtn { position: absolute; top: 10px; right: 12px; z-index: 5; font: 700 11px var(--f-body); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; min-height: 30px; }
 
 /* rolling die */
-.dice-wrap { position: absolute; left: 50%; top: 22%; width: 68px; height: 68px; margin-left: -34px; perspective: 520px; pointer-events: none; z-index: 6; opacity: 0; transition: opacity .25s; }
-.dice-wrap.on { opacity: 1; }
+.dice-panel { display: none; align-items: center; gap: 10px; padding: 6px 12px; min-height: 66px; border: 1px solid var(--lamp); border-radius: 12px; background: var(--panel); pointer-events: none; }
+.dice-panel.on { display: flex; }
+.dice-wrap { position: relative; flex: 0 0 68px; width: 68px; height: 68px; perspective: 520px; transform: scale(.7); }
+.dice-result { min-width: 0; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.dice-result b { display: block; color: var(--lamp); font-size: 16px; }
 .dice-sh { position: absolute; left: 4px; right: 4px; bottom: -16px; height: 12px; border-radius: 50%; background: rgba(0, 0, 0, .7); filter: blur(4px); }
 .dice-roll, .dice-tilt, .dice { position: absolute; inset: 0; transform-style: preserve-3d; }
 .dice-tilt { transform: rotateX(-22deg) rotateY(24deg); }
@@ -615,6 +618,7 @@ let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔�
 function newGame() {
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
+  if (story && !story.inn && story.innings) G.maxHalf = story.innings;
   critArm = vanishArm = false; storyResetSession(); hud();
 }
 
@@ -692,28 +696,32 @@ const FACE_UP = { 1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0], 
 let diceEl = null, diceHide = 0, diceRoll = 0;
 function diceDom() {
   if (diceEl) return diceEl;
-  const w = document.createElement('div'); w.className = 'dice-wrap';
-  w.innerHTML = '<div class="dice-sh"></div><div class="dice-roll"><div class="dice-tilt"><div class="dice">' +
+  const w = document.createElement('div'); w.className = 'dice-panel';
+  w.setAttribute('role', 'status');
+  w.innerHTML = '<div class="dice-wrap"><div class="dice-sh"></div><div class="dice-roll"><div class="dice-tilt"><div class="dice">' +
     [1, 2, 3, 4, 5, 6].map(n => '<div class="f" style="transform:' + FACE_AT[n] + ' translateZ(34px)">' +
       PIPS[n].map(c => '<i class="' + (n === 1 ? 'red' : '') + '" style="grid-area:' + Math.ceil(c / 3) + '/' + ((c - 1) % 3 + 1) + '"></i>').join('') + '</div>').join('') +
-    '</div></div></div>';
-  $('#stage').appendChild(w);
+    '</div></div></div></div><div class="dice-result"><b></b><span></span></div>';
+  $('.ctl').prepend(w);
   return (diceEl = w);
 }
 function showDiceBanner(d) {
   const w = diceDom(), roll = w.querySelector('.dice-roll'), cube = w.querySelector('.dice'), sh = w.querySelector('.dice-sh');
   clearTimeout(diceHide); w.classList.add('on');
+  w.querySelector('.dice-result b').textContent = 'サイコロ';
+  w.querySelector('.dice-result span').textContent = 'この回のボーナスを決めています…';
+  resize();
   const my = ++diceRoll;                                // a newer roll cancels this one's landing and hiding
   try { w.getAnimations({ subtree: true }).forEach(a => a.cancel()); } catch (e) {}   // drop the last roll's finished animations
   const [fx, fy] = FACE_UP[d.v], T = 1500;
   const rot = (x, y, z) => 'rotateX(' + x + 'deg) rotateY(' + y + 'deg) rotateZ(' + z + 'deg)';
   try {
     roll.animate([
-      { transform: 'translate(-150px,-130px)', easing: 'cubic-bezier(.5,0,1,.6)' },
-      { transform: 'translate(-70px,0)', offset: 0.38, easing: 'cubic-bezier(0,.5,.5,1)' },
-      { transform: 'translate(-30px,-46px)', offset: 0.56, easing: 'cubic-bezier(.5,0,1,.6)' },
-      { transform: 'translate(-8px,0)', offset: 0.74, easing: 'cubic-bezier(0,.5,.5,1)' },
-      { transform: 'translate(-2px,-12px)', offset: 0.85, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translateY(-8px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translateY(0)', offset: 0.38, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translateY(-6px)', offset: 0.56, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translateY(0)', offset: 0.74, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translateY(-2px)', offset: 0.85, easing: 'cubic-bezier(.5,0,1,.6)' },
       { transform: 'translate(0,0)' }
     ], { duration: T, fill: 'forwards' });
     cube.animate([
@@ -729,10 +737,11 @@ function showDiceBanner(d) {
   say(cmtLine('dice'), 1);
   setTimeout(() => {                                   // landed: show what it means
     if (my !== diceRoll) return;
-    showBanner('出た目 ' + d.v + '！', d.text, d.v === 1 ? 'n' : 'g');
+    w.querySelector('.dice-result b').textContent = '出た目 ' + d.v + '！';
+    w.querySelector('.dice-result span').textContent = d.text;
     say(cmtLine('dice' + d.v), 2);
     if (d.v >= 5) sfx.cheer(1);
-    diceHide = setTimeout(() => { if (my === diceRoll) w.classList.remove('on'); }, 1800);
+    diceHide = setTimeout(() => { if (my === diceRoll) { w.classList.remove('on'); resize(); } }, 1800);
   }, T + 80);
 }
 
@@ -2175,10 +2184,10 @@ const STAGES = [
       ['コタロウ（柴犬）', 'ボールを追ってたら、体が勝手に…。もう一回は、できないや。'],
       ['パン太（パンダ）', 'まあ、今日はよく跳ねる日なんじゃろ。おにぎりにしよう。']],
     log: ['観測記録 001', '跳躍高度：設計上限超過\n予測モデルとの不一致\n再観測を継続する。'] },
-  { short: '第2話', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', max: 2, event: 'rescue', batSkill: 1.1,
+  { short: '第2話', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', innings: 2, max: 2, event: 'rescue', batSkill: 1, batRatings: { m: 3, p: 3 },
     intro: [['トラ（トラ）', '足でも肩でも負けないぜ。タイガーズ、全力で行くぞ！'],
       ['ミケ（ネコ）', '打球も走者も速い。決めた作戦どおりに守ろう。'],
-      ['コタロウ（柴犬）', 'ぼくが投げるよ。3回を2失点以内に抑えよう。弾く向きで球種、離す位置でコースだ。']],
+      ['コタロウ（柴犬）', 'ぼくが投げるよ。2回を2失点以内に抑えよう。弾く向きで球種、離す位置でコースだ。']],
     win: [['トラ（トラ）', '助けに行った間に、こっちは点を取った。それでも立て直したのか。'],
       ['ミケ（ネコ）', 'ぼくも、きみの後ろを守るからね。'],
       ['コタロウ（柴犬）', '助けたことは取り消さない。失点したことも、忘れないよ。']],
@@ -2548,7 +2557,7 @@ function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3
 
 function goalLong(st) {
   if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。勝って、次の日も全員で野球をしよう。ビーストモードは1試合に1回、打つ・守るどちらでも使えます。';
-  if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、3回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
+  if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
     : ROSTER[st.opp].name + 'から、3回までに' + st.runs + '点取ろう。';
 }
@@ -3582,6 +3591,10 @@ function curBatter() {
   const t = teamsNow().bat, s = teamState(t), slot = s.order % 9;
   let sub = !!(s.sub && s.sub[slot]), b = sub ? ROSTER[t].ph : ROSTER[t].bat[slot];
   if (story && t === 'home' && !sub) b = STORY_BAT[slot];
+  if (story && t === story.opp && story.batRatings) {
+    b = [...b]; b[1] = story.batRatings.m; b[2] = story.batRatings.p;
+    b[3] = (b[3] || '').replace('*', '');
+  }
   const hand = handOf(b[3]), side = hand === 'S' ? (pitcherHand() === 'L' ? 'R' : 'L') : hand;
   const bn0 = G && G.bonus && G.bonus.pa === G.pa && G.bonus.inn === G.inning ? G.bonus : { m: 0, p: 0 };   // サイコロのボーナス（その回の最初の打席だけ）
   const bn = { m: bn0.m + (hapOn('wave') ? 1 : 0), p: bn0.p };                                              // ウェーブ：その回の攻撃側ミート+1
@@ -4343,6 +4356,7 @@ function startGame() {
   storyVisual(null);
   audioInit(); newGame();
   if (story && story.inn) storyRole();
+  $('#pitches').hidden = mode !== 'pit';
   const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);
   $('#overlay').hidden = true;
   phase = mode === 'bat' ? 'wait' : 'ready';

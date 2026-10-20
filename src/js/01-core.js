@@ -281,6 +281,7 @@ let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔�
 function newGame() {
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
+  if (story && !story.inn && story.innings) G.maxHalf = story.innings;
   critArm = vanishArm = false; storyResetSession(); hud();
 }
 
@@ -358,28 +359,32 @@ const FACE_UP = { 1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0], 
 let diceEl = null, diceHide = 0, diceRoll = 0;
 function diceDom() {
   if (diceEl) return diceEl;
-  const w = document.createElement('div'); w.className = 'dice-wrap';
-  w.innerHTML = '<div class="dice-sh"></div><div class="dice-roll"><div class="dice-tilt"><div class="dice">' +
+  const w = document.createElement('div'); w.className = 'dice-panel';
+  w.setAttribute('role', 'status');
+  w.innerHTML = '<div class="dice-wrap"><div class="dice-sh"></div><div class="dice-roll"><div class="dice-tilt"><div class="dice">' +
     [1, 2, 3, 4, 5, 6].map(n => '<div class="f" style="transform:' + FACE_AT[n] + ' translateZ(34px)">' +
       PIPS[n].map(c => '<i class="' + (n === 1 ? 'red' : '') + '" style="grid-area:' + Math.ceil(c / 3) + '/' + ((c - 1) % 3 + 1) + '"></i>').join('') + '</div>').join('') +
-    '</div></div></div>';
-  $('#stage').appendChild(w);
+    '</div></div></div></div><div class="dice-result"><b></b><span></span></div>';
+  $('.ctl').prepend(w);
   return (diceEl = w);
 }
 function showDiceBanner(d) {
   const w = diceDom(), roll = w.querySelector('.dice-roll'), cube = w.querySelector('.dice'), sh = w.querySelector('.dice-sh');
   clearTimeout(diceHide); w.classList.add('on');
+  w.querySelector('.dice-result b').textContent = 'サイコロ';
+  w.querySelector('.dice-result span').textContent = 'この回のボーナスを決めています…';
+  resize();
   const my = ++diceRoll;                                // a newer roll cancels this one's landing and hiding
   try { w.getAnimations({ subtree: true }).forEach(a => a.cancel()); } catch (e) {}   // drop the last roll's finished animations
   const [fx, fy] = FACE_UP[d.v], T = 1500;
   const rot = (x, y, z) => 'rotateX(' + x + 'deg) rotateY(' + y + 'deg) rotateZ(' + z + 'deg)';
   try {
     roll.animate([
-      { transform: 'translate(-150px,-130px)', easing: 'cubic-bezier(.5,0,1,.6)' },
-      { transform: 'translate(-70px,0)', offset: 0.38, easing: 'cubic-bezier(0,.5,.5,1)' },
-      { transform: 'translate(-30px,-46px)', offset: 0.56, easing: 'cubic-bezier(.5,0,1,.6)' },
-      { transform: 'translate(-8px,0)', offset: 0.74, easing: 'cubic-bezier(0,.5,.5,1)' },
-      { transform: 'translate(-2px,-12px)', offset: 0.85, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translateY(-8px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translateY(0)', offset: 0.38, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translateY(-6px)', offset: 0.56, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: 'translateY(0)', offset: 0.74, easing: 'cubic-bezier(0,.5,.5,1)' },
+      { transform: 'translateY(-2px)', offset: 0.85, easing: 'cubic-bezier(.5,0,1,.6)' },
       { transform: 'translate(0,0)' }
     ], { duration: T, fill: 'forwards' });
     cube.animate([
@@ -395,10 +400,11 @@ function showDiceBanner(d) {
   say(cmtLine('dice'), 1);
   setTimeout(() => {                                   // landed: show what it means
     if (my !== diceRoll) return;
-    showBanner('出た目 ' + d.v + '！', d.text, d.v === 1 ? 'n' : 'g');
+    w.querySelector('.dice-result b').textContent = '出た目 ' + d.v + '！';
+    w.querySelector('.dice-result span').textContent = d.text;
     say(cmtLine('dice' + d.v), 2);
     if (d.v >= 5) sfx.cheer(1);
-    diceHide = setTimeout(() => { if (my === diceRoll) w.classList.remove('on'); }, 1800);
+    diceHide = setTimeout(() => { if (my === diceRoll) { w.classList.remove('on'); resize(); } }, 1800);
   }, T + 80);
 }
 

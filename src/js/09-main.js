@@ -475,6 +475,7 @@ function startGame() {
   storyVisual(null);
   audioInit(); newGame();
   if (story && story.inn) storyRole();
+  $('#pitches').hidden = mode !== 'pit';
   const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);
   $('#overlay').hidden = true;
   phase = mode === 'bat' ? 'wait' : 'ready';

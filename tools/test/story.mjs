@@ -77,6 +77,13 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
     } else {
       await p.click('#goBtn');
       assert.equal(await p.evaluate(() => window.__dbg.mode), def.mode);
+      if (i === 1) {
+        assert.equal(await p.evaluate(() => window.__dbg.G.maxHalf), 2);
+        assert.equal(await p.evaluate(() => window.__dbg.roster().b.m), 3);
+        assert.equal(await p.evaluate(() => window.__dbg.roster().b.p), 3);
+        assert.equal(await p.locator('#pitches').isVisible(), true, 'Chapter 2 must show the pitching guide after batting chapter 1');
+        assert.deepEqual(await p.locator('#pitches .pg').evaluateAll(nodes => nodes.map(n => n.dataset.t)), ['str', 'cur', 'two', 'chg']);
+      }
       assert.equal(await p.evaluate(() => window.__dbg.G.inning), 1);
       if (i === 0) {
         await p.click('#menuBtn'); await p.click('#goBtn');
@@ -124,7 +131,10 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
       } else if (def.mode === 'bat') {
         for (let n = 0; n < def.runs; n++) await playPA(p, errs, HOMERUN, '第' + (i + 1) + '話 得点');
       } else {
-        for (let n = 0; n < 8; n++) await playPA(p, errs, FLYOUT, '第2話 守備');
+        for (let n = 0; n < 4; n++) await playPA(p, errs, FLYOUT, '第2話 2回終了前');
+        assert.equal(await p.evaluate(() => window.__dbg.G.over), false, 'Chapter 2 continues until six outs');
+        await playPA(p, errs, FLYOUT, '第2話 2回終了');
+        assert.equal(await p.evaluate(() => window.__dbg.G.over), true, 'Chapter 2 ends after six outs');
       }
       await readChapterEnd(p, i);
     }

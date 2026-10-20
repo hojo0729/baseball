@@ -12,7 +12,7 @@ function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3
 
 function goalLong(st) {
   if (st.inn) return '地球代表 vs ' + ROSTER[st.opp].name + '。' + st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。勝って、次の日も全員で野球をしよう。ビーストモードは1試合に1回、打つ・守るどちらでも使えます。';
-  if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、3回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
+  if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
     : ROSTER[st.opp].name + 'から、3回までに' + st.runs + '点取ろう。';
 }

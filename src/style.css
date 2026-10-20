@@ -111,8 +111,11 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #cmtBtn { position: absolute; top: 10px; right: 12px; z-index: 5; font: 700 11px var(--f-body); color: var(--chalk); background: rgba(6, 14, 12, .6); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; min-height: 30px; }
 
 /* rolling die */
-.dice-wrap { position: absolute; left: 50%; top: 22%; width: 68px; height: 68px; margin-left: -34px; perspective: 520px; pointer-events: none; z-index: 6; opacity: 0; transition: opacity .25s; }
-.dice-wrap.on { opacity: 1; }
+.dice-panel { display: none; align-items: center; gap: 10px; padding: 6px 12px; min-height: 66px; border: 1px solid var(--lamp); border-radius: 12px; background: var(--panel); pointer-events: none; }
+.dice-panel.on { display: flex; }
+.dice-wrap { position: relative; flex: 0 0 68px; width: 68px; height: 68px; perspective: 520px; transform: scale(.7); }
+.dice-result { min-width: 0; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.dice-result b { display: block; color: var(--lamp); font-size: 16px; }
 .dice-sh { position: absolute; left: 4px; right: 4px; bottom: -16px; height: 12px; border-radius: 50%; background: rgba(0, 0, 0, .7); filter: blur(4px); }
 .dice-roll, .dice-tilt, .dice { position: absolute; inset: 0; transform-style: preserve-3d; }
 .dice-tilt { transform: rotateX(-22deg) rotateY(24deg); }
