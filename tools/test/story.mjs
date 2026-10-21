@@ -22,7 +22,7 @@ async function readChapterEnd(p, idx) {
 }
 
 export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
-  const chapterArts = ['everyday', 'rescue', 'lab', 'teamwork', 'archive', 'ship', 'ai', 'beast', 'final', 'epilogue'];
+  const chapterArts = ['everyday', 'rescue', 'lab', 'teamwork', 'archive', 'invasion', 'ai', 'beast', 'final', 'epilogue'];
   const seenArts = new Set();
   async function illustration(i) {
     // Chapters 2 and 8 reveal their dedicated art in the event, before returning to play.

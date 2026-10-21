@@ -25,7 +25,7 @@
 <meta name="twitter:description" content="スマホで遊べる3D野球。招待リンクで友達とネット対戦もできます。無料。">
 <meta name="twitter:image" content="https://saboten-apps.github.io/baseball/icons/ogp.png">
 <title>どうぶつベースボール</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
 html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -39,7 +39,7 @@ html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
   --clay: #d9683b;
   --lamp: #f4c95a;
   --good: #5fd08a;
-  --f-disp: 'Dela Gothic One', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --f-disp: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif;
   --f-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif;
   --f-num: 'DM Mono', ui-monospace, Menlo, monospace;
   color-scheme: dark;
@@ -49,7 +49,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--chalk);
-  font: 500 14px/1.4 var(--f-body);
+  font: 400 14px/1.4 var(--f-body);
   padding-block: 8px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -284,7 +284,7 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #overlay.story-scene:not(.dlg) #story-art { height: clamp(100px, 24vh, 220px); }
 #overlay.story-scene #ospk { align-self: flex-start; margin: 0 22px 10px; max-width: calc(100% - 68px); }
 #overlay.story-scene h1 { margin: 0 22px 12px; font-size: clamp(20px, 5.5vw, 27px); line-height: 1.5; text-wrap: wrap; }
-#overlay.story-scene #od { margin: 0 22px 18px; width: auto; max-width: none; color: #f4efe3; font: 500 16px/1.85 var(--f-body); white-space: normal; word-break: normal; line-break: strict; overflow-wrap: anywhere; text-wrap: pretty; }
+#overlay.story-scene #od { margin: 0 22px 18px; width: auto; max-width: none; color: #f4efe3; font: 400 16px/1.85 var(--f-body); white-space: normal; word-break: normal; line-break: strict; overflow-wrap: anywhere; text-wrap: pretty; }
 #overlay.story-scene.dlg #od { min-height: 3.7em; }
 #overlay.story-scene #obtns { align-self: center; width: calc(100% - 44px); max-width: 440px; }
 #overlay.story-scene.dlg #obtns { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
@@ -311,6 +311,53 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
   #story-art.cinematic > img, #story-art.cinematic .ending-balloon { animation: none !important; }
   #story-art.cinematic.released .ending-balloon { transform: translate(70px, -205px); }
 }
+
+/* Titles use whole words; body, controls and headings have distinct weights. */
+#overlay { box-sizing: border-box; min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
+#overlay h1 { max-width: 100%; font-family: var(--f-body); font-weight: 700; line-height: 1.4; text-shadow: none; word-break: normal; overflow-wrap: anywhere; }
+#overlay p { font-weight: 400; line-height: 1.8; text-wrap: pretty; }
+#overlay #obtns { max-width: 100%; }
+#overlay #obtns button { font-family: var(--f-body); font-weight: 500; line-height: 1.5; letter-spacing: 0; }
+#overlay #ospk { font-weight: 500; box-shadow: none; }
+.title-word { display: block; white-space: nowrap; }
+#overlay.logo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 22px 18px; }
+#overlay.logo h1 { flex-shrink: 0; font: 700 clamp(29px, 8.5vw, 43px)/1.2 var(--f-body); white-space: normal; transform: none; letter-spacing: .035em; filter: drop-shadow(0 2px 0 #4a2a0c); }
+#overlay.logo h1::before { font: 500 10px/1.3 var(--f-num); letter-spacing: .24em; margin-bottom: 10px; }
+#overlay.logo #od { max-width: 28em; font-size: 14px; line-height: 1.7; }
+#overlay.logo #obtns { width: 100%; max-width: 360px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+#overlay.logo #obtns button { min-width: 0; min-height: 46px; padding: 9px 5px; font-size: 14px; white-space: nowrap; }
+#overlay.logo #goBtn, #overlay.logo #go6 { grid-column: 1 / -1; }
+#overlay.logo #goBtn { font-size: 16px; font-weight: 700; }
+#overlay.logo #obadge { gap: 7px; }
+#overlay.logo #obadge i { width: 36px; height: 36px; }
+#overlay.logo #obadge i img { width: 34px; height: 34px; }
+#story-final h1 { font: 700 clamp(27px, 7.5vw, 38px)/1.35 var(--f-body); letter-spacing: .03em; }
+#banner .t { font-weight: 700; }
+
+/* Story peaks: edge-to-edge cuts, a quiet pause, then a single impact. */
+#overlay.story-spotlight { background: #080e18; --scene-accent: #8de7ed; }
+#overlay[data-scene^="awakening-"] { --scene-accent: #ffc17c; background: #120e12; }
+#overlay.story-spotlight #story-art { position: relative; height: clamp(210px, 44vh, 380px); max-height: none; aspect-ratio: auto; overflow: hidden; border-bottom: 2px solid var(--scene-accent); }
+#overlay.story-spotlight #story-art img { object-fit: cover; animation: story-arrival 2.6s cubic-bezier(.15,.6,.3,1) both; }
+#overlay[data-scene="invasion"] #story-art img { object-position: 35% center; }
+#overlay[data-scene="ultimatum"] #story-art img { object-position: 58% center; }
+#overlay[data-scene="awakening-roar"] #story-art img { animation: story-breakthrough 1.15s cubic-bezier(.1,.8,.2,1) both; }
+#overlay.story-spotlight #story-art::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -18px 30px -22px #080e18; }
+#overlay.story-spotlight #od { color: #f7f0e7; font-size: 17px; line-height: 1.9; }
+#overlay.story-spotlight #ospk { background: transparent !important; color: var(--scene-accent); border-radius: 0; padding-left: 0; }
+#overlay.story-spotlight #ospk .av { display: none; }
+#overlay.story-spotlight #goBtn { background: transparent; border: 1px solid #4b666d; box-shadow: none; color: #e7f2f1; }
+#overlay.story-spotlight #obtns { margin-top: auto; margin-bottom: 12px; }
+@keyframes story-arrival { from { opacity: .2; transform: scale(1.06); } to { opacity: 1; transform: scale(1); } }
+@keyframes story-breakthrough { 0% { opacity: .25; transform: scale(1.13); } 35% { opacity: 1; transform: scale(1.015); } 100% { transform: scale(1); } }
+@media (max-height: 620px) {
+  #overlay.logo { gap: 11px; padding: 16px; }
+  #overlay.logo h1 { font-size: 29px; }
+  #overlay.logo #od { font-size: 13px; }
+  #overlay.story-spotlight #od { font-size: 16px; }
+}
+@media (max-height: 470px) { #overlay.logo { justify-content: flex-start; } }
+@media (prefers-reduced-motion: reduce) { #overlay.story-spotlight #story-art img { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -519,7 +566,9 @@ function bgmHR() {
 }
 function bgmTick() {
   if (storySilent || !bgmOn || !ac || !bgmGain) return;
-  if (fileReady()) { bgmFileTick(); return; }
+  const quiet = $('#overlay').classList.contains('story-spotlight') && !$('#overlay').hidden;
+  bgmGain.gain.setTargetAtTime(quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
+  if (fileReady()) { bgmFileTick(); fileOut.gain.setTargetAtTime(quiet ? .055 : .42, ac.currentTime, .3); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
 }
@@ -2284,12 +2333,16 @@ const STAGES = [
       ['最終適応個体', 'コタロウ「ぼくの考え方まで、誰かが作った……？」', '経験から判断を学ぶ独立した意思決定モデル。構築者名は伏せられている。'] ],
     win: [['コタロウ（柴犬）', 'じゃあ、きみと練習したかった気持ちも、作り物？'],
       ['ミケ（ネコ）', 'ぼくは明日も練習したい。それだけは、今ここで決めたよ。']] },
-  { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'ship',
+  { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'invasion',
     pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
-    intro: [['使節（野球星人）', '戦争の代わりに野球で決める。敗者は勝者の統治下に入る。'],
-      ['ミケ（ネコ）', '勝手に決めるなよ。ここは、ぼくらの球場だ！'],
-      ['使節（野球星人）', '人間と戦った頃も、そう言われた。お前たちも人間なのか？'],
-      ['コタロウ（柴犬）', '分からない。でも、ここに暮らすのはぼくらだ。まず球とルールを確かめよう。']],
+    intro: [['', '空が、消えた。', 'invasion'],
+      ['ウサミ（うさぎ）', '……あれ、雲じゃない。球場も、街も、影の中に。'],
+      ['使節（野球星人）', 'この星の代表を出せ。勝負は、野球で決める。', 'ultimatum'],
+      ['使節（野球星人）', '敗れた側は、勝者の統治に従う。'],
+      ['ミケ（ネコ）', 'この球場も、ぼくらの明日も……勝手に決めるな！'],
+      ['使節（野球星人）', '人間も、そう言った。お前たちも人間なのか？'],
+      ['コタロウ（柴犬）', '分からない。でも、ここはぼくらの帰る場所だ。'],
+      ['コタロウ（柴犬）', '球を見せて。ルールを確かめよう。ぼくらが、相手になる。']],
     win: [['使節（野球星人）', '判定に異議はない。正式な決闘までに、代表を選べ。'],
       ['コタロウ（柴犬）', '明日もこの球場で遊びたい。今は、それがぼくの答えだ。']] },
   { short: '第7話', title: '人類最後のAI', kind: 'scene', scene: 'ai',
@@ -2443,10 +2496,17 @@ function storyEvent() {
             });
       }] });
   } else if (event === 'awaken') {
-    storyVisual('beast');
-    dialog([['', '牙が伸び、胸の奥から唸り声が漏れる。大きな手に、ミケの小さな手が触れた。'],
-      ['ミケ（ネコ）', '大丈夫。きみは、ぼくを助けてくれたコタロウだ。']], () => {
-      overlay({ title: 'ぼくが選ぶ', text: 'この力を、誰かを傷つけるためには使わない。',
+    storyVisual('awakening-strain');
+    dialog([['', '心臓が、一度、大きく鳴った。', 'awakening-strain'],
+      ['AI', '制御限界。これ以上は、君自身を保証できない。'],
+      ['コタロウ（柴犬）', '来るな……ミケ。今のぼくは……。'],
+      ['', '牙が伸びる。腕が膨れ、喉の奥から、獣の咆哮がほとばしった。', 'awakening-roar'],
+      ['ミケ（ネコ）', '怖いよ。でも、一人にはしない。'],
+      ['', '大きな手に、小さな手が触れた。', 'beast'],
+      ['ミケ（ネコ）', 'あの日、ぼくを助けに戻った。あれは、きみが決めたんだろ。'],
+      ['コタロウ（柴犬）', '……覚えてる。この手で、きみを助けた。']], () => {
+      storyVisual('beast');
+      overlay({ title: 'ぼくが選ぶ', text: '吠えているのは、ぼくの中の野性。どう使うかは、ぼくが決める。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
           storySession.awakenRuns = G.runs;
           storySession.beastLeft = 1; activateBeast(); resume();
@@ -2509,15 +2569,48 @@ const STORY_ARTS = {
   ai: ['story/ai.webp', '仲間を守ってきた記憶を映す、静かなAIの光'],
   beast: ['story/beast.webp', '獣化したコタロウの手に、ミケがそっと触れる'],
   ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す'],
+  invasion: ['story/invasion.webp', '巨大な宇宙船が空を覆い、いつもの球場と街を影に沈める'],
+  ultimatum: ['story/ultimatum.webp', '無表情の使節が球を差し出し、コタロウが仲間を背に立ち向かう'],
+  'awakening-strain': ['story/awakening-strain.webp', '制御の光がほどけ、コタロウが膝をついて湧き上がる野性に耐える'],
+  'awakening-roar': ['story/awakening-roar.webp', '太い腕と牙を持つ獣の姿が現れ、咆哮とともに砂が舞い上がる'],
   final: ['story/final.webp', '決戦を前に、六人の仲間が手を重ねて励まし合う'],
   epilogue: ['story/epilogue.webp', '朝の球場で、仲間全員と約束のおにぎりを囲む'],
   real: ['story/ending-street.webp', '夕方の街。顔の見えない人物と、風船へ手を伸ばす子ども'],
   'real-jump': ['story/ending-jump.webp', '建物ほどの高さへ跳んだ人物が、風船のひもに手を伸ばす'],
   hand: ['story/ending-hand.webp', '人物が自分の手を見つめる。奥では子どもが戻った風船を持つ']
 };
+let storyCue = null;
+function storySceneCue(kind) {
+  if (storyCue) {
+    const old = storyCue; storyCue = null;
+    try {
+      const t = old.context.currentTime;
+      old.gain.gain.cancelScheduledValues(t); old.gain.gain.setTargetAtTime(0, t, .015);
+      old.nodes.forEach(n => { try { n.stop(t + .06); } catch (e) {} });
+    } catch (e) { old.gain.disconnect(); }
+  }
+  if (!ac || storySilent || !bgmWanted()) return;
+  const notes = { invasion: [52, 78, 3.2], 'awakening-strain': [55, 82.5, 1.2], 'awakening-roar': [98, 147, 2.3] }[kind];
+  if (!notes) return;
+  try {
+    const context = ac, t = context.currentTime, duration = notes[2], gain = context.createGain();
+    gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(.045, t + .12);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + duration); gain.connect(context.destination);
+    const nodes = notes.slice(0, 2).map(f => {
+      const n = context.createOscillator(); n.type = 'sine'; n.frequency.setValueAtTime(f, t);
+      n.frequency.exponentialRampToValueAtTime(f * .65, t + duration); n.connect(gain);
+      n.start(t); n.stop(t + duration + .05); return n;
+    });
+    nodes[nodes.length - 1].onended = () => { gain.disconnect(); nodes.forEach(n => n.disconnect()); };
+    storyCue = { context, gain, nodes };
+  } catch (e) { /* Scene remains playable on devices without Web Audio. */ }
+}
 function storyVisual(kind) {
   const el = $('#overlay');
+  const changed = el.dataset.scene !== (kind || '');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
+  el.classList.toggle('story-spotlight', ['invasion', 'ultimatum', 'awakening-strain', 'awakening-roar'].includes(kind));
+  if (changed) storySceneCue(kind);
   storyArt.hidden = !kind;
   storyArt.classList.remove('released');
   storyArt.classList.toggle('cinematic', ['real', 'real-jump', 'hand'].includes(kind));
@@ -2597,7 +2690,8 @@ function showFinalQuestion() {
   $('#app').classList.add('story-final');
   storyEnding.phase = 'title';
   const final = document.createElement('section'); final.id = 'story-final'; final.setAttribute('aria-live', 'polite');
-  final.innerHTML = '<div><h1>どうぶつベースボール</h1><p class="made">Made by AI.</p><p class="question" hidden>Who made you?</p></div><button hidden>余韻のあとに</button>';
+  final.innerHTML = '<div><h1></h1><p class="made">Made by AI.</p><p class="question" hidden>Who made you?</p></div><button hidden>余韻のあとに</button>';
+  setStoryHeading(final.querySelector('h1'), 'どうぶつベースボール');
   $('#stage').appendChild(final);
   storyEnding.timers.push(setTimeout(() => {
     if (!storyEnding) return;
@@ -2805,7 +2899,7 @@ function overlay(o) {
     else spkEl.style.background = '';
     spkEl.appendChild(document.createTextNode(o.spk));
   }
-  $('#ot').textContent = o.title || ''; $('#ot').hidden = !o.title;
+  setStoryHeading($('#ot'), o.title || ''); $('#ot').hidden = !o.title;
   $('#od').textContent = o.text || '';
   $('#overlay').classList.toggle('dlg', !!o.dlg);
   $('#overlay').classList.toggle('logo', !!o.logo);
@@ -2844,10 +2938,19 @@ function dialog(lines, done) {
   let i = 0;
   const step = () => {
     if (i >= lines.length) { done(); return; }
-    const [spk, text] = lines[i++];
+    const [spk, text, scene] = lines[i++];
+    if (scene) storyVisual(scene);
     overlay({ spk, text, dlg: true, b1: ['つぎへ　' + i + ' / ' + lines.length, step], b2: ['スキップ', done] });
   };
   step();
+}
+function setStoryHeading(el, text) {
+  el.replaceChildren();
+  if (text === 'どうぶつベースボール') {
+    for (const word of ['どうぶつ', 'ベースボール']) {
+      const span = document.createElement('span'); span.className = 'title-word'; span.textContent = word; el.appendChild(span);
+    }
+  } else el.textContent = text;
 }
 function idle() { pausedAt = 0; clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 

@@ -146,7 +146,7 @@ function overlay(o) {
     else spkEl.style.background = '';
     spkEl.appendChild(document.createTextNode(o.spk));
   }
-  $('#ot').textContent = o.title || ''; $('#ot').hidden = !o.title;
+  setStoryHeading($('#ot'), o.title || ''); $('#ot').hidden = !o.title;
   $('#od').textContent = o.text || '';
   $('#overlay').classList.toggle('dlg', !!o.dlg);
   $('#overlay').classList.toggle('logo', !!o.logo);
@@ -185,10 +185,19 @@ function dialog(lines, done) {
   let i = 0;
   const step = () => {
     if (i >= lines.length) { done(); return; }
-    const [spk, text] = lines[i++];
+    const [spk, text, scene] = lines[i++];
+    if (scene) storyVisual(scene);
     overlay({ spk, text, dlg: true, b1: ['つぎへ　' + i + ' / ' + lines.length, step], b2: ['スキップ', done] });
   };
   step();
+}
+function setStoryHeading(el, text) {
+  el.replaceChildren();
+  if (text === 'どうぶつベースボール') {
+    for (const word of ['どうぶつ', 'ベースボール']) {
+      const span = document.createElement('span'); span.className = 'title-word'; span.textContent = word; el.appendChild(span);
+    }
+  } else el.textContent = text;
 }
 function idle() { pausedAt = 0; clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 

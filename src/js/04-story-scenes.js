@@ -10,15 +10,48 @@ const STORY_ARTS = {
   ai: ['story/ai.webp', '仲間を守ってきた記憶を映す、静かなAIの光'],
   beast: ['story/beast.webp', '獣化したコタロウの手に、ミケがそっと触れる'],
   ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す'],
+  invasion: ['story/invasion.webp', '巨大な宇宙船が空を覆い、いつもの球場と街を影に沈める'],
+  ultimatum: ['story/ultimatum.webp', '無表情の使節が球を差し出し、コタロウが仲間を背に立ち向かう'],
+  'awakening-strain': ['story/awakening-strain.webp', '制御の光がほどけ、コタロウが膝をついて湧き上がる野性に耐える'],
+  'awakening-roar': ['story/awakening-roar.webp', '太い腕と牙を持つ獣の姿が現れ、咆哮とともに砂が舞い上がる'],
   final: ['story/final.webp', '決戦を前に、六人の仲間が手を重ねて励まし合う'],
   epilogue: ['story/epilogue.webp', '朝の球場で、仲間全員と約束のおにぎりを囲む'],
   real: ['story/ending-street.webp', '夕方の街。顔の見えない人物と、風船へ手を伸ばす子ども'],
   'real-jump': ['story/ending-jump.webp', '建物ほどの高さへ跳んだ人物が、風船のひもに手を伸ばす'],
   hand: ['story/ending-hand.webp', '人物が自分の手を見つめる。奥では子どもが戻った風船を持つ']
 };
+let storyCue = null;
+function storySceneCue(kind) {
+  if (storyCue) {
+    const old = storyCue; storyCue = null;
+    try {
+      const t = old.context.currentTime;
+      old.gain.gain.cancelScheduledValues(t); old.gain.gain.setTargetAtTime(0, t, .015);
+      old.nodes.forEach(n => { try { n.stop(t + .06); } catch (e) {} });
+    } catch (e) { old.gain.disconnect(); }
+  }
+  if (!ac || storySilent || !bgmWanted()) return;
+  const notes = { invasion: [52, 78, 3.2], 'awakening-strain': [55, 82.5, 1.2], 'awakening-roar': [98, 147, 2.3] }[kind];
+  if (!notes) return;
+  try {
+    const context = ac, t = context.currentTime, duration = notes[2], gain = context.createGain();
+    gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(.045, t + .12);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + duration); gain.connect(context.destination);
+    const nodes = notes.slice(0, 2).map(f => {
+      const n = context.createOscillator(); n.type = 'sine'; n.frequency.setValueAtTime(f, t);
+      n.frequency.exponentialRampToValueAtTime(f * .65, t + duration); n.connect(gain);
+      n.start(t); n.stop(t + duration + .05); return n;
+    });
+    nodes[nodes.length - 1].onended = () => { gain.disconnect(); nodes.forEach(n => n.disconnect()); };
+    storyCue = { context, gain, nodes };
+  } catch (e) { /* Scene remains playable on devices without Web Audio. */ }
+}
 function storyVisual(kind) {
   const el = $('#overlay');
+  const changed = el.dataset.scene !== (kind || '');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
+  el.classList.toggle('story-spotlight', ['invasion', 'ultimatum', 'awakening-strain', 'awakening-roar'].includes(kind));
+  if (changed) storySceneCue(kind);
   storyArt.hidden = !kind;
   storyArt.classList.remove('released');
   storyArt.classList.toggle('cinematic', ['real', 'real-jump', 'hand'].includes(kind));
@@ -98,7 +131,8 @@ function showFinalQuestion() {
   $('#app').classList.add('story-final');
   storyEnding.phase = 'title';
   const final = document.createElement('section'); final.id = 'story-final'; final.setAttribute('aria-live', 'polite');
-  final.innerHTML = '<div><h1>どうぶつベースボール</h1><p class="made">Made by AI.</p><p class="question" hidden>Who made you?</p></div><button hidden>余韻のあとに</button>';
+  final.innerHTML = '<div><h1></h1><p class="made">Made by AI.</p><p class="question" hidden>Who made you?</p></div><button hidden>余韻のあとに</button>';
+  setStoryHeading(final.querySelector('h1'), 'どうぶつベースボール');
   $('#stage').appendChild(final);
   storyEnding.timers.push(setTimeout(() => {
     if (!storyEnding) return;

@@ -1,5 +1,18 @@
 # ストーリー挿絵・生成記録
 
+## 襲来・覚醒の山場（2026-10-21追加・内蔵image_gen）
+
+共通プロンプト：Use case illustration-story. NEW landscape 3:2 cinematic Japanese animated storybook film keyframe. Hand-painted tactile fur, recognizable animal baseball mascots, intense readable expressions, deep indigo/teal shadows and amber rimlight, center-safe on phone. Kotaro: golden orange Shiba, cream muzzle/eyebrows, red scarf, white/red-pinstripe uniform. Mike: gray cat/purple. Usami: ivory rabbit/green/lavender scarf. References preserve identity and painterly style only, new composition. No text, numbers, captions, UI, logos, watermark, humans, weapons, blood or evil AI.
+
+| 保存先 | シーン別の最終指示 |
+|---|---|
+| docs/story/invasion.webp | Ground-level wide shot from behind normal Shiba/cat/rabbit. Colossal saucer underside eclipses sunset over cozy ballfield and village, concentric turquoise lights, single cold beam on empty mound, wind/dust and dropped glove. Heroes small under overwhelming scale. Not happy welcome or battle. Reference beast.webp for identity/style. |
+| docs/story/ultimatum.webp | Waist-low standoff. Impassive mint-green envoy with large black eyes/antennae/navy uniform and cap/white pants/red socks offers baseball like cold ultimatum. Stern Shiba protects anxious cat/rabbit. Colossal saucer and teal beams, warm village windows. No smiles. Reference ship.webp for characters/style. |
+| docs/story/awakening-strain.webp | Shiba kneels at home plate, one paw digging into dirt, other at chest/scarf, eyes clenched and teeth gritted. Fur rising, claws emerging, wolf-shaped shadow behind him; abstract teal control rings split into amber motes. Worried cat reaches toward him. Pressure before eruption. Reference beast.webp. |
+| docs/story/awakening-roar.webp | Heroic low angle: feral wolf-like Shiba now three-head-tall, massive shoulders/forearms, blazing ruff, elongated cream muzzle, ivory fangs, amber-red eyes, black claws. Same scarf/uniform, immense wooden bat. Roaring upward, fiery canine-shaped aura, expanding dust shockwave and breaking teal light rings. Small frightened cat stands firm at edge. Frightening wild power the hero must choose how to use; no demon horns/wings/possession. Reference beast.webp. |
+
+原本は本チャットgenerated_imagesフォルダの invasion exec-0cf4c64d-e3ed-40d7-8158-cacb576b1631.png、ultimatum exec-43fd3fe0-656f-4d46-b684-f72f9d3649c9.png、strain exec-dded6e25-4c9d-487b-8f21-81315d193826.png、roar exec-3fbe8bd2-6aae-4305-8484-f29524989f69.png。既存絵は保持、新規4枚を幅1200px/WebP quality80で保存。4枚668074bytes、全17枚2604070bytes（約2.48MiB）。
+
 2026-10-21、内蔵 image_gen を使用。承認された日常・覚醒の2枚に、同じ絵柄の8枚を追加。全10話それぞれに専用挿絵を用意。選択済み画像は docs/story/ にWebPで保存。生成後の処理は幅1200pxへの縮小と圧縮のみ。
 
 ## 最終プロンプトセット

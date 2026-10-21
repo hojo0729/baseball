@@ -114,10 +114,17 @@ function storyEvent() {
             });
       }] });
   } else if (event === 'awaken') {
-    storyVisual('beast');
-    dialog([['', '牙が伸び、胸の奥から唸り声が漏れる。大きな手に、ミケの小さな手が触れた。'],
-      ['ミケ（ネコ）', '大丈夫。きみは、ぼくを助けてくれたコタロウだ。']], () => {
-      overlay({ title: 'ぼくが選ぶ', text: 'この力を、誰かを傷つけるためには使わない。',
+    storyVisual('awakening-strain');
+    dialog([['', '心臓が、一度、大きく鳴った。', 'awakening-strain'],
+      ['AI', '制御限界。これ以上は、君自身を保証できない。'],
+      ['コタロウ（柴犬）', '来るな……ミケ。今のぼくは……。'],
+      ['', '牙が伸びる。腕が膨れ、喉の奥から、獣の咆哮がほとばしった。', 'awakening-roar'],
+      ['ミケ（ネコ）', '怖いよ。でも、一人にはしない。'],
+      ['', '大きな手に、小さな手が触れた。', 'beast'],
+      ['ミケ（ネコ）', 'あの日、ぼくを助けに戻った。あれは、きみが決めたんだろ。'],
+      ['コタロウ（柴犬）', '……覚えてる。この手で、きみを助けた。']], () => {
+      storyVisual('beast');
+      overlay({ title: 'ぼくが選ぶ', text: '吠えているのは、ぼくの中の野性。どう使うかは、ぼくが決める。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
           storySession.awakenRuns = G.runs;
           storySession.beastLeft = 1; activateBeast(); resume();
