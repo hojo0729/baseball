@@ -24,6 +24,7 @@ const LINES = {
   hitBig: ['完璧な当たり！', 'いい打球だ！ぐんぐん伸びる！', 'これは大きい！'],
   single: ['ヒット！きれいに運びました！', 'ヒットです！', '外野の間を抜けた！'],
   double: ['ツーベース！ぐんぐん伸びてフェンス際！', '長打！二塁へ到達！'],
+  triple: ['スリーベース！一気に三塁へ！'],
   hr: ['入った！ホームラン！', 'ホームラン！豪快な一発！', '行ったー！特大のホームランです！'],
   hr2: ['入ったー！2ランホームラン！'],
   hr3: ['入ったー！3ランホームラン！'],
@@ -162,6 +163,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/盗塁/.test(t)) key = /アウト|失敗/.test(t) ? 'stealX' : 'steal';
   else if (/エラー/.test(t)) key = 'err';
   else if (/ツーベース/.test(t)) key = 'double';
+  else if (/スリーベース/.test(t)) key = 'triple';
   else if (/ヒット/.test(t)) key = 'single';
   else if (/内野フライ|ポップ/.test(t)) key = 'pout';
   else if (/ライナー/.test(t)) key = 'lout';

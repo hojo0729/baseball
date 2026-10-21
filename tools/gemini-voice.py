@@ -1,12 +1,14 @@
 # Gemini TTS で実況の声を作る（声: Kore、元気な女性実況）
 #   キー: 環境変数 GEMINI_API_KEY か ~/.gemini.key（リポジトリには入れない）
 #   全部（既にあるファイルは飛ばす）: python3 tools/gemini-voice.py all Kore voice-script.csv <出力フォルダ>
+#   1本の再生成: python3 tools/gemini-voice.py one Kore "バットが、くうをきる！" <出力.mp3>
 #   注意: gemini-3.8-flash-tts は有料でも1日100回まで。1分あたりの上限もあるので、ゆっくり回る
 #   確認: python3 tools/gemini-voice-check.py <フォルダ>  （文字起こしでセリフと照合。0.8未満を表示）
 import json, base64, subprocess, sys, time, urllib.request, urllib.error, os
 KEY = os.environ.get('GEMINI_API_KEY') or open(os.path.expanduser('~/.gemini.key')).read().strip()   # never commit the key
 MODEL = os.environ.get('MODEL', 'gemini-3.8-flash-tts')
 STYLE = os.environ.get('STYLE', '[excitedly, like an energetic female sports announcer] ')
+READINGS = {'miss_2': 'バットが、くうをきる！'}  # 字幕は漢字のまま。音声だけ読みを固定する。
 def tts(text, voice, out_mp3):
     body = {"contents": [{"parts": [{"text": STYLE + text}]}],
             "generationConfig": {"responseModalities": ["AUDIO"],
@@ -28,6 +30,9 @@ def tts(text, voice, out_mp3):
                     '-ac', '1', '-b:a', '64k', out_mp3], input=pcm, check=True)
 if __name__ == '__main__':
     mode = sys.argv[1]
+    if mode == 'one':
+        tts(sys.argv[3], sys.argv[2], sys.argv[4])
+        print('ok', sys.argv[4], flush=True)
     if mode == 'sample':
         lines = [('hr_3', '行ったー！特大のホームランです！'), ('K_2', '空振り三振！気持ちよく仕留めた！')]
         os.makedirs('samples', exist_ok=True)
@@ -45,7 +50,7 @@ def run_all(voice, csv_path, outdir):
         out = f'{outdir}/{lid}.mp3'
         if os.path.exists(out): continue
         for t in range(3):
-            try: tts(text, voice, out); break
+            try: tts(READINGS.get(lid, text), voice, out); break
             except Exception as e: print('  err', lid, str(e)[:150], flush=True); time.sleep(10)
         print(f'{i}/{len(rows)} {lid}', flush=True); time.sleep(1)
     print('ALLDONE', flush=True)

@@ -1214,6 +1214,16 @@ function cpuBat() {
 }
 
 /* ---- resolve one pitch ---- */
+// Deep drives between the center and corner outfielders can stretch a double.
+// Run only during result resolution (inside withSeed on both online peers).
+function extraBaseHit(c) {
+  const angle = Math.abs(c.dir);
+  if (story || c.kind !== 'play' || c.bunt || c.bases !== 2 || c.dist < 75 || c.launch < 5 || c.launch >= 40 || angle < 12 || angle > 28) return c;
+  const speed = curBatter().sp, arm = ROSTER[teamsNow().fld].outArm || 3;
+  const depth = clamp((c.dist - 65) / 35, 0.3, 1);
+  const chance = clamp(0.16 + (speed - 3) * 0.065 - (arm - 3) * 0.035, 0.02, 0.4) * depth;
+  return Math.random() < chance ? { ...c, res: 'スリーベース', bases: 3 } : c;
+}
 /* online: the batter's device judges, sends the verdict with a seed, and both devices resolve it identically */
 function resolve(c, C) {
   if (online && mode === 'bat') {
@@ -1224,6 +1234,7 @@ function resolve(c, C) {
   return resolveCore(c, C);
 }
 function resolveCore(c, C) {
+  c = extraBaseHit(c);
   // Chapter 8's opening is a scripted demonstration, including balls outside the zone.
   if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
@@ -1283,7 +1294,7 @@ function resolveCore(c, C) {
       }
       else if (c.bases === 1 && thrWanted(c, play, B0, sg)) thrStart(c, play, B0, now);   // ゴロヒット：守備側が送球先を選ぶ（スロー）
       else if (c.bases > 0) {
-        t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
+        t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases >= 2 ? 0.8 : 0.4; play.run = B0;
         if (c.bases === 4) { bgmHR(); celebrate(now + 0.5, 5); }
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
@@ -4146,27 +4157,27 @@ function inviteBoot() {
    Ratings are 1-5 (shown as E-A). Batters: m = contact (ミート), p = power (パワー).
    Pitchers: v = velocity, c = control, b = break, s = stamina (pitch budget, roughly 1.6 per pitch).
    Optional last field: 'L' = left-handed, 'S' = switch hitter (bats from the side opposite the pitcher). Default right.
-   run: 走力 (1-5) per batting slot / arm: the catcher's arm / closer: index of the 守護神 in pit / ph: the bench's 代打の切り札 [name, m, p, flags, run].
+   run: 走力 (1-5) per batting slot / arm: the catcher's arm / outArm: outfield relay arm / closer: index of the 守護神 in pit / ph: the bench's 代打の切り札 [name, m, p, flags, run].
    A '*' in it marks a superstar (ratings can go past A to 6-7 = S); stars are two-way and also sit at the end of the bullpen. */
 /* every pitcher's pitch repertoire (pt). Stars throw everything. */
 const ALL_PITCHES = ['str', 'gou', 'cut', 'sli', 'cur', 'frk', 'snk', 'sht', 'two', 'chg', 'knk'];
 const ROSTER = {
-  home: { name: 'しばいぬズ', run: [5, 4, 4, 2, 3, 3, 2, 4, 3], arm: 4, closer: 2, ph: ['ゲンキ', 4, 5, '', 2],
+  home: { name: 'しばいぬズ', run: [5, 4, 4, 2, 3, 3, 2, 4, 3], arm: 4, outArm: 4, closer: 2, ph: ['ゲンキ', 4, 5, '', 2],
     bat: [['マメ', 5, 1, 'L'], ['ハチ', 4, 2, 'S'], ['ソウタ', 5, 7, 'L*'], ['ゴン', 3, 5, 'L'], ['チャチャ', 3, 4], ['キナコ', 3, 3], ['ムギ', 2, 3], ['ポチ', 3, 2], ['ソラ', 2, 2]],
     pit: [['シバタ', 3, 4, 3, 80, '', ['str','two','cur','chg']], ['ハル', 4, 3, 3, 45, 'L', ['str','cut','sli','frk']], ['リキ', 5, 3, 4, 35, '', ['str','gou','frk','snk']], ['ソウタ', 6, 3, 4, 40, '*', ALL_PITCHES]] },
-  away: { name: 'パンダーズ', run: [4, 3, 3, 2, 2, 4, 3, 2, 3], arm: 3, closer: 2, ph: ['パンチョ', 3, 5, 'L', 2],
+  away: { name: 'パンダーズ', run: [4, 3, 3, 2, 2, 4, 3, 2, 3], arm: 3, outArm: 3, closer: 2, ph: ['パンチョ', 3, 5, 'L', 2],
     bat: [['ササ', 3, 2, 'L'], ['シャオ', 3, 2], ['リンリン', 2, 4, 'S'], ['ダイパン', 4, 7, 'R*'], ['ユウユウ', 2, 4], ['モモ', 3, 2, 'L'], ['タンタン', 2, 3], ['ランラン', 2, 2], ['コウ', 1, 2]],
     pit: [['パンパン', 2, 3, 2, 80, '', ['str','cur','sli','chg']], ['メイメイ', 3, 3, 3, 45, 'L', ['str','cut','sht','snk']], ['ホアホア', 3, 4, 3, 35, '', ['str','frk','two','knk']], ['ダイパン', 6, 2, 3, 40, '*', ALL_PITCHES]] },
-  neko: { name: 'ニャンキーズ', run: [5, 5, 4, 3, 3, 4, 3, 5, 4], arm: 2, closer: 2, ph: ['ボス', 5, 5, 'L', 3],
+  neko: { name: 'ニャンキーズ', run: [5, 5, 4, 3, 3, 4, 3, 5, 4], arm: 2, outArm: 3, closer: 2, ph: ['ボス', 5, 5, 'L', 3],
     bat: [['タマ', 5, 2, 'L'], ['シロ', 5, 1, 'L'], ['ミケ', 5, 6, 'S*'], ['クロ', 4, 4], ['トラ', 4, 3], ['サバ', 4, 2, 'L'], ['ハナ', 3, 3], ['チビ', 4, 1], ['ノラ', 3, 2]],
     pit: [['ニャン太', 3, 3, 4, 80, 'L', ['str','cut','sli','cur']], ['キジ', 3, 4, 3, 45, '', ['str','chg','sht','two']], ['ルナ', 4, 3, 4, 35, '', ['str','sli','snk','frk','knk']]] },
-  usagi: { name: 'ラビッツ', run: [5, 5, 4, 4, 3, 4, 3, 5, 4], arm: 3, closer: 2, ph: ['ジャンプ', 4, 4, 'S', 5],
+  usagi: { name: 'ラビッツ', run: [5, 5, 4, 4, 3, 4, 3, 5, 4], arm: 3, outArm: 2, closer: 2, ph: ['ジャンプ', 4, 4, 'S', 5],
     bat: [['ピョン', 4, 2, 'S'], ['モカ', 4, 2], ['ラビ', 3, 3, 'L'], ['ミミ', 3, 4], ['ココア', 3, 3], ['ユキ', 3, 2], ['シロップ', 2, 3], ['ネザー', 3, 1], ['ホップ', 2, 2]],
     pit: [['ウサミ', 3, 4, 5, 80, '', ['str','chg','two','cur']], ['ムーン', 3, 3, 4, 45, 'L', ['str','cut','sht']], ['ラパン', 3, 4, 5, 35, '', ['str','frk','sli','chg','snk']]] },
-  kuma: { name: 'ヒグマーズ', run: [3, 3, 2, 1, 1, 2, 2, 2, 3], arm: 5, closer: 2, ph: ['キンタロウ', 3, 6, '', 1],
+  kuma: { name: 'ヒグマーズ', run: [3, 3, 2, 1, 1, 2, 2, 2, 3], arm: 5, outArm: 5, closer: 2, ph: ['キンタロウ', 3, 6, '', 1],
     bat: [['コグマ', 3, 3], ['ツキノワ', 3, 4, 'L'], ['グリズ', 4, 7, 'S*'], ['ベア', 3, 5], ['ヒグ太', 2, 5], ['クマ吉', 3, 4], ['マロン', 2, 4], ['ハニー', 3, 3], ['ドングリ', 2, 3]],
     pit: [['ヒグマ', 5, 3, 3, 90, '', ['str','gou','sht','snk']], ['シロクマ', 4, 3, 3, 45, 'L', ['str','cut','sli','cur']], ['ポーラ', 4, 4, 4, 35, '', ['str','frk','knk','chg']]] },
-  human: { name: 'ヒューマンズ', run: [4, 4, 3, 3, 2, 3, 4, 4, 3], arm: 5, closer: 2, ph: ['エージェント', 5, 6, 'L', 3],
+  human: { name: 'ヒューマンズ', run: [4, 4, 3, 3, 2, 3, 4, 4, 3], arm: 5, outArm: 5, closer: 2, ph: ['エージェント', 5, 6, 'L', 3],
     bat: [['コード01', 4, 3, 'L'], ['コード02', 4, 4], ['コード03', 4, 5, 'S'], ['アルファ', 5, 7, 'R*'], ['ベータ', 4, 5], ['ガンマ', 3, 4, 'L'], ['デルタ', 3, 3], ['エプシロン', 4, 2], ['ゼータ', 3, 3]],
     pit: [['ディレクター', 5, 4, 4, 90, '', ['str','sli','frk','gou','cut']], ['マネージャー', 4, 4, 4, 50, 'L', ['str','chg','snk','cur']], ['エグゼクティブ', 5, 5, 5, 40, '*', ALL_PITCHES]] }
 };
@@ -4346,6 +4357,7 @@ const LINES = {
   hitBig: ['完璧な当たり！', 'いい打球だ！ぐんぐん伸びる！', 'これは大きい！'],
   single: ['ヒット！きれいに運びました！', 'ヒットです！', '外野の間を抜けた！'],
   double: ['ツーベース！ぐんぐん伸びてフェンス際！', '長打！二塁へ到達！'],
+  triple: ['スリーベース！一気に三塁へ！'],
   hr: ['入った！ホームラン！', 'ホームラン！豪快な一発！', '行ったー！特大のホームランです！'],
   hr2: ['入ったー！2ランホームラン！'],
   hr3: ['入ったー！3ランホームラン！'],
@@ -4484,6 +4496,7 @@ function commentBanner(t, s) {                   // called from showBanner (the 
   else if (/盗塁/.test(t)) key = /アウト|失敗/.test(t) ? 'stealX' : 'steal';
   else if (/エラー/.test(t)) key = 'err';
   else if (/ツーベース/.test(t)) key = 'double';
+  else if (/スリーベース/.test(t)) key = 'triple';
   else if (/ヒット/.test(t)) key = 'single';
   else if (/内野フライ|ポップ/.test(t)) key = 'pout';
   else if (/ライナー/.test(t)) key = 'lout';

@@ -9,13 +9,14 @@
 
 ## 使い方
     node tools/check.mjs                     # 推奨：ビルド → 構文・乱数チェック → game.html 生成 → smoke.mjs を一括実行
-    node tools/check.mjs --full              # 上記に加えて thr.js / hbp.js / tac7.js / online-beast.mjs も一括実行
+    node tools/check.mjs --full              # 上記に加えて thr.js / triples.mjs / hbp.js / tac7.js / online-beast.mjs も一括実行
 
 ### 個別に動かす場合
     node build.mjs                           # まず本体をビルド（dist/artifact.html ができる）
     node tools/test/make-test-page.mjs       # tools/test/game.html を作る（src を変えるたびにやり直す）
     node tools/test/smoke.mjs                # 起動スモーク＆全モード（メニュー・ストーリー全10話・CPU・練習・オンライン・整合・リセット漏れ）テスト
     node tools/test/thr.js                   # 送球先の選択（満塁・1塁・3塁など）
+    node tools/test/triples.mjs              # 深い左右中間の三塁打、走力・外野の肩、走者得点、単打/HRとの分離（--fullにも含む）
     node tools/test/hbp.js                   # デッドボール→乱闘→投手交代（スクショ bw-*.png）
     node tools/test/faces2.js                # 顔の表情の確認画像（f2-*.png）
     node tools/test/ingame.js                # 守備側の通常画面とホームラン（ig-*.png）

@@ -781,6 +781,16 @@ function cpuBat() {
 }
 
 /* ---- resolve one pitch ---- */
+// Deep drives between the center and corner outfielders can stretch a double.
+// Run only during result resolution (inside withSeed on both online peers).
+function extraBaseHit(c) {
+  const angle = Math.abs(c.dir);
+  if (story || c.kind !== 'play' || c.bunt || c.bases !== 2 || c.dist < 75 || c.launch < 5 || c.launch >= 40 || angle < 12 || angle > 28) return c;
+  const speed = curBatter().sp, arm = ROSTER[teamsNow().fld].outArm || 3;
+  const depth = clamp((c.dist - 65) / 35, 0.3, 1);
+  const chance = clamp(0.16 + (speed - 3) * 0.065 - (arm - 3) * 0.035, 0.02, 0.4) * depth;
+  return Math.random() < chance ? { ...c, res: 'スリーベース', bases: 3 } : c;
+}
 /* online: the batter's device judges, sends the verdict with a seed, and both devices resolve it identically */
 function resolve(c, C) {
   if (online && mode === 'bat') {
@@ -791,6 +801,7 @@ function resolve(c, C) {
   return resolveCore(c, C);
 }
 function resolveCore(c, C) {
+  c = extraBaseHit(c);
   // Chapter 8's opening is a scripted demonstration, including balls outside the zone.
   if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
@@ -850,7 +861,7 @@ function resolveCore(c, C) {
       }
       else if (c.bases === 1 && thrWanted(c, play, B0, sg)) thrStart(c, play, B0, now);   // ゴロヒット：守備側が送球先を選ぶ（スロー）
       else if (c.bases > 0) {
-        t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases === 2 ? 0.8 : 0.4; play.run = B0;
+        t = advance(c.bases, c.res); tn = tone(true); cheer = c.bases === 4 ? 1.6 : c.bases >= 2 ? 0.8 : 0.4; play.run = B0;
         if (c.bases === 4) { bgmHR(); celebrate(now + 0.5, 5); }
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
