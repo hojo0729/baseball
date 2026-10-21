@@ -22,6 +22,14 @@ async function readChapterEnd(p, idx) {
 }
 
 export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
+  const chapterArts = ['everyday', 'rescue', 'lab', 'teamwork', 'archive', 'ship', 'ai', 'beast', 'final', 'epilogue'];
+  const seenArts = new Set();
+  async function illustration(i) {
+    // Chapters 2 and 8 reveal their dedicated art in the event, before returning to play.
+    const expected = `story/${chapterArts[i]}.webp`;
+    assert.equal(await p.getAttribute('#story-art', 'data-art'), expected, `Chapter ${i + 1} needs its own illustration`);
+    seenArts.add(expected);
+  }
   // An old five-episode clear must not skip any of the new story.
   await p.evaluate(() => { localStorage.setItem('yakyu-progress', '5'); localStorage.removeItem('animal-baseball-story-v2'); });
   const opts = await p.evaluate(() => localStorage.getItem('yakyu-opts'));
@@ -44,6 +52,10 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
 
   for (let i = 0; i < 10; i++) {
     const def = await p.evaluate(() => ({ kind: window.__dbg.story.kind, mode: window.__dbg.story.mode, runs: window.__dbg.story.runs, inn: window.__dbg.story.inn }));
+    if (i !== 1 && i !== 7) {
+      await p.locator('#story-art img').evaluate(im => im.decode());
+      await illustration(i);
+    }
     await dialogue(p);
     if (def.kind === 'explore') {
       assert.equal(await p.locator('#go4').isHidden(), true, 'Unread records must gate chapter completion');
@@ -105,6 +117,7 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
         assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true);
       }
       await playPA(p, errs, i === 7 ? HOMERUN : FLYOUT, '第' + (i + 1) + '話 最初の打席'); await event(p);
+      if (i === 1 || i === 7) await illustration(i);
       if (i === 8) assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true, 'Beast mode lasts across plate appearances');
       if (i === 1) assert.equal(await p.evaluate(() => window.__dbg.G.runs), 1, 'Rescue must have a real run cost');
       if (i === 7) {
@@ -146,6 +159,7 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
     console.log(`✓ 3-${i + 1}. 新ストーリー（${def.kind}・イベント・進行保存）`);
     await p.click('#goBtn');
   }
+  assert.equal(seenArts.size, 10, 'All ten chapters have distinct story illustrations');
   assert.equal(await p.evaluate(() => localStorage.getItem('yakyu-progress')), '5');
   assert.equal(await p.evaluate(() => localStorage.getItem('yakyu-opts')), opts, 'Story must preserve user preferences');
   assert.equal(await p.evaluate(() => window.__dbg.beastActive()), false);

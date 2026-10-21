@@ -5,16 +5,20 @@ const STORY_ARTS = {
   everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
   rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
   lab: ['story/lab.webp', '研究所の端末に、自分たちと同じ姿を見つける三人'],
+  teamwork: ['story/teamwork.webp', '一塁のウサミと打席のコタロウが、励まし合ってヒグマに挑む'],
+  archive: ['story/archive.webp', '古い記録を囲み、不安なコタロウの手をミケが支える'],
   ai: ['story/ai.webp', '仲間を守ってきた記憶を映す、静かなAIの光'],
   beast: ['story/beast.webp', '獣化したコタロウの手に、ミケがそっと触れる'],
-  ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す']
+  ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す'],
+  final: ['story/final.webp', '決戦を前に、六人の仲間が手を重ねて励まし合う'],
+  epilogue: ['story/epilogue.webp', '朝の球場で、仲間全員と約束のおにぎりを囲む']
 };
 function storyVisual(kind) {
   const el = $('#overlay');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
   storyArt.hidden = !kind;
   if (!kind) { storyArt.replaceChildren(); return; }
-  const art = STORY_ARTS[({ field: 'everyday', archive: 'lab', analysis: 'lab' })[kind] || kind];
+  const art = STORY_ARTS[({ field: 'everyday', analysis: 'lab' })[kind] || kind];
   storyArt.classList.toggle('painted', !!art);
   if (art) {
     if (storyArt.dataset.art !== art[0] || !storyArt.querySelector('img')) {

@@ -123,6 +123,9 @@ URL は `src/js/06-online.js`、`README.md`、`build.mjs` にあり、`node buil
 - 締めるときにやること：`main` への直接 push を禁止（ブランチ保護）、PR 経由に、CI（check とスモークテスト）の成功を必須に、PR テンプレート、判定・オンラインの変更は別のAIがレビューしてからマージ、実機確認のチェックリスト。
 
 ### 作業ログ（新しいものを上に1行ずつ。AIも Take も書く）
+- 2026-10-21 Codex確認版：追加4枚を含む全10枚のWebP埋め込みと外部画像パス残りなしを確認。Android/iPhoneサイズのタッチ操作・保存領域分離・PWAオフライン再起動も通過。単一HTMLは約8.5MiB。作業ブランチとbaseball-preview/previewにpushする。本番mainは46ff18eのまま。
+- 2026-10-21 Codex：全10話に固有の挿絵を実装（第4話teamwork、第5話archive、第9話final、第10話epilogueを追加）。10枚計1506554bytes。第2話/第8話は救援/覚醒イベントで専用絵を提示し、展開前のネタバレを避ける。check.mjs全通過（10話で固有画像10種、オンラインSAME）、story-designの全10話×3サイズ・自動初球・コールド境界通過。最初のcheckはChrome起動直後の終了で停止、ゲーム/テストを変更せず再実行で通過。生成記録はdesign/story-art-prompts.md。
+- 2026-10-21 Codex作業開始：全10話に専用挿絵を最低1枚ずつという依頼。第4話の連携・第5話の記録調査・第9話の決戦・第10話の後日談を追加し、既存6枚と合わせる。作業ブランチとbaseball-preview/previewのみ反映、本番main不変更。
 - 2026-10-21 Codex配信確認：ゲーム本体は eed4225、確認サイトは baseball-preview/preview の7555c09で反映済み。Pages built、HTTP 200、配信HTMLと生成物の完全一致・WebP6枚埋め込みを確認。mainは作業前と同じ46ff18e。確認URL https://saboten-apps.github.io/baseball-preview/?v=7555c09 。初めから見るときは章選択の第1話へ。実機Pixelの負荷、実機Safari、実サービス2端末の確認はTakeに依頼する。
 - 2026-10-21 Codex：オンラインsmokeの一時的なresultフェーズ待ちが、遅いヘッドレス端末で表示終了を見逃して失敗する経路を特定。両端末の初打席完了（G.pa===1）を待ち、従来どおり全状態のSAMEと不変条件を比較する形へ修正。ゲーム本体の通信・判定は変更しない。
 - 2026-10-21 Codex：絵本調の挿絵6枚（docs/story、計約0.82MiB）、短い会話と自然な日本語幅、調査の要約/詳細、発言数表示を実装。序盤の屋根/おにぎりの約束→AIの保護→覚醒時のミケの支え→終盤の約束回収へ改訂。第4話はウサミが実際に一塁へ出て支援。ビースト発動後の最終戦は10点差で即コールド（両方向）。新試合/章/イベント再開へ一時停止時間を持ち越さない修正。check --full全通過（オンラインSAME）、story-designの3サイズ/自動初球/コールド境界、実ポインターpresentation、Android/iPhoneサイズのタッチ/保存分離/PWAオフライン挿絵を確認。plot/生成記録はdesign配下。これを作業ブランチとbaseball-preview/previewへ反映する。本番main不変更。実機Safari・Pixel負荷・実サービス2端末は未検証。

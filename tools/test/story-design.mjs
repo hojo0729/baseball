@@ -11,7 +11,7 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
   try {
     await p.waitForFunction(() => window.__dbg);
     await p.evaluate(() => window.__dbg.optOff());
-    for (const idx of [0, 2, 4, 5, 6, 7, 9]) {
+    for (const idx of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
       await p.evaluate(i => window.__dbg.showStage(i), idx);
       await p.waitForFunction(() => { const i = document.querySelector('#story-art img'); return i && i.complete && i.naturalWidth > 0; });
       await p.locator('#story-art img').evaluate(im => im.decode());
@@ -24,7 +24,7 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
       assert.ok(layout.text.bottom <= layout.button.top, 'Dialogue must not overlap controls');
       assert.ok(layout.button.bottom <= layout.page.bottom, `Continue must be visible in chapter ${idx + 1}`);
       assert.ok(layout.scroll <= layout.width + 1, 'No sideways scrolling');
-      if (idx === 0 || idx === 7) await p.screenshot({ path: `tools/test/story-design-${idx}-${width}.png` });
+      if ([0, 3, 4, 7, 8, 9].includes(idx)) await p.screenshot({ path: `tools/test/story-design-${idx}-${width}.png` });
     }
     // A real pause in the previous game must not delay the next chapter's first pitch.
     await chapter(p, 0);
