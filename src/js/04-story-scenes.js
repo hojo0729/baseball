@@ -11,12 +11,17 @@ const STORY_ARTS = {
   beast: ['story/beast.webp', '獣化したコタロウの手に、ミケがそっと触れる'],
   ship: ['story/ship.webp', '宇宙船の下で、野球星人が公式球を差し出す'],
   final: ['story/final.webp', '決戦を前に、六人の仲間が手を重ねて励まし合う'],
-  epilogue: ['story/epilogue.webp', '朝の球場で、仲間全員と約束のおにぎりを囲む']
+  epilogue: ['story/epilogue.webp', '朝の球場で、仲間全員と約束のおにぎりを囲む'],
+  real: ['story/ending-street.webp', '夕方の街。顔の見えない人物と、風船へ手を伸ばす子ども'],
+  'real-jump': ['story/ending-jump.webp', '建物ほどの高さへ跳んだ人物が、風船のひもに手を伸ばす'],
+  hand: ['story/ending-hand.webp', '人物が自分の手を見つめる。奥では子どもが戻った風船を持つ']
 };
 function storyVisual(kind) {
   const el = $('#overlay');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
   storyArt.hidden = !kind;
+  storyArt.classList.remove('released');
+  storyArt.classList.toggle('cinematic', ['real', 'real-jump', 'hand'].includes(kind));
   if (!kind) { storyArt.replaceChildren(); return; }
   const art = STORY_ARTS[({ field: 'everyday', analysis: 'lab' })[kind] || kind];
   storyArt.classList.toggle('painted', !!art);
@@ -24,6 +29,20 @@ function storyVisual(kind) {
     if (storyArt.dataset.art !== art[0] || !storyArt.querySelector('img')) {
       const im = new Image(); im.src = art[0]; im.alt = art[1]; im.decoding = 'async';
       storyArt.replaceChildren(im); storyArt.dataset.art = art[0];
+      if (kind === 'real' || kind === 'real-jump') {
+        // A separate vector balloon moves over the painted sky. Its string ends
+        // at the child's fingers / the raised hand in each 1500×1000 composition.
+        const caught = kind === 'real-jump';
+        const balloon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        balloon.setAttribute('viewBox', '0 0 1500 1000'); balloon.setAttribute('aria-hidden', 'true');
+        balloon.classList.add('ending-balloon-layer');
+        const x = caught ? 1045 : 1060, y = caught ? 46 : 380, rx = caught ? 29 : 38, ry = caught ? 38 : 49;
+        balloon.innerHTML = '<defs><radialGradient id="ending-balloon-red" cx="32%" cy="24%" r="80%"><stop stop-color="#ffb09d"/><stop offset=".35" stop-color="#ef695a"/><stop offset="1" stop-color="#b72d40"/></radialGradient></defs>'
+          + '<g class="ending-balloon"><path d="M' + x + ' ' + (y + ry + 5) + (caught ? ' Q1025 88 1005 115' : ' Q1047 475 1058 518') + '" fill="none" stroke="#fff2d9" stroke-width="2.5"/>'
+          + '<ellipse cx="' + x + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" fill="url(#ending-balloon-red)"/>'
+          + '<path d="M' + x + ' ' + (y + ry - 2) + 'l-4 8h8z" fill="#b72d40"/></g>';
+        storyArt.appendChild(balloon);
+      }
     }
     return;
   }
@@ -58,16 +77,21 @@ function finishStoryEnding() {
 function playStoryEnding() {
   silenceStoryAudio(); storyEnding = { phase: 'real', timers: [] };
   storyVisual('real');
-  dialog([['', '見知らぬ街。一人の人物が、スマートフォンを手に立っている。'],
-    ['', '名前も、ここへ来る前のことも思い出せない。目の前で、子どもの手から風船が離れた。']], () => {
+  dialog([['', '見知らぬ街。スマートフォンを持つ人物は、自分の名前も、ここへ来る前のことも思い出せない。']], () => {
+    storyArt.classList.add('released');
+    overlay({ text: '子どもの手から、赤い風船が離れた。細いひもが、指の先をすり抜けていく。', dlg: true,
+      b1: ['つぎへ', showEndingJump] });
+  });
+}
+function showEndingJump() {
+    if (!storyEnding) return;
     storyEnding.phase = 'jump'; storyVisual('real-jump');
-    overlay({ text: '人物は反射的に走り出す。人間には届かない高さへ跳び、風船をつかんだ。', dlg: true,
+    overlay({ text: '考えるより先に、体が動いた。人間には届かない高さへ跳び、風船のひもをつかむ。', dlg: true,
       b1: ['つぎへ', () => {
         storyEnding.phase = 'hand'; storyVisual('hand');
-        overlay({ text: '着地した人物は、自分の手を見つめる。それから、スマートフォンへ目を落とした。画面は、こちらからは見えない。', dlg: true,
+        overlay({ text: '風船を返し、人物は自分の手を見つめた。それから、スマートフォンへ目を落とす。画面は、こちらからは見えない。', dlg: true,
           b1: ['つぎへ', showFinalQuestion] });
       }] });
-  });
 }
 function showFinalQuestion() {
   silenceStoryAudio(); storyVisual(null); $('#overlay').hidden = true;

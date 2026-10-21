@@ -23,4 +23,16 @@
 
 ゲームは原本のローカルパスに依存しない。docs/story/ を読み、配布用単一HTMLには画像も埋め込む。
 
+## 終幕の3カット（同日追加・内蔵image_gen）
+
+共通プロンプト：Use case illustration-story. Landscape 3:2 cinematic Japanese animated film background, natural human proportions, rich painterly detail, subtle film grain, amber late afternoon and pale blue sky. Anonymous short-dark-haired young adult in light-gray hooded jacket, dark trousers, off-white sneakers, black smartphone. Face hidden. Everyday Japanese neighborhood plaza, apartment buildings, trees and paving. No legible text, UI, numbers, watermark, animal characters or identity explanations. The street image is the location/clothing/style reference for the next two cuts.
+
+| 保存先 | シーン別の最終指示 |
+|---|---|
+| docs/story/ending-street.webp | Adult seen entirely from behind holding phone low; mustard-jacket child reaches an empty hand toward sky after losing balloon. Upper half is spacious blue sky, detailed apartment plaza and amber shadows below. No painted balloon or string; animated foreground added by game. |
+| docs/story/ending-jump.webp | Same adult at apex of impossibly high leap around second-floor balcony height. Low angle, back/three-quarter view, face hidden, one hand reaches up near upper-right sky, other holds phone low, bent legs and lifted jacket. Small child below, buildings frame lower corners to show height. No superhero aura, balloon or string. Gesture echoes baseball fielder. |
+| docs/story/ending-hand.webp | First-person close-up of open natural human palm with five correct fingers and gray cuff, other hand holds black phone angled away, entirely dark reflective screen. In blurred background child holds returned red balloon on plaza. Warm rim light, quiet tactile detail, no scars/symbols or identity answers. |
+
+原本：街 exec-aeae5bfc-3948-4599-96df-1f05a56b176a.png、跳躍 exec-264a85fe-71b4-45d4-91f3-cbb9a575a884.png、手元 exec-b4b24728-e5f6-4d40-b38d-6b9b57c8fdb4.png。同じチャットのgenerated_imagesフォルダに保持。幅1200px・WebP quality80への縮小/圧縮のみ。3枚429442bytes、全13枚1935996bytes。
+
 追加4枚も内蔵image_genで1枚ずつ生成。共通参照は docs/story/everyday.webp（絵柄とキャラクターの同一性のみ、新構図）。原本は同じgenerated_imagesフォルダの、連携 exec-23854357-93bc-432d-984d-7a459d272dcb.png、記録調査 exec-04e886c8-e774-4f98-b7eb-a8ccaa03ad66.png、決戦 exec-4a400b82-59e4-4434-b4d8-dc094f30af22.png、後日談 exec-96176795-a973-42d4-91f7-096df53e19c2.png。追加分649744bytes、10枚合計1506554bytes。全画像1200×800・WebP quality80。第2話/第8話はイベントで専用絵を見せ、他は章の導入から表示する。
