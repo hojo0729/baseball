@@ -24,6 +24,7 @@ s = s.replace('  faceFor(pitcherF,', '  if(!window.__fh)faceFor(pitcherF,');
 s = s.replace('camera.lookAt(camLook);', 'if(window.__hold){camera.position.set(...window.__hold.p);camera.lookAt(...window.__hold.l);camera.fov=window.__hold.f;camera.near=0.1;camera.updateProjectionMatrix();}else camera.lookAt(camLook);');
 s = s.replace('requestAnimationFrame(frame);\n})();', hook.replace('requestAnimationFrame(frame);', `window.__dbg.beastView=()=>({giant:giantActive(),speed:ball&&ball.speed,vanish:ball&&ball.vn,armed:vanishArm,pitcher:!!pitcherF.beastOn,batter:!!batterF.beastOn,batScale:batG.scale.x});
 window.__dbg.clock=()=>({now:now_(),nextAt,pausedAt,timeOut});
+window.__dbg.musicState=()=>{const buf=musicNow&&musicNow.s.buffer;let peak=0,sum=0,n=0;if(buf){const data=buf.getChannelData(0);for(let i=0;i<data.length;i++){peak=Math.max(peak,Math.abs(data[i]));sum+=data[i]*data[i];n++;}}return {duration:buf&&buf.duration,channels:buf&&buf.numberOfChannels,loop:musicNow&&musicNow.s.loop,peak,rms:Math.sqrt(sum/Math.max(1,n)),output:fileOut&&fileOut.gain.value};};
 window.__dbg.storyAfterResult=storyAfterResult;
 window.__dbg.lobby=()=>({code:onl.code,side:onl.side,me:onl.me,started:onl.started,peers:onl.ch?onl.ch.presenceState():null});
 requestAnimationFrame(frame);`));

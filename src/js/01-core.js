@@ -107,15 +107,24 @@ function bgmBeatAt(n, t) {
 /* recorded cheer music (docs/bgm, made with Lyria): a crowd bed that always runs, plus a music loop that follows the game
    (your team batting / fielding / runners in scoring position), and a fanfare with a roar on home runs.
    Until the files load (or where they can't, like the in-Claude preview) the synth rhythm above plays instead. */
-const BGM_FILES = { a: 'bgm/a_normal.mp3', b: 'bgm/b_normal.mp3', chance: 'bgm/c_chance.mp3', crowd: 'bgm/crowd.mp3', hr: 'bgm/hr.mp3' };
+const BGM_FILES = { a: 'bgm/a_normal.mp3', b: 'bgm/b_normal.mp3', chance: 'bgm/c_chance.mp3', crowd: 'bgm/crowd.mp3', hr: 'bgm/hr.mp3',
+  storyHome: 'bgm/story_home.mp3', storyMystery: 'bgm/story_mystery.mp3', storyInvasion: 'bgm/story_invasion.mp3',
+  storyAwakening: 'bgm/story_awakening.mp3', storyFinal: 'bgm/story_final.mp3', storyEpilogue: 'bgm/story_epilogue.mp3' };
 const bgmRec = {};
+const bgmRequested = new Set();
 let bgmFileReq = false, fileOut = null, musicNow = null, crowdNow = null;
+function bgmLoadTrack(k) {
+  if (!ac || !window.fetch || bgmRequested.has(k)) return;
+  bgmRequested.add(k);
+  const context = ac;
+  fetch(BGM_FILES[k]).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+    .then(a => new Promise((res, rej) => context.decodeAudioData(a, res, rej))).then(b => { bgmRec[k] = b; }).catch(() => {});
+}
 function bgmLoadFiles() {
   if (bgmFileReq || !ac || !window.fetch) return; bgmFileReq = true;
-  Object.keys(BGM_FILES).forEach(k => fetch(BGM_FILES[k]).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
-    .then(a => new Promise((res, rej) => ac.decodeAudioData(a, res, rej))).then(b => { bgmRec[k] = b; }).catch(() => {}));
+  Object.keys(BGM_FILES).filter(k => !k.startsWith('story')).forEach(bgmLoadTrack);
 }
-const fileReady = () => !!(bgmRec.a && bgmRec.crowd);
+const fileReady = () => story ? !!bgmRec[wantTheme()] : !!(bgmRec.a && bgmRec.crowd);
 function loopSrc(buf, vol, fade) {
   const s = ac.createBufferSource(), g = ac.createGain(), t = ac.currentTime;
   s.buffer = buf; s.loop = true; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + fade);
@@ -127,18 +136,36 @@ function fadeStop(n, fade) {
   try { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(n.g.gain.value, t); n.g.gain.linearRampToValueAtTime(0, t + fade); n.s.stop(t + fade + 0.05); } catch (e) {}
 }
 function wantTheme() {
+  if (story) {
+    const scene = $('#overlay').hidden ? '' : $('#overlay').dataset.scene;
+    if (['lab', 'archive', 'analysis', 'ai'].includes(scene)) return 'storyMystery';
+    if (['awakening-strain', 'awakening-roar', 'beast'].includes(scene)) return 'storyAwakening';
+    if (['invasion', 'ultimatum'].includes(scene)) return 'storyInvasion';
+    if (story.idx === 8) return 'storyFinal';
+    if (story.idx === 9) return 'storyEpilogue';
+    if (story.idx === 7) return beastActive() ? 'storyAwakening' : 'storyInvasion';
+    if ([2, 4, 6].includes(story.idx)) return 'storyMystery';
+    if (story.idx === 5) return 'storyInvasion';
+    return 'storyHome';
+  }
   if (!G || phase === 'idle') return 'a';
   if (mode === 'bat' && (G.bases[1] || G.bases[2]) && bgmRec.chance) return 'chance';   // 攻撃で得点圏（2・3塁）にランナー → チャンステーマ
   return mode === 'bat' || !bgmRec.b ? 'a' : 'b';                      // 攻撃中は王道ブラス、守備中はマーチ
 }
 function bgmFileTick() {
   if (!fileOut) { fileOut = ac.createGain(); fileOut.gain.value = 0.42; fileOut.connect(ac.destination); }
-  if (!crowdNow) crowdNow = loopSrc(bgmRec.crowd, 0.8, 1.5);           // 歓声は多め、ずっと流す
+  const crowdVol = story ? .2 : .8;
+  const crowdWanted = !story || (phase !== 'idle' && $('#overlay').hidden);
+  if (!crowdWanted) { fadeStop(crowdNow, .6); crowdNow = null; }
+  else if (bgmRec.crowd && (!crowdNow || crowdNow.vol !== crowdVol)) {
+    fadeStop(crowdNow, .6); crowdNow = loopSrc(bgmRec.crowd, crowdVol, 1.5);
+  }
   const want = wantTheme();
   if (!musicNow || musicNow.name !== want) { fadeStop(musicNow, 1.2); musicNow = loopSrc(bgmRec[want], 0.55, 1.2); musicNow.name = want; }
 }
 function bgmFileStop() { fadeStop(musicNow, 0.6); fadeStop(crowdNow, 0.6); musicNow = crowdNow = null; }
 function bgmHR() {
+  if (story) return; // Keep the story score through alien HRs and the final match.
   if (!bgmOn || !ac || !fileOut || !bgmRec.hr) return;
   const t = ac.currentTime;
   if (musicNow) { const g = musicNow.g.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.1, t + 0.3); g.linearRampToValueAtTime(musicNow.vol, t + 8); }
@@ -148,8 +175,15 @@ function bgmTick() {
   if (storySilent || !bgmOn || !ac || !bgmGain) return;
   const quiet = $('#overlay').classList.contains('story-spotlight') && !$('#overlay').hidden;
   const movie = !!$('#story-movie');
-  bgmGain.gain.setTargetAtTime(movie ? 0 : quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
-  if (fileReady()) { bgmFileTick(); fileOut.gain.setTargetAtTime(movie ? 0 : quiet ? .055 : .42, ac.currentTime, .3); return; }
+  if (story) bgmLoadTrack(wantTheme());
+  const ready = fileReady();
+  bgmGain.gain.setTargetAtTime(movie || story || ready ? 0 : quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
+  if (ready) {
+    bgmFileTick();
+    const dialogue = story && !$('#overlay').hidden;
+    fileOut.gain.setTargetAtTime(movie ? 0 : quiet ? .1 : dialogue ? .28 : .42, ac.currentTime, .3); return;
+  }
+  if (story) { bgmFileStop(); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
 }

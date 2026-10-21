@@ -41,3 +41,5 @@
 動画：`node tools/test/story-movies.mjs`。3サイズで実再生/終了/スキップ/覚醒後の挿絵接続/音声オフ/章変更の破棄/読込失敗時の進行を確認。ローカルサーバーはMP4の範囲読込にも対応。試験環境のシークが待機する場合があるため、終了判定は実際に最後まで再生して検証する。`mobile-preview.mjs` ではオフラインの埋込MP4も再生する。
 
 第8話の覚醒前は投球側で、野球星人がコース・球種に関わらず3球連続でホームランを打つ。3本目の後に覚醒会話・任意動画・意思決定へ進み、打撃側の新しい挑戦へ切り替える。前半の3失点は得点目標へ加算せず、覚醒後1点でクリア。再挑戦は投球からやり直す。`story-opening.mjs` は中央・隅・大きく外れたボール球を実際に投げ、各HRと3本目だけでの覚醒開始を検証する（smoke/story-peaks/story-moviesから使用）。
+
+ストーリー音楽の仕上げ：6曲のオリジナル合成BGMを場面別に再生。曲と生成手順は `design/story-music.md`、検証は `node tools/test/story-music.mjs`。`node tools/build-mobile-preview.mjs` 後の `node tools/test/story-music.mjs --preview` では、外部素材通信を遮断して配布HTML内の全6曲を実デコードする。街から最後の問いまでは無音を維持。

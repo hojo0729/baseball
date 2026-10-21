@@ -58,4 +58,4 @@ https://saboten-apps.github.io/baseball/ をスマホのブラウザで開き、
 
 - 投球・打撃フォームは CMU Graphics Lab Motion Capture Database のデータをもとにしています。The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
 - 効果音の一部は「効果音ラボ」（https://soundeffect-lab.info/）の素材です。
-- 実況の声は Gemini TTS、曲は Lyria で生成しています。
+- 実況の声は Gemini TTS、試合曲は Lyria で生成しています。ストーリーBGMは本作用のオリジナル曲（合成音源）です。

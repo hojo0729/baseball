@@ -249,7 +249,7 @@ function showSettings() {
 /* クレジット（素材の出どころ。README と同じ内容） */
 function showCredits() {
   overlay({ title: 'クレジット', plain: true, cred: true,
-    text: '・投球・打撃フォーム：CMU Graphics Lab Motion Capture Database（mocap.cs.cmu.edu）のデータをもとにしています。The database was created with funding from NSF EIA-0196217.\n・効果音の一部：効果音ラボ（soundeffect-lab.info）\n・実況の声：Gemini TTS／曲：Lyria で生成\n・3D 描画：Three.js（MIT License）',
+    text: '・投球・打撃フォーム：CMU Graphics Lab Motion Capture Database（mocap.cs.cmu.edu）のデータをもとにしています。The database was created with funding from NSF EIA-0196217.\n・効果音の一部：効果音ラボ（soundeffect-lab.info）\n・実況の声：Gemini TTS／試合曲：Lyria／ストーリーBGM：オリジナル曲（合成音源）\n・3D 描画：Three.js（MIT License）',
     b1: ['もどる', showSettings] });
 }
 function startFree() {
