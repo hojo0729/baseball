@@ -2732,7 +2732,7 @@ function storyEvent() {
   const resume = () => { pausedAt = 0; storyVisual(null); $('#overlay').hidden = true; afterResult(); };
   const event = story.event;
   if (event === 'jump') {
-    storyVisual('jump');
+    storyVisual('jump-catch');
     dialog([['', 'ファウルボールが、ベンチへ飛んだ。コタロウは反射的に跳び上がる。'],
       ['ウサミ（うさぎ）', 'えっ、あんな高さまで！？'], ['コタロウ（柴犬）', '…取れた。どうやったんだろう？']], resume);
   } else if (event === 'rescue' || event === 'limit') {
@@ -2893,6 +2893,7 @@ function playStoryMovie(key, done) {
   skip.focus({ preventScroll: true }); play();
 }
 const STORY_ARTS = {
+  'jump-catch': ['story/chapter1-jump.webp', '夕空を見上げ、コタロウが高く跳んで右上の白球へ手を伸ばす。左下でミケが見守る'],
   everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
   rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
   lab: ['story/lab.webp', '研究所の端末に、自分たちと同じ姿を見つける三人'],

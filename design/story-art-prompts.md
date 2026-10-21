@@ -36,6 +36,10 @@
 
 ゲームは原本のローカルパスに依存しない。docs/story/ を読み、配布用単一HTMLには画像も埋め込む。
 
+## 第1話の跳躍（2026-10-21差し替え・内蔵image_gen）
+
+`docs/story/chapter1-jump.webp`：Take提供の終幕スクリーンショットと同じ、低い位置からの背面構図。中央のコタロウが右上のファウルボールへ右手を伸ばし、両脚を曲げて跳ぶ。左下のミケが見上げる。夕空と左側の木、右下からの暖光を終幕と揃え、街を練習場のベンチ・屋根・フェンスへ置き換える。人間や風船は描かず、正体は明かさない。原本 `output/imagegen/chapter1-jump-v2.png`（generated_images の exec-c9711f56-e2bb-46ee-bade-e85197f7b812.png）。1200×800、WebP quality80へ縮小・圧縮。第1話の初打席後だけに適用し、第4話の救援場面は変えない。
+
 ## 終幕の3カット（同日追加・内蔵image_gen）
 
 共通プロンプト：Use case illustration-story. Landscape 3:2 cinematic Japanese animated film background, natural human proportions, rich painterly detail, subtle film grain, amber late afternoon and pale blue sky. Anonymous short-dark-haired young adult in light-gray hooded jacket, dark trousers, off-white sneakers, black smartphone. Face hidden. Everyday Japanese neighborhood plaza, apartment buildings, trees and paving. No legible text, UI, numbers, watermark, animal characters or identity explanations. The street image is the location/clothing/style reference for the next two cuts.

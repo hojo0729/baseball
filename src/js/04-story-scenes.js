@@ -63,6 +63,7 @@ function playStoryMovie(key, done) {
   skip.focus({ preventScroll: true }); play();
 }
 const STORY_ARTS = {
+  'jump-catch': ['story/chapter1-jump.webp', '夕空を見上げ、コタロウが高く跳んで右上の白球へ手を伸ばす。左下でミケが見守る'],
   everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
   rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
   lab: ['story/lab.webp', '研究所の端末に、自分たちと同じ姿を見つける三人'],

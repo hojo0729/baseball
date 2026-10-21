@@ -99,7 +99,7 @@ function storyEvent() {
   const resume = () => { pausedAt = 0; storyVisual(null); $('#overlay').hidden = true; afterResult(); };
   const event = story.event;
   if (event === 'jump') {
-    storyVisual('jump');
+    storyVisual('jump-catch');
     dialog([['', 'ファウルボールが、ベンチへ飛んだ。コタロウは反射的に跳び上がる。'],
       ['ウサミ（うさぎ）', 'えっ、あんな高さまで！？'], ['コタロウ（柴犬）', '…取れた。どうやったんだろう？']], resume);
   } else if (event === 'rescue' || event === 'limit') {

@@ -23,7 +23,7 @@
 - `docs/sfx/*.bin` — 効果音ラボの打球音・ミット音・スライディング音（`tools/make-sfx.py` が mp3 を XOR で固定化して作る。元の mp3 はコミットしない。サイトの規約: 商用可・クレジット不要・AI学習利用禁止・素材ファイルの再配布禁止）。`01-core.js` の `sfxLoad`/`playRec` で再生。音まわりに Math.random は使わず `sfxRnd` を使う
 - `build.mjs` — `node build.mjs` で `docs/index.html`（GitHub Pages 公開用）と `dist/artifact.html`（Claude内プレビュー用）を作る
 - `docs/` — GitHub Pages の公開フォルダ（ビルド結果をコミットする）。アプリ化（PWA）用の `manifest.webmanifest` と `sw.js` もビルドで作られる。`docs/icons/` のアイコンは `python3 tools/make-icons.py` で作る。`docs/audio/<id>.mp3` を置いてビルドすると、実況の声として自動で使われる（スマホの機械音声は使わない）
-- `docs/story/` — 各話10枚・終幕3カット・襲来/覚醒4カットの全17枚（圧縮WebP）。スマホ確認版には `tools/build-preview.mjs` が埋め込む。台詞の第3要素にsceneを指定すると会話中に絵が切り替わる。山場はstory-spotlightクラスで絵を拡大し、BGMを下げ、音楽オン時だけ短い低音を鳴らす。終幕の風船はSVGで一度だけ上昇。意図/生成記録は `design/story-plot.md` と `design/story-art-prompts.md`。ビースト発動後の最終戦は10点差コールド。
+- `docs/story/` — 各話10枚・終幕3カット・襲来/覚醒4カット・第1話の跳躍1枚の全18枚（圧縮WebP）。スマホ確認版には `tools/build-preview.mjs` が埋め込む。台詞の第3要素にsceneを指定すると会話中に絵が切り替わる。山場はstory-spotlightクラスで絵を拡大し、BGMを下げ、音楽オン時だけ短い低音を鳴らす。終幕の風船はSVGで一度だけ上昇。意図/生成記録は `design/story-plot.md` と `design/story-art-prompts.md`。ビースト発動後の最終戦は10点差コールド。
 
 ## 動作確認
 
