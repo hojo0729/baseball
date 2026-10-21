@@ -1,5 +1,6 @@
 const { openGame } = require('./lib.mjs');
 (async()=>{const { b, p, errs } = await openGame();
+try {
 await p.waitForTimeout(1500);
 await p.evaluate(()=>__dbg.gopit());await p.waitForTimeout(800);
 console.log('mode',await p.evaluate(()=>__dbg.mode));
@@ -18,10 +19,16 @@ async function run(bases,outs,pick,res,ev,tag){
   await p.waitForFunction(()=>__dbg.phase==='fly',null,{timeout:20000});
   await p.evaluate(([res,ev])=>__dbg.hit({kind:'play',q:0.6,dir:-20,ev,launch:2,dist:30,res,bases:res==='ゴロヒット'?1:0}),[res,ev]);
   await p.waitForTimeout(400);
-  const st=await p.evaluate(()=>({pend:!!(__dbg.play&&__dbg.play.pend),chips:[...document.querySelectorAll('#acts .chip')].map(x=>x.textContent),hint:document.querySelector('#hint').textContent}));
+  // Select in the same browser turn as inspection. A software-WebGL screenshot
+  // can exceed the real decision deadline; capture it only after the selection.
+  const st=await p.evaluate(pick=>{
+    const st={pend:!!(__dbg.play&&__dbg.play.pend),chips:[...document.querySelectorAll('#acts .chip')].map(x=>x.textContent),hint:document.querySelector('#hint').textContent};
+    if(!st.pend) throw new Error('Throw selection did not open');
+    if(pick){const button=document.querySelector(`#acts .chip[data-k="thr${pick}"]`);if(!button)throw new Error('Missing throw destination '+pick);button.click();}
+    return st;
+  },pick);
   console.log(tag,'pending',JSON.stringify(st));
   if(tag==='shot'){ await p.screenshot({path:pre+'-slow.png'}); }
-  if(pick){ await p.evaluate(b=>{document.querySelector(`#acts .chip[data-k="thr${b}"]`).click()},pick); }
   await p.waitForTimeout(tag==='shot'?1200:300);
   if(tag==='shot') await p.screenshot({path:pre+'-after.png'});
   await p.waitForFunction(()=>__dbg.phase==='ready'||__dbg.phase==='wait'||__dbg.phase==='idle',null,{timeout:30000});
@@ -32,4 +39,6 @@ await run([3,3,3],0,2,'ゴロアウト',135,'loaded-2nd');
 await run([3,0,0],0,1,'ゴロアウト',135,'first-only');
 await run([0,0,3],0,4,'ゴロアウト',100,'tag');
 await run([3,0,0],1,0,'ゴロアウト',135,'timeout');
-console.log(JSON.stringify(errs));await b.close();})()
+console.log(JSON.stringify(errs));
+} finally {await b.close();}
+})()

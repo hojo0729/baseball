@@ -9,3 +9,5 @@ CPU対戦とオンライン（練習も含む）に三塁打を追加。スト�
 テスト：`node tools/test/triples.mjs`（CPUの走力・肩・方向・距離・得点・除外条件）、`node tools/test/tac7.js`（共有シード7で実際の二塁打データを三塁打に変え、両端末の得点と三塁走者を比較）。`check --full` に含む。
 
 音声 `docs/audio/miss_2.mp3` の字幕は「バットが空を切る！」。生成スクリプト `tools/gemini-voice.py` はこのIDだけ「バットが、くうをきる！」を送るようにして再発を防ぐ。単独生成は `python tools/gemini-voice.py one Kore "バットが、くうをきる！" dist/voice-fix/miss_2.mp3`（出力先フォルダは事前に作成する）。APIキーは環境変数 `GEMINI_API_KEY` または `~/.gemini.key`。秘密をコミットしない。生成後に聴取・照合し、元ファイルと入れ替えてビルドする。2026-10-22時点、このPCでは既定のキーが見つからず、Takeの指示で音声生成は別AIへ引き継ぐ。録音の差し替えは未実施。コピペ用の指示は `design/voice-fix-handoff.md`。
+
+公開準備時の更新：別AIがmainの870a899で `miss_2.mp3` を修正済み。Takeから完了報告とmain公開承認を受け、新10話を含む版へ取り込んだ。`triple_1.mp3` はまだなく、三塁打実況は字幕のみ。
