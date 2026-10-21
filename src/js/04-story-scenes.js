@@ -204,7 +204,7 @@ function showFinalQuestion() {
   storyEnding.timers.push(setTimeout(() => { if (storyEnding) final.querySelector('button').hidden = false; }, 6500));
   final.querySelector('button').addEventListener('click', () => {
     finishStoryEnding(); storyVisual(null);
-    overlay({ title: 'クレジット', text: 'どうぶつベースボール\n物語構想・制作方針：Take\n開発協力：AI\n\n素材の出典は設定のクレジットから確認できます。', plain: true, cred: true,
+    overlay({ title: 'クレジット', text: 'どうぶつベースボール\n開発協力：AI\n\n素材の出典は設定のクレジットから確認できます。', plain: true, cred: true,
       b1: ['メニューへ', showMenu], b2: ['素材のクレジット', showCredits] });
   });
 }
