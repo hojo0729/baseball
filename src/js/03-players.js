@@ -343,7 +343,7 @@ function poseFig(f, J, yaw, headYaw) {
   f.longT.position.copy(_a); f.longT.position.y += 0.03; f.longT.rotation.set(0.25, yaw + Math.PI / 2 + wag * 1.4, -0.35);
   f.ball.position.copy(_a); if ((f.sp === 'usagi' || f.sp === 'floppy')) f.ball.position.y += 0.02; f.ball.scale.setScalar((f.sp === 'usagi' || f.sp === 'floppy') ? 0.082 : 0.06);
   if (f.mitt) { f.mitt.position.copy(J.hL); f.mitt.scale.set(0.1, 0.115, 0.065); f.mitt.rotation.set(0, headYaw, 0); }
-  beastForm(f, beastActive() && ((f === pitcherF && mode === 'pit') || (f === batterF && mode === 'bat')));
+  beastForm(f, (f === pitcherF && beastForRole('pit')) || (f === batterF && beastForRole('bat')));
 }
 
 /* ---- right-handed batter ---- */

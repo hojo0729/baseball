@@ -7,7 +7,7 @@ function saveProgress(n) { try { localStorage.setItem(STORY_SAVE_KEY, JSON.strin
 /* every third plate appearance: giant bat (batting) or magic pitch (pitching) */
 /* automatic helpers (giant bat / lucky ball) are for story and practice only, not for the head-to-head games */
 const helpersOn = () => !online && !match && !(story && story.inn);
-function giantActive() { return mode === 'bat' && (beastActive() || (helpersOn() && !!G && G.pa % 3 === 2)); }
+function giantActive() { return beastForRole('bat') || (mode === 'bat' && helpersOn() && !!G && G.pa % 3 === 2); }
 function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3 === 2; }
 
 function goalLong(st) {
@@ -22,7 +22,8 @@ function updateGoal() {
   if (!G || phase === 'idle') { el.innerHTML = ''; return; }
   if (online) {
     el.innerHTML = 'オンライン 部屋' + onl.code + '<br>' + teamName(onl.side) + '・' + (mode === 'bat' ? '攻撃中' : '守備中')
-      + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '') + '<br>' + rosterLines();
+      + (mode === 'bat' && giantActive() ? '　<span class="hot">巨大バット！</span>' : '')
+      + (onl.beast.home || onl.beast.away ? '<br>野性解放：' + ['home', 'away'].filter(s => onl.beast[s]).map(teamName).join('・') : '') + '<br>' + rosterLines();
     return;
   }
   if (match) { el.innerHTML = 'CPU対戦 vs ' + ROSTER[match.opp].name + '（' + DIFF[diffLv].name + '）・' + (mode === 'bat' ? '攻撃中' : '守備中') + '<br>' + rosterLines(); return; }

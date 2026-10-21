@@ -150,7 +150,16 @@ function storyEvent() {
   return true;
 }
 function beastActive() {
+  if (online) return !!(G && !G.over && phase !== 'idle' && onl.beast[onl.side]);
   return !!(story && !online && !match && G && !G.over && phase !== 'idle' && storySession && storySession.beastUntilPA >= G.pa);
+}
+function beastForRole(role) {
+  if (!online) return beastActive() && mode === role;
+  if (!G || G.over || phase === 'idle') return false;
+  // G.inning advances at the third out; the displayed roles change only when
+  // applyRole completes the result animation. Keep its actor snapshot until then.
+  const bat = onl.half % 2 === 1 ? 'away' : 'home';
+  return !!onl.beast[role === 'bat' ? bat : bat === 'home' ? 'away' : 'home'];
 }
 function storyRunGoal() { return story.idx === 7 && storySession && storySession.awakenRuns !== undefined ? storySession.awakenRuns + 1 : story.runs; }
 function activateBeast() {

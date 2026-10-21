@@ -588,9 +588,9 @@ function advance(n, label) {
 function contact(dt, d, vy, speed, boost, crit, evAdd) {
   if (story && !online && !match && mode === 'bat') {
     if (story.idx === 7 && storySession && !storySession.eventDone) { dt *= 1.2; d *= 1.2; }
-    if (beastActive()) { dt *= 0.65; d *= 0.7; evAdd = (evAdd || 0) + 15; }
   }
-  if (story && !online && !match && mode === 'pit' && beastActive()) { d += 0.35; dt *= 1.3; }
+  if (beastForRole('bat')) { dt *= 0.65; d *= 0.7; evAdd = (evAdd || 0) + 15; }
+  if (beastForRole('pit')) { d += 0.35; dt *= 1.3; }
 
   if (crit) dt *= 0.65;                                   // 会心の一振り：ミートの時間の幅が広がる
   const tB = trT('bat'), tF = trT('fld');                 // どうぶつ固有スキル（ストーリー以外）
@@ -643,7 +643,7 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
 
 /* ---- pitch flight ---- */
 function launchBall(o) {
-  if (beastActive() && mode === 'pit') o = { ...o, speed: 200 };
+  if (beastForRole('pit')) o = { ...o, speed: 200 };
   let dk = false;
   const T = TYPES[o.key], PT = curPitcher(), BRK = 0.55 + 0.15 * PT.b, hs = PT.hand === 'L' ? -1 : 1;   // a lefty's breaks are mirrored
   spendStamina(o.speed, o.key);
@@ -662,7 +662,7 @@ function launchBall(o) {
   trailPts.length = 0;
   hideBanner();
   $('#spd').textContent = Math.round(o.speed) + ' km/h';
-  const hot = o.key === 'gou' || (beastActive() && mode === 'pit'), magic = magicActive();
+  const hot = o.key === 'gou' || beastForRole('pit'), magic = magicActive();
   $('#spd').classList.toggle('hot', hot);
   ballMesh.material.emissive.set(hot ? '#ff4a10' : magic ? '#7a3cff' : '#34342e');
   ballGlow.material.color.set(hot ? '#ff8a3c' : magic ? '#b48cff' : '#ffffff');
@@ -785,7 +785,7 @@ function cpuBat() {
 function resolve(c, C) {
   if (online && mode === 'bat') {
     const seed = (Math.random() * 4294967296) >>> 0;
-    send('result', { c, C: C ? [C.x, C.y, C.z] : null, seed, swung: !!(swing && !swing.bunt) });
+    send('result', { c, C: C ? [C.x, C.y, C.z] : null, seed, swung: !!(swing && !swing.bunt), beast: onlineBeastState() });
     return withSeed(seed, () => resolveCore(c, C));
   }
   return resolveCore(c, C);

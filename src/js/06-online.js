@@ -9,7 +9,64 @@ const PAGES_URL = 'https://saboten-apps.github.io/baseball/';
 let online = false;
 const onl = { sb: null, ch: null, code: '', side: 'home', me: Math.random().toString(36).slice(2, 10), started: false,
   score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0, goneTimer: 0,
-  pn: 0, oppSign: null, seed: 0, queuedPick: null, queuedSub: [] };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
+  pn: 0, oppSign: null, seed: 0, queuedPick: null, queuedSub: [],
+  beast: { home: false, away: false }, beastWanted: { home: false, away: false } };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
+
+let beastKeys = '', beastKeyAt = 0, beastTaps = 0, beastTapAt = 0;
+function resetOnlineBeast() {
+  onl.beast = { home: false, away: false }; onl.beastWanted = { home: false, away: false };
+  beastKeys = ''; beastTaps = 0;
+}
+const onlineBeastState = () => ({ home: onl.beast.home, away: onl.beast.away });
+function applyOnlineBeast(state) {
+  if (!online || !state) return;
+  for (const side of ['home', 'away']) if (state[side] === true) {
+    if (side === onl.side && !onl.beast[side]) vanishArm = true;
+    onl.beast[side] = onl.beastWanted[side] = true;
+  }
+}
+function prepareOnlinePitch(p) {
+  // Only the pitcher commits pending activations. This snapshot travels with
+  // the pitch, so neither device changes a ball that is already in flight.
+  applyOnlineBeast(onl.beastWanted);
+  return onl.beast[onl.side] ? { ...p, speed: 200, vn: vanishArm } : p;
+}
+function requestOnlineBeast() {
+  if (!online || !onl.started || !G || G.over || onl.beastWanted[onl.side]) return false;
+  onl.beastWanted[onl.side] = true; send('beast', { side: onl.side }); return true;
+}
+function showOnlineSecret() {
+  if (!online || !G || G.over) return;
+  overlay({ title: '隠しコマンド', text: '',
+    b1: ['入力する', () => {
+      const value = ($('#beast-code').value || '').trim().toUpperCase();
+      if (value !== 'BEAST') { $('#beast-code').value = ''; $('#beast-code').focus(); return; }
+      const requested = requestOnlineBeast();
+      overlay({ title: '野性解放', text: requested ? '次の投球から、試合終了までビーストモード。' : 'ビーストモードは発動済みです。',
+        b1: ['試合にもどる', () => { $('#overlay').hidden = true; }] });
+    }], b2: ['もどる', onlinePause] });
+  const label = document.createElement('label'); label.textContent = 'コマンド';
+  const input = document.createElement('input'); input.id = 'beast-code'; input.type = 'text';
+  input.maxLength = 16; input.autocomplete = 'off'; input.autocapitalize = 'characters'; input.spellcheck = false;
+  input.setAttribute('aria-label', '隠しコマンド');
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#goBtn').click(); } });
+  label.appendChild(input); $('#od').appendChild(label); input.focus();
+}
+$('#ot').addEventListener('click', () => {
+  if (!online || $('#ot').textContent !== 'オンライン対戦中') { beastTaps = 0; return; }
+  const now = now_(); beastTaps = now - beastTapAt < 3 ? beastTaps + 1 : 1; beastTapAt = now;
+  if (beastTaps >= 5) { beastTaps = 0; showOnlineSecret(); }
+});
+document.addEventListener('keydown', e => {
+  if (!online || e.repeat || e.isComposing || e.ctrlKey || e.altKey || e.metaKey || (e.target instanceof Element && e.target.closest('input,textarea,[contenteditable="true"]'))) { beastKeys = ''; return; }
+  if (e.key.length !== 1) { beastKeys = ''; return; }
+  const now = now_(); beastKeys = (now - beastKeyAt < 3 ? beastKeys : '') + e.key.toUpperCase(); beastKeyAt = now;
+  if (!'BEAST'.startsWith(beastKeys)) beastKeys = e.key.toUpperCase() === 'B' ? 'B' : '';
+  if (beastKeys === 'BEAST') {
+    beastKeys = '';
+    if (requestOnlineBeast()) setHint('野性解放！ 次の投球からビーストモード');
+  }
+});
 
 /* run fn with Math.random replaced by a seeded generator (mulberry32) */
 function withSeed(seed, fn) {
@@ -81,6 +138,7 @@ function leaveRoom() {
     try { onl.sb.removeChannel(ch); } catch (e) {}
   }
   online = false; onl.started = false; onl.queued = null; onl.waitRes = null; onl.queuedPick = null; onl.queuedSub = [];
+  resetOnlineBeast();
 }
 function hostRoom() {
   onl.side = 'home';
@@ -131,6 +189,9 @@ function onMsg(m) {
   else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline(); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
+  else if (m.type === 'beast') {
+    if (online && m.side === (onl.side === 'home' ? 'away' : 'home')) onl.beastWanted[m.side] = true;
+  }
   else if (m.type === 'bye') opponentLeft();
   else if (m.type === 'relief' || m.type === 'closer' || m.type === 'ph') onSubMsg(m);
   else if (m.type === 'pick') onPickMsg(m);
@@ -150,6 +211,7 @@ function onPickMsg(m) {
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null; match = null;
+  resetOnlineBeast();
   onl.timeLeft = 3; onl.oppTime = false; timeOut = false;
   onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null; onl.queuedSub = [];
   sign = null; cpuStealPlan = false; cpuBuntPlan = false;
@@ -183,6 +245,7 @@ function onPitchMsg(m) {
   if (!online) return;
   if (mode !== 'bat' || phase !== 'wait') { onl.queued = m; return; }   // still showing the last play, or switching sides
   pending = m.p; phase = 'deliver'; deliverStart = now_();
+  applyOnlineBeast(m.beast);
   setHint('');
 }
 /* pitcher: the batter's device judged the pitch */
@@ -192,6 +255,7 @@ function onResultMsg(m) {
   applyRemoteResult(m);
 }
 function applyRemoteResult(m) {
+  applyOnlineBeast(m.beast);
   const C = m.C ? V(m.C[0], m.C[1], m.C[2]) : ball.tgt.clone();
   if (m.swung) batAnim = { t0: now_() - SWING_LEAD, plan: makeSwingPlan(C) };
   if (m.c.bunt) curBunt = true;

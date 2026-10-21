@@ -1,15 +1,19 @@
 const { launchBrowser, attachErrors } = require('./lib.mjs');
 (async () => {
   const { b, url } = await launchBrowser();
+  try {
   const ctx = await b.newContext({ viewport: { width: 380, height: 760 } });
-  await ctx.addInitScript(() => { localStorage.setItem('yakyu-opts', JSON.stringify({ dice: false, hap: false })); });
+  await ctx.addInitScript(() => { localStorage.setItem('yakyu-opts', JSON.stringify({ dice: false, hap: false })); localStorage.setItem('yakyu-bgm', '0'); });
   const A = await ctx.newPage(), B = await ctx.newPage();
   const errs = []; [A, B].forEach((p, i) => attachErrors(p, errs, 'P' + i + ' '));
-  await A.goto(url); await B.goto(url); await A.waitForTimeout(1500);
+  // Synchronization test: skip software WebGL drawing, retain real pitch timing.
+  for (const p of [A, B]) { await p.goto(url); await p.waitForFunction(() => window.__dbg); await p.evaluate(() => { window.__dbg.optOff(); window.__dbg.noDraw(); }); }
   await A.click('#go3'); await A.click('#goBtn'); await A.waitForTimeout(300);
   const code = (await A.textContent('#ot')).replace(/\D/g, '');
   await B.click('#go3'); await B.click('#go2'); await B.fill('#codeIn', code); await B.click('#goBtn');
-  await A.waitForFunction(() => window.__dbg.online); await B.waitForFunction(() => window.__dbg.online);
+  for (const p of [A, B]) await p.waitForFunction(() => window.__dbg.online).catch(async error => {
+    console.error('Lobby timeout', await Promise.all([A, B].map(p => p.evaluate(() => ({ title: document.querySelector('#ot').textContent, lobby: window.__dbg.lobby() }))))); throw error;
+  });
   const st = p => p.evaluate(() => { const d = window.__dbg, G = d.G; return { inn: G.inning, b: G.b, s: G.s, o: G.outs, bases: G.bases.join(''), runs: G.runs, pa: G.pa }; });
   const log = [];
   const waitPhase = (p, ph) => p.waitForFunction(x => window.__dbg.phase === x, ph, { timeout: 30000 });
@@ -33,5 +37,5 @@ const { launchBrowser, attachErrors } = require('./lib.mjs');
   await A.click('#goBtn'); await A.waitForTimeout(200);
   log.push('overlay hidden ' + await A.$eval('#overlay', e => e.hidden));
   console.log(log.join('\n')); console.log(JSON.stringify(errs));
-  await b.close();
+  } finally { await b.close(); }
 })();

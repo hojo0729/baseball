@@ -106,12 +106,13 @@ if (runNode('tools/test/smoke.mjs', 'smoke.mjs')) {
   console.log('✓ smoke.mjs 通過');
 }
 
-// 7. --full 指定時は thr.js / hbp.js / tac7.js も実行
+// 7. --full 指定時は thr.js / hbp.js / tac7.js / online-beast.mjs も実行
 if (full && ok) {
   for (const [script, name] of [
     ['tools/test/thr.js', 'thr.js'],
     ['tools/test/hbp.js', 'hbp.js'],
-    ['tools/test/tac7.js', 'tac7.js']
+    ['tools/test/tac7.js', 'tac7.js'],
+    ['tools/test/online-beast.mjs', 'online-beast.mjs']
   ]) {
     if (runNode(script, name, out => out.trim().endsWith('[]') && !out.includes('DIFF '))) {
       console.log(`✓ ${name} 通過`);
