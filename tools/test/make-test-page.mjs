@@ -28,6 +28,8 @@ window.__dbg.musicState=()=>{const buf=musicNow&&musicNow.s.buffer;let peak=0,su
 window.__dbg.noDraw=()=>{renderer.render=()=>{};};
 window.__dbg.freezePitches=()=>{const launch=launchBall;launchBall=p=>{launch(p);if(ball)ball.start=now_()+3600;};renderer.render=()=>{};};
 window.__dbg.onlineBeast=()=>({active:onlineBeastState(),wanted:{...onl.beastWanted},local:beastActive()});
+window.__dbg.stadium=()=>({id:stadiumId,name:stadiumLook.name,type:stadiumLook.type,groups:stadiumGroups.size,visible:[...stadiumGroups.values()].filter(g=>g.visible).length,batches:stadiumGroup?stadiumGroup.children.length:0,sky:scene.background.getHexString(),grass:GRASS.color.getHexString(),grassMap:GRASS.map===grassTex,stands:stands.visible,towers:stadiumTowers.filter(o=>o.visible).length,stars:stadiumStars.visible,fence:FR,center:[FC.x,FC.y,FC.z],distance:fenceDist(0,-1),mound:[mound.position.x,mound.position.y,mound.position.z],lights:[key.intensity,hemi.intensity,fill.intensity,rim.intensity],geometries:renderer.info.memory.geometries,draws:renderer.info.render.calls});
+window.__dbg.stadiumShot=wide=>{storyVisual(null);clearPlay();phase=mode==='bat'?'wait':'ready';nextAt=Infinity;document.querySelector('#overlay').hidden=true;window.__hold=wide?{p:[0,48,62],l:[0,17,-112],f:62}:null;syncStadium();};
 window.__dbg.storyAfterResult=storyAfterResult;
 window.__dbg.lobby=()=>({code:onl.code,side:onl.side,me:onl.me,started:onl.started,peers:onl.ch?onl.ch.presenceState():null});
 requestAnimationFrame(frame);`));

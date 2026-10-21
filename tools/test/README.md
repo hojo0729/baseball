@@ -21,6 +21,7 @@
     node tools/test/ingame.js                # 守備側の通常画面とホームラン（ig-*.png）
     node tools/test/ui.js                    # メニュー〜試合開始〜ホームラン〜守備のスクショ
     node tools/test/tac7.js                  # オンライン2タブの同期確認（SAME/DIFF）
+    node tools/test/stadium.mjs              # 10章の球場・覚醒照明・寸法保持・背景再利用・通常球場復帰・3画面サイズ
 
 スクショは実行したフォルダに出る。`__dbg` のフックは `tools/test/make-test-page.mjs` の先頭にある
 （`hit(c)` で打球結果を強制、`pitch()` で1球投げる、`ff()` で投球・待機時間を即座に早送り、`gopit()` で守備側で開始、`face(team, expr)` で顔の確認 など）。

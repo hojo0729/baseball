@@ -139,6 +139,7 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
         });
         assert.ok(attack.boosted > attack.normal, 'Offensive beast mode must improve timing/contact tolerance');
         assert.equal(await p.evaluate(() => window.__dbg.session.beastUsed), true);
+        await p.waitForFunction(() => window.__dbg.stadium().id === 'awakened');
         assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true);
       }
       if (def.inn) {

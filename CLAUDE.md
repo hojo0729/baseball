@@ -10,6 +10,7 @@
   （`01-core.js` が `(() => {` を開き、`09-main.js` が `})();` で閉じる。ES modules ではない）
   - `01-core.js` 定数、効果音、球種、試合状態、カウント/走塁ルール、当たり判定、投球、結果処理
   - `02-stadium.js` レンダラー、カメラ、球場、照明、ボール、マーカー
+  - `02-story-stadium.js` 各話の3D背景・配色・照明。通常球場への復帰、背景のキャッシュと共有描画（仕様は `design/story-stadiums.md`）
   - `03-motion.js` 投球フォームのモーションキャプチャ（CMU mocap 124_01。`tools/bvh-joints.py` → `tools/make-motion.py` で生成。手で編集しない）
   - `03-motion-bat.js` 打者の体の動き（CMU mocap 124_07 スイング・124_08 バント。`tools/make-bat-motion.py` で生成）。手とバットはスイング計画のまま
   - `03-mascot-heads.js` 提供HTMLから適合したマスコットの頭部造形。`03-players.js` 動物の選手モデル、ポーズ（打者・投手・野手）、バット

@@ -1483,11 +1483,13 @@ function canvasTex(w, h, draw, rep) {
   if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); }
   return t;
 }
+let stadiumSeed = 20261021;
+const stadiumRnd = () => (stadiumSeed = (Math.imul(stadiumSeed, 1664525) + 1013904223) >>> 0) / 4294967296;
 function speckle(g, w, h, n, cols, size) {
   for (let i = 0; i < n; i++) {
-    g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.25 + Math.random() * 0.35;
-    const s = size * (0.5 + Math.random());
-    g.fillRect(Math.random() * w, Math.random() * h, s, s);
+    g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.25 + stadiumRnd() * 0.35;
+    const s = size * (0.5 + stadiumRnd());
+    g.fillRect(stadiumRnd() * w, stadiumRnd() * h, s, s);
   }
   g.globalAlpha = 1;
 }
@@ -1593,9 +1595,9 @@ const crowdTex = canvasTex(1024, 256, (g, w, h) => {
     const y = r * h / rows;
     g.fillStyle = r % 2 ? '#0f161b' : '#172027'; g.fillRect(0, y, w, h / rows);
     for (let i = 0; i < 200; i++) {
-      if (Math.random() < 0.12) continue;
-      const x = (i + (r % 2) * 0.5) * w / 200 + Math.random();
-      g.fillStyle = CROWD[(Math.random() * CROWD.length) | 0];
+      if (stadiumRnd() < 0.12) continue;
+      const x = (i + (r % 2) * 0.5) * w / 200 + stadiumRnd();
+      g.fillStyle = CROWD[(stadiumRnd() * CROWD.length) | 0];
       g.fillRect(x, y + h / rows * 0.3, 3, 4);
     }
   }
@@ -1623,24 +1625,25 @@ const glowTex = canvasTex(128, 128, (g) => {
   gr.addColorStop(0, 'rgba(255,246,214,1)'); gr.addColorStop(0.2, 'rgba(255,236,180,.5)'); gr.addColorStop(1, 'rgba(255,236,180,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
 });
-const towerSp = [];
+const towerSp = [], stadiumTowers = [];
 [96, 138, 222, 264].forEach(deg => {
   const a = deg * D2R, r = FR + 58, x = FC.x + Math.sin(a) * r, z = FC.z + Math.cos(a) * r;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 48, 8), mat('#1a1f24'));
-  pole.position.set(x, 24, z); scene.add(pole);
+  pole.position.set(x, 24, z); scene.add(pole); stadiumTowers.push(pole);
   const panel = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 0.6), new THREE.MeshBasicMaterial({ color: '#fff6d6' }));
-  panel.position.set(x, 50, z); panel.lookAt(0, 0, -20); scene.add(panel);
+  panel.position.set(x, 50, z); panel.lookAt(0, 0, -20); scene.add(panel); stadiumTowers.push(panel);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
-  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp); towerSp.push(sp);
+  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp); towerSp.push(sp); stadiumTowers.push(sp);
 });
+let stadiumStars = null;
 (() => {
   const n = 500, p = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, e = 0.12 + Math.random() * 1.2, r = 600;
+    const a = stadiumRnd() * Math.PI * 2, e = 0.12 + stadiumRnd() * 1.2, r = 600;
     p[i * 3] = Math.cos(a) * Math.cos(e) * r; p[i * 3 + 1] = Math.sin(e) * r; p[i * 3 + 2] = Math.sin(a) * Math.cos(e) * r;
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#cfd8e6', size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0.6, fog: false })));
+  stadiumStars = new THREE.Points(g, new THREE.PointsMaterial({ color: '#cfd8e6', size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0.6, fog: false })); scene.add(stadiumStars);
 })();
 
 /* ---- 演出：花火・観客のウェーブ・照明の明滅（すべて軽い：Points 1個とメッシュ1枚） ---- */
@@ -1698,7 +1701,7 @@ function updateShow(now, dt) {
   if (live) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
   // crowd wave: a bright band sweeping around the stands
   const wv = now < waveUntil;
-  waveMesh.visible = wv || waveMat.opacity > 0.01;
+  waveMesh.visible = stands.visible && (wv || waveMat.opacity > 0.01);
   waveMat.opacity += ((wv ? 0.8 : 0) - waveMat.opacity) * Math.min(1, dt * 4);
   if (waveMesh.visible) waveTex.offset.x = (waveTex.offset.x - dt * 0.35) % 1;
   // lights: flash on a celebration, dim during the lights-out happening
@@ -1707,7 +1710,8 @@ function updateShow(now, dt) {
   const target = dark ? 0.32 : 1;
   lightK += (target - lightK) * Math.min(1, dt * (dark ? 6 : 2.5));
   const fl = now < flashUntil ? 0.5 + 0.5 * Math.abs(Math.sin(now * 14)) : 1;
-  key.intensity = 1.55 * lightK; hemi.intensity = 0.6 * (0.45 + 0.55 * lightK); fill.intensity = 0.5 * lightK; rim.intensity = 0.45 * lightK;
+  const env = stadiumLighting();
+  key.intensity = env[0] * lightK; hemi.intensity = env[1] * (0.45 + 0.55 * lightK); fill.intensity = env[2] * lightK; rim.intensity = env[3] * lightK;
   towerSp.forEach(s => { s.material.opacity = (dark ? 0.08 : 1) * fl; });
 }
 function darkActive() {
@@ -1769,6 +1773,197 @@ const tapRing = marker('#eef0e4', 0.95), flashRing = marker('#f4c95a', 1), ghost
 const aimRing = marker('#f4c95a', 0.95, 0.18), landRing = marker('#f4c95a', 0.9);
 landRing.rotation.x = -Math.PI / 2;
 let fxTap = -9, fxFlash = -9, ghostOn = false;
+
+/* ---- 02-story-stadium.js ---- */
+/* Story environments. Only scenery/materials/lights change; the field and all
+   gameplay dimensions stay fixed. Static batches are built lazily and reused. */
+const STADIUM_LOOKS = {
+  standard: { name: 'ナイター球場', type: '', sky: '#050b13', horizon: '#0b1626', grass: '#ffffff', dirt: '#ffffff', fence: '#ffffff', trim: '#f4c95a', eye: 30, stands: true, towers: true, stars: true, sun: '#fff1d6', ambient: '#a9bde0', ground: '#1c2a20', fill: '#c9dbff', rim: '#ffe7b0', lights: [1.55, .6, .5, .45] },
+  park: { name: '約束のグラウンド', type: 'park', sky: '#557e9b', horizon: '#e7b584', grass: '#67935a', dirt: '#b18b62', fence: '#456755', trim: '#d8b87c', eye: 8, sun: '#ffdbab', ambient: '#d3dbe1', ground: '#667044', fill: '#b9d6e4', rim: '#ffd6a2', lights: [1.8, 1.05, .45, .55] },
+  tiger: { name: 'タイガーズ球場', type: 'tiger', sky: '#5e97bc', horizon: '#dce1cc', grass: '#78994e', dirt: '#bd895b', fence: '#523c2d', trim: '#edb652', eye: 10, stands: true, sun: '#fff1ce', ambient: '#cde1ec', ground: '#787249', fill: '#b8d8ef', rim: '#ffc479', lights: [1.8, 1.1, .4, .45] },
+  forest: { name: '森の球場', type: 'forest', sky: '#7594a2', horizon: '#bbcfb4', grass: '#4c7959', dirt: '#a28762', fence: '#304d3d', trim: '#b6aa77', eye: 11, sun: '#e0e7c0', ambient: '#b2caca', ground: '#46583d', fill: '#a8c9db', rim: '#d5db9d', lights: [1.6, .95, .5, .5] },
+  lab: { name: '研究施設', type: 'lab', sky: '#152b37', horizon: '#405a62', grass: '#3e6265', dirt: '#758486', fence: '#253b45', trim: '#77cfc8', eye: 18, accent: '#6dc9c3', grid: true, sun: '#c9e4df', ambient: '#90b9c6', ground: '#273c43', fill: '#a0cad8', rim: '#71d4c9', lights: [1.7, .8, .6, .65] },
+  archive: { name: '記録保管施設', type: 'lab', sky: '#202534', horizon: '#4e5665', grass: '#485c66', dirt: '#7d818a', fence: '#303845', trim: '#b9afd5', eye: 18, accent: '#a69bc8', grid: true, sun: '#ded9ee', ambient: '#a9afc9', ground: '#343b4b', fill: '#acb9db', rim: '#b4a4dd', lights: [1.7, .8, .6, .65] },
+  ai: { name: '保護と制御の中枢', type: 'lab', sky: '#112c33', horizon: '#38666a', grass: '#3c6266', dirt: '#718787', fence: '#1e3e43', trim: '#9cdbcc', eye: 18, accent: '#91d5bd', grid: true, sun: '#d1eee1', ambient: '#9ac6ca', ground: '#2b4646', fill: '#a1cbdf', rim: '#8be1be', lights: [1.7, .85, .55, .7] },
+  invasion: { name: '巨大船の影', type: 'invasion', sky: '#102435', horizon: '#6c7e87', grass: '#426758', dirt: '#8d8474', fence: '#263f43', trim: '#80b8c1', eye: 12, accent: '#81d6d5', sun: '#d7e8ed', ambient: '#a2bdcf', ground: '#344e4b', fill: '#90b7d7', rim: '#8ed1d1', lights: [1.6, .85, .6, .65] },
+  trial: { name: '最終適応試験場', type: 'trial', sky: '#102630', horizon: '#355865', grass: '#365963', dirt: '#6d8083', fence: '#203742', trim: '#68cbd0', eye: 18, accent: '#65d5d3', grid: true, sun: '#cae4e8', ambient: '#92bacb', ground: '#253e45', fill: '#87b9d9', rim: '#74dcd2', lights: [1.7, .8, .65, .7] },
+  awakened: { name: '野性解放の試験場', type: 'trial', sky: '#30273d', horizon: '#a47b6e', grass: '#5e6262', dirt: '#9c8973', fence: '#3c3c47', trim: '#f4ba72', eye: 18, accent: '#ffb35d', grid: true, sun: '#ffdfbd', ambient: '#b5bbd4', ground: '#514e43', fill: '#a1c1de', rim: '#ffb469', lights: [1.8, .9, .6, .8] },
+  final: { name: '地球代表の決戦場', type: 'final', sky: '#101a37', horizon: '#686885', grass: '#416c62', dirt: '#9c8874', fence: '#24374d', trim: '#d8bd79', eye: 30, stands: true, towers: true, stars: true, accent: '#93c7e0', sun: '#fff0cf', ambient: '#abb6d9', ground: '#30444a', fill: '#93b9e3', rim: '#ffd192', lights: [1.8, .8, .65, .7] },
+  morning: { name: 'いつもの朝の球場', type: 'park', sky: '#6da6c7', horizon: '#e7e5be', grass: '#70a268', dirt: '#b7996a', fence: '#4b725c', trim: '#e1c88d', eye: 8, sun: '#fff3ca', ambient: '#d1e6ec', ground: '#718251', fill: '#bfdef0', rim: '#ffe4b2', lights: [1.75, 1.15, .4, .5] }
+};
+const stadiumGroups = new Map();
+let stadiumId = '', stadiumLook = STADIUM_LOOKS.standard, stadiumGroup = null;
+const stadiumLighting = () => stadiumLook.lights;
+const STADIUM_GEO = {
+  box: new THREE.BoxGeometry(1, 1, 1), cylinder: new THREE.CylinderGeometry(.5, .5, 1, 8),
+  cone: new THREE.ConeGeometry(1, 1, 7), sphere: new THREE.SphereGeometry(1, 16, 8),
+  ring: new THREE.TorusGeometry(1, .025, 6, 48), arch: new THREE.TorusGeometry(1, .025, 6, 48, Math.PI)
+};
+const storyGrassTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#777777'; g.fillRect(0, 0, w, h); g.fillStyle = '#626262'; g.fillRect(0, 0, w/2, h);
+  speckle(g, w, h, 2200, ['#555555', '#858585'], 2);
+}, [36, 36]);
+const storyDirtTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#929292'; g.fillRect(0, 0, w, h); speckle(g, w, h, 1400, ['#777777', '#a2a2a2'], 1.4);
+}, [10, 10]);
+const storyGridTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#666666'; g.fillRect(0, 0, w, h); g.strokeStyle = '#858585'; g.lineWidth = 1;
+  g.strokeRect(.5, .5, w-1, h-1); g.strokeStyle = '#727272'; g.beginPath(); g.moveTo(w/2, 0); g.lineTo(w/2, h); g.moveTo(0, h/2); g.lineTo(w, h/2); g.stroke();
+}, [36, 36]);
+const storyInnerGrass = storyGrassTex.clone(), storyInnerDirt = storyDirtTex.clone(), storyInnerGrid = storyGridTex.clone();
+[storyInnerGrass, storyInnerDirt, storyInnerGrid].forEach(t => { t.repeat.set(2, 2); t.needsUpdate = true; });
+const stadiumSkyTex = canvasTex(8, 128, g => { g.fillStyle = '#547688'; g.fillRect(0, 0, 8, 128); });
+const stadiumSky = new THREE.Mesh(new THREE.SphereGeometry(550, 24, 12), new THREE.MeshBasicMaterial({ map: stadiumSkyTex, side: THREE.BackSide, depthWrite: false, fog: false }));
+stadiumSky.renderOrder = -10; stadiumSky.visible = false; scene.add(stadiumSky);
+
+function stadiumBuilder(root) {
+  const pools = new Map(), dummy = new THREE.Object3D();
+  root.userData.glows = [];
+  const add = (shape, color, x, y, z, sx, sy, sz, rotation = 0, glow = false) => {
+    const id = shape + color + glow;
+    if (!pools.has(id)) pools.set(id, { shape, color, glow, matrices: [] });
+    dummy.position.set(x, y, z); dummy.scale.set(sx, sy, sz); dummy.rotation.set(0, rotation, 0); dummy.updateMatrix();
+    pools.get(id).matrices.push(dummy.matrix.clone());
+  };
+  const finish = () => {
+    for (const p of pools.values()) {
+      const material = p.glow ? new THREE.MeshBasicMaterial({ color: p.color }) : mat(p.color, { roughness: .9 });
+      if (!p.glow) material.color.convertSRGBToLinear();
+      const mesh = new THREE.InstancedMesh(STADIUM_GEO[p.shape], material, p.matrices.length);
+      p.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.instanceMatrix.needsUpdate = true;
+      mesh.frustumCulled = false; root.add(mesh);
+      if (p.glow) root.userData.glows.push(material);
+    }
+  };
+  return { add, finish };
+}
+function makeStadiumGroup(type) {
+  const root = new THREE.Group(); root.name = 'story-stadium-' + type;
+  const { add, finish } = stadiumBuilder(root);
+  const park = () => {
+    [-1, 1].forEach(s => {
+      for (let i = 0; i < 6; i++) {
+        const x = s*(40 + i*18), z = -160 + i*13, h = 22 + (i%3)*5;
+        add('cylinder', '#62503b', x, h/2, z, 2.5, h, 2.5);
+        add('sphere', i%2 ? '#496b4d' : '#627a51', x, h+7, z, 12, 12, 10);
+      }
+      const x = s*73, z = -131;
+      add('box', '#8d7453', x, 4, z, 21, 1, 10);
+      for (const dx of [-9, 9]) add('box', '#71583d', x+dx, 3.5, z, 1, 7, 1);
+      add('box', '#4a6657', x, 8, z, 25, 1.5, 14);
+      add('box', '#9f835d', x, 1.5, z, 18, .6, 2);
+    });
+    add('sphere', '#6e846c', -95, 2, -236, 150, 47, 65);
+    add('sphere', '#81917a', 110, 0, -254, 160, 55, 60);
+  };
+  if (type === 'park' || type === 'invasion') park();
+  if (type === 'tiger') {
+    [-1, 1].forEach(s => {
+      add('sphere', '#997f5b', s*115, 4, -183, 58, 32, 35);
+      add('box', '#553f2a', s*58, 17, -151, 10, 34, 8);
+      add('box', '#d79a3f', s*58, 34, -151, 17, 3, 11);
+      for (let i = 0; i < 4; i++) add('box', '#edb34b', s*58, 8+i*7, -146.8, 11, 2, .5);
+      for (let i = 0; i < 5; i++) {
+        const x = s*(42+i*17), z = -149+i*8;
+        add('cylinder', '#494235', x, 23, z, .7, 46, .7);
+        add('box', i%2 ? '#352f27' : '#d49b42', x+s*4, 41, z, 8, 5, .4);
+      }
+    });
+    add('box', '#d9a54e', 0, 36, -154, 125, 3, 7);
+  }
+  if (type === 'forest') {
+    for (const s of [-1, 1]) for (let i = 0; i < 11; i++) {
+      const x = s*(28+i*13), z = -174+i*9, h = 37+(i%4)*9;
+      add('cylinder', '#534d3b', x, h/2, z, 2, h, 2);
+      add('cone', i%2 ? '#2c5145' : '#3d6350', x, h*.7, z, 12, h, 12);
+      add('cone', '#50715a', x, h*.95, z, 8, h*.65, 8);
+    }
+    add('cone', '#71877b', -65, 16, -280, 160, 140, 75);
+    add('cone', '#82958b', 110, 12, -300, 180, 160, 85);
+    for (const s of [-1, 1]) {
+      add('box', '#645e45', s*68, 4, -137, 21, 8, 8);
+      add('box', '#4b6755', s*68, 9, -137, 25, 2, 12);
+    }
+  }
+  const ship = (x, y, z, scale) => {
+    add('sphere', '#293c4c', x, y, z, 90*scale, 9*scale, 46*scale);
+    add('sphere', '#50616d', x, y+5*scale, z, 48*scale, 14*scale, 25*scale);
+    add('sphere', '#1d2f3a', x, y-5*scale, z, 66*scale, 5*scale, 33*scale);
+    for (let i = 0; i < 9; i++) add('sphere', '#81d6d5', x+(i-4)*15*scale, y-7*scale, z+25*scale, 2.3*scale, .65*scale, .8*scale, 0, true);
+  };
+  if (type === 'invasion') ship(0, 57, -164, 1.2);
+  if (type === 'lab' || type === 'trial') {
+    [-1, 1].forEach(s => {
+      add('box', '#344954', s*85, 20, -153, 30, 40, 26);
+      add('box', '#233641', s*56, 26, -143, 10, 52, 12);
+      add('box', '#6ed4d1', s*56, 27, -136.8, 2, 45, .4, 0, true);
+      for (let i = 0; i < 3; i++) add('box', '#6ed4d1', s*85, 12+i*10, -139.8, 24, 1.4, .4, 0, true);
+    });
+    add('box', '#405660', 0, 52, -143, 122, 5, 15);
+    add('box', '#6ed4d1', 0, 49, -135, 106, .8, .5, 0, true);
+    if (type === 'trial') add('ring', '#6ed4d1', 0, 43, -181, 49, 29, 1, 0, true);
+  }
+  if (type === 'final') {
+    add('arch', '#a0bed0', 0, 29, -205, 108, 92, 2);
+    add('arch', '#9dcce5', 0, 29, -204, 100, 85, 1, 0, true);
+    [-1, 1].forEach(s => {
+      for (let i = 0; i < 3; i++) {
+        const x = s*(68+i*20), z = -174+i*12;
+        add('cylinder', '#596a76', x, 31, z, 1.5, 62, 1.5);
+        add('box', s<0 ? '#b98646' : '#517c9e', x+s*5, 52, z, 10, 15, .7);
+        add('box', '#d7c492', x+s*5, 50, z+.4, 1.2, 14, .3);
+      }
+    });
+    ship(-120, 86, -262, .6);
+  }
+  finish();
+  const signTex = canvasTex(512, 64, g => { g.fillStyle = '#172a2d'; g.fillRect(0, 0, 512, 64); });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(36, 4.5), new THREE.MeshBasicMaterial({ map: signTex }));
+  const signHeight = type === 'final' ? 39 : ['trial', 'lab'].includes(type) ? 26 : 14;
+  sign.position.set(0, signHeight, type === 'final' ? -184 : ['trial', 'lab'].includes(type) ? -145 : -126);
+  root.add(sign); root.userData.sign = signTex;
+  scene.add(root); return root;
+}
+function syncStadium() {
+  let id = story && !online && !match ? story.stadium || 'park' : 'standard';
+  if (id === 'trial' && storySession && storySession.beastUsed) id = 'awakened';
+  if (id === stadiumId) return;
+  stadiumId = id; stadiumLook = STADIUM_LOOKS[id] || STADIUM_LOOKS.standard;
+  const look = stadiumLook, original = id === 'standard';
+  if (stadiumGroup) stadiumGroup.visible = false;
+  stadiumGroup = null;
+  if (!original) {
+    if (!stadiumGroups.has(look.type)) stadiumGroups.set(look.type, makeStadiumGroup(look.type));
+    stadiumGroup = stadiumGroups.get(look.type); stadiumGroup.visible = true;
+    stadiumGroup.userData.glows.forEach(m => m.color.set(look.accent || look.trim));
+    const texture = stadiumGroup.userData.sign, g = texture.image.getContext('2d');
+    g.fillStyle = look.fence; g.fillRect(0, 0, 512, 64); g.strokeStyle = look.trim; g.lineWidth = 3; g.strokeRect(3, 3, 506, 58);
+    g.fillStyle = '#f1eee2'; g.font = '500 34px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(look.name, 256, 33); texture.needsUpdate = true;
+  }
+  stadiumSky.visible = !original; scene.background.set(look.sky); scene.fog.color.set(look.horizon);
+  scene.fog.near = original ? 160 : 220; scene.fog.far = original ? 440 : 650;
+  if (!original) {
+    const g = stadiumSkyTex.image.getContext('2d'), gradient = g.createLinearGradient(0, 0, 0, 128);
+    gradient.addColorStop(0, look.sky); gradient.addColorStop(.48, look.horizon); gradient.addColorStop(1, look.horizon);
+    g.fillStyle = gradient; g.fillRect(0, 0, 8, 128); stadiumSkyTex.needsUpdate = true;
+  }
+  const maps = original ? [grassTex, igrassTex, dirtTex, dirtTexS] : [look.grid ? storyGridTex : storyGrassTex, look.grid ? storyInnerGrid : storyInnerGrass, storyDirtTex, storyInnerDirt];
+  [GRASS, IGRASS, DIRT, DIRTS].forEach((m, i) => {
+    if (m.map !== maps[i]) { m.map = maps[i]; m.needsUpdate = true; }
+    m.color.set(i<2 ? look.grass : look.dirt);
+    if (!original) m.color.convertSRGBToLinear();
+  });
+  fence.material.color.set(look.fence); fence.material.map = original ? adTex : null;
+  fence.material.emissiveMap = original ? adTex : null; fence.material.emissiveIntensity = original ? .3 : 0; fence.material.needsUpdate = true;
+  fenceTop.material.color.set(look.trim); bEye.material.color.set(original ? '#0b1914' : look.fence);
+  if (!original) [fence.material, fenceTop.material, bEye.material].forEach(m => m.color.convertSRGBToLinear());
+  bEye.scale.y = look.eye/30; bEye.position.y = 3.2+look.eye/2;
+  stands.visible = !!look.stands; stands.material.color.set(original ? '#ffffff' : look.fence);
+  stadiumTowers.forEach(o => { o.visible = !!look.towers; }); stadiumStars.visible = !!look.stars;
+  key.color.set(look.sun); hemi.color.set(look.ambient); hemi.groundColor.set(look.ground); fill.color.set(look.fill); rim.color.set(look.rim);
+  key.position.set(id === 'morning' ? -35 : 18, id === 'morning' ? 65 : 40, 26);
+  key.intensity = look.lights[0]; hemi.intensity = look.lights[1]; fill.intensity = look.lights[2]; rim.intensity = look.lights[3];
+}
 
 /* ---- 03-mascot-heads.js ---- */
 /* Head shapes adapted from the user-supplied baseball_chibi_characters.html.
@@ -2349,7 +2544,7 @@ function updateStars(now, bj, pj) {
 /* ---- 04-story-data.js ---- */
 /* Illustrated ten-chapter story. Origins and the final person's identity remain open. */
 const STAGES = [
-  { short: '第1話', title: 'はじまりの一球', kind: 'match', opp: 'away', mode: 'bat', runs: 1, scene: 'everyday',
+  { short: '第1話', stadium: 'park', title: 'はじまりの一球', kind: 'match', opp: 'away', mode: 'bat', runs: 1, scene: 'everyday',
     pitcher: { speed: -12, mix: { str: 30, cur: 5, chg: 5 } }, event: 'jump',
     intro: [['ミケ（ネコ）', '今朝の空振り、惜しかったね。また一緒に練習しよう。'],
       ['ウサミ（うさぎ）', '昨日の雨も、この屋根が守ってくれたね。明日もここで練習したいな。'],
@@ -2357,7 +2552,7 @@ const STAGES = [
     win: [['コタロウ（柴犬）', '約束のおにぎり！ ミケの分も取ってあるよ。'],
       ['ミケ（ネコ）', '明日も練習しよう！野球はたのしいね！']],
     log: ['観測記録 001', '跳躍高度、設計上限を超過。再観測を継続。'] },
-  { short: '第2話', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', innings: 2, max: 2, event: 'rescue', batSkill: 1, batRatings: { m: 3, p: 3 }, scene: 'field',
+  { short: '第2話', stadium: 'tiger', title: '強敵あらわる', kind: 'match', opp: 'tiger', mode: 'pit', innings: 2, max: 2, event: 'rescue', batSkill: 1, batRatings: { m: 3, p: 3 }, scene: 'field',
     intro: [['トラ（トラ）', '今日は負けないぜ。タイガーズ、全力で行くぞ！'],
       ['ミケ（ネコ）', '打たれても、ぼくが後ろで止めるよ！安心して！'],
       ['コタロウ（柴犬）', '頼んだよ。ぼくは2回、2失点以内に抑える！！']],
@@ -2365,7 +2560,7 @@ const STAGES = [
       ['コタロウ（柴犬）', '大丈夫。きみが無事でよかった！また一緒に守ろうよ！'],
       ['トラ（トラ）', '次は負けねぇ。……そいつの足、冷やしてやれよ。']],
     log: ['観測記録 002', '救援によって勝率は低下。その後の連携は予測を超えた。'] },
-  { short: '第3話', title: '立入禁止の研究所', kind: 'explore', scene: 'lab',
+  { short: '第3話', stadium: 'lab', title: '立入禁止の研究所', kind: 'explore', scene: 'lab',
     intro: [['ウサミ（うさぎ）', '帰り道の建物、灯りがついてる。誰かいるのかな。'],
       ['ミケ（ネコ）', '今、端末がきみの名前を呼ばなかった？']],
     records: [
@@ -2374,14 +2569,14 @@ const STAGES = [
       ['認証端末', '端末「最終適応個体。記録の閲覧を許可します」', '初めて来たはずのコタロウを、端末は知っていた。構築者の名前は表示されない。'] ],
     win: [['コタロウ（柴犬）', '自分の顔なのに、知らない誰かみたいだ。'],
       ['ミケ（ネコ）', '1人で抱え込まないで。次も、ぼくらと一緒に。']] },
-  { short: '第4話', title: '勝つための力', kind: 'match', opp: 'kuma', mode: 'bat', runs: 2, event: 'limit', scene: 'teamwork',
+  { short: '第4話', stadium: 'forest', title: '勝つための力', kind: 'match', opp: 'kuma', mode: 'bat', runs: 2, event: 'limit', scene: 'teamwork',
     pitcher: { speed: 0, mix: { str: 20, gou: 8, frk: 6 } },
     intro: [['ヒグマ（くま）', '考え事をしたまま打席に立つな！よく球を見ろ。'],
       ['ウサミ（うさぎ）', 'わたしが塁に出る。きみの一振りで、一緒に帰ろうよ！']],
     win: [['ヒグマ（くま）', '仲間を助けたあの速さ、まだ体が覚えてるんだな。'],
       ['コタロウ（柴犬）', 'でも、一人じゃ打てなかった。みんな、ありがとう。']],
     log: ['制御系通信', '能力制限を維持。この個体は、まだ設計を理解していない。'] },
-  { short: '第5話', title: 'ぼくらは何者なのか', kind: 'explore', scene: 'archive',
+  { short: '第5話', stadium: 'archive', title: 'ぼくらは何者なのか', kind: 'explore', scene: 'archive',
     intro: [['パン太（パンダ）', '怖い記録も、一緒に読もう。お茶なら持ってきた。']],
     records: [
       ['文明継承計画', 'ウサミ「なにこれ…。わたしたちは生まれる前から、役目が決まってたの？」', '人間の知能を参考に設計された、動物の身体を持つ生命。人間の記憶を移された存在ではない。'],
@@ -2389,7 +2584,7 @@ const STAGES = [
       ['最終適応個体', 'コタロウ「ぼくのこの考え方まで、誰かが作った……？」', '経験から判断を学ぶ独立した意思決定モデル。構築者名は伏せられている。'] ],
     win: [['コタロウ（柴犬）', 'じゃあ、きみと練習したかったこの気持ちも、作り物だってこと…？'],
       ['ミケ（ネコ）', 'ぼくは明日も練習したい。このことだけは、今ここで決めたよ。']] },
-  { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'invasion',
+  { short: '第6話', stadium: 'invasion', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'invasion',
     pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
     intro: [['', '空が、消えた。', 'invasion', 'arrival'],
       ['ウサミ（うさぎ）', '……あれ、雲じゃない。球場も、街も、影の中に。'],
@@ -2401,7 +2596,7 @@ const STAGES = [
       ['コタロウ（柴犬）', 'ぼくが何者なのかはわからない。でも、この場所を渡さない！']],
     win: [['使節（野球星人）', '判定に異議はない。正式な決闘までに、代表を選べ。'],
       ['コタロウ（柴犬）', '明日もこの球場で遊びたい。今は、それがぼくの答えだ。']] },
-  { short: '第7話', title: '人類最後のAI', kind: 'scene', scene: 'ai',
+  { short: '第7話', stadium: 'ai', title: '人類最後のAI', kind: 'scene', scene: 'ai',
     intro: [['ウサミ（うさぎ）', 'この映像……熱を出したときに泊まった部屋だ。'],
       ['AI', '私は人類を守るために作られた。今も使命は変わらない。'],
       ['AI', '君たちを設計し、育てたのも私だ。治療も、あの球場の屋根も。'],
@@ -2409,14 +2604,14 @@ const STAGES = [
       ['AI', '君たちは人類ではない。だが保護対象だ。危険な判断は私に委ねなさい。']],
     win: [['ミケ（ネコ）', '助けてくれたことは絶対に忘れない。でも、どう生きるかはぼくらが決めたい。'],
       ['AI', '……保護と自由。二つの条件が競合している。']] },
-  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'pit', openingHR: 3, runs: 1, event: 'awaken', beast: true, scene: 'ai',
+  { short: '第8話', stadium: 'trial', title: '覚醒', kind: 'match', opp: 'alien', mode: 'pit', openingHR: 3, runs: 1, event: 'awaken', beast: true, scene: 'ai',
     pitcher: { speed: -5, mix: { str: 25, chg: 8 } },
     intro: [['AI', '決闘前の適応試験を開始。動作制限を適用する。'],
       ['コタロウ（柴犬）', 'うぅ…体が熱い……。ミケ、ぼくが怖くなったら離れていいからね。'],
       ['ミケ（ネコ）', '離れないよ。あの日、きみが戻ってきてくれたから。']],
     win: [['コタロウ（柴犬）', 'まだ、心臓が熱い。でも、どんなことになっても球を打つって決めた、ぼくが決めたんだ！'],
       ['ミケ（ネコ）', 'すごい姿だった。でも、きみの手はぼくを守ったあの日と同じ手だった。']] },
-  { short: '第9話', title: '地球の命運を懸けた試合', kind: 'match', opp: 'alien', mode: 'pit', inn: 3, maxInn: 5, beast: true, event: 'final', scene: 'final',
+  { short: '第9話', stadium: 'final', title: '地球の命運を懸けた試合', kind: 'match', opp: 'alien', mode: 'pit', inn: 3, maxInn: 5, beast: true, event: 'final', scene: 'final',
     pitcher: { speed: 2, mix: { str: 20, sli: 10, frk: 8, cut: 6 } },
     intro: [['AI', '勝率を上げるには、投手を限界まで使う。故障後の今後の登板は保証できない。'],
       ['ヒグマ（くま）', '投げたいが…。だが、今日で最後にはしたくない。'],
@@ -2426,7 +2621,7 @@ const STAGES = [
       ['AI', '…。私が作った判断モデルでは、君たちの選択を説明できない。行動制御を解除する。'],
       ['コタロウ（柴犬）', '助けてくれて、ありがとう。きみは、このあとどうするの？'],
       ['', '返事はなかった。灯りの向こうで、かすかな音がする。しかし、この先も見守ってくれる気がする。']] },
-  { short: '第10話', title: 'きみは何者なのか', kind: 'ending', scene: 'epilogue',
+  { short: '第10話', stadium: 'morning', title: 'きみは何者なのか', kind: 'ending', scene: 'epilogue',
     intro: [['パン太（パンダ）', 'おにぎり、全員分あるぞ。今日はおかわりもな。'],
       ['ミケ（ネコ）', '明日も練習しよう！最初の日みたいにさ。'],
       ['コタロウ（柴犬）', 'うん。今度は、ぼくがきみに教える番だ。負けないぞ！'],
@@ -4875,6 +5070,7 @@ let lastT = now_(), perfN = 0, perfSum = 0, degraded = LITE;
 let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
+  syncStadium();
   // The movie covers the stadium. Leave the decoder the GPU/CPU budget instead
   // of rendering an invisible 3D scene throughout the cutscene.
   if (storyMovie) { if (phase !== 'idle' && !pausedAt) pausedAt = now; requestAnimationFrame(frame); return; }

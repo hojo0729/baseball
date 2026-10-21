@@ -71,11 +71,13 @@ function canvasTex(w, h, draw, rep) {
   if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); }
   return t;
 }
+let stadiumSeed = 20261021;
+const stadiumRnd = () => (stadiumSeed = (Math.imul(stadiumSeed, 1664525) + 1013904223) >>> 0) / 4294967296;
 function speckle(g, w, h, n, cols, size) {
   for (let i = 0; i < n; i++) {
-    g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.25 + Math.random() * 0.35;
-    const s = size * (0.5 + Math.random());
-    g.fillRect(Math.random() * w, Math.random() * h, s, s);
+    g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.25 + stadiumRnd() * 0.35;
+    const s = size * (0.5 + stadiumRnd());
+    g.fillRect(stadiumRnd() * w, stadiumRnd() * h, s, s);
   }
   g.globalAlpha = 1;
 }
@@ -181,9 +183,9 @@ const crowdTex = canvasTex(1024, 256, (g, w, h) => {
     const y = r * h / rows;
     g.fillStyle = r % 2 ? '#0f161b' : '#172027'; g.fillRect(0, y, w, h / rows);
     for (let i = 0; i < 200; i++) {
-      if (Math.random() < 0.12) continue;
-      const x = (i + (r % 2) * 0.5) * w / 200 + Math.random();
-      g.fillStyle = CROWD[(Math.random() * CROWD.length) | 0];
+      if (stadiumRnd() < 0.12) continue;
+      const x = (i + (r % 2) * 0.5) * w / 200 + stadiumRnd();
+      g.fillStyle = CROWD[(stadiumRnd() * CROWD.length) | 0];
       g.fillRect(x, y + h / rows * 0.3, 3, 4);
     }
   }
@@ -211,24 +213,25 @@ const glowTex = canvasTex(128, 128, (g) => {
   gr.addColorStop(0, 'rgba(255,246,214,1)'); gr.addColorStop(0.2, 'rgba(255,236,180,.5)'); gr.addColorStop(1, 'rgba(255,236,180,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
 });
-const towerSp = [];
+const towerSp = [], stadiumTowers = [];
 [96, 138, 222, 264].forEach(deg => {
   const a = deg * D2R, r = FR + 58, x = FC.x + Math.sin(a) * r, z = FC.z + Math.cos(a) * r;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 48, 8), mat('#1a1f24'));
-  pole.position.set(x, 24, z); scene.add(pole);
+  pole.position.set(x, 24, z); scene.add(pole); stadiumTowers.push(pole);
   const panel = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 0.6), new THREE.MeshBasicMaterial({ color: '#fff6d6' }));
-  panel.position.set(x, 50, z); panel.lookAt(0, 0, -20); scene.add(panel);
+  panel.position.set(x, 50, z); panel.lookAt(0, 0, -20); scene.add(panel); stadiumTowers.push(panel);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
-  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp); towerSp.push(sp);
+  sp.scale.set(80, 80, 1); sp.position.set(x, 50, z); scene.add(sp); towerSp.push(sp); stadiumTowers.push(sp);
 });
+let stadiumStars = null;
 (() => {
   const n = 500, p = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, e = 0.12 + Math.random() * 1.2, r = 600;
+    const a = stadiumRnd() * Math.PI * 2, e = 0.12 + stadiumRnd() * 1.2, r = 600;
     p[i * 3] = Math.cos(a) * Math.cos(e) * r; p[i * 3 + 1] = Math.sin(e) * r; p[i * 3 + 2] = Math.sin(a) * Math.cos(e) * r;
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#cfd8e6', size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0.6, fog: false })));
+  stadiumStars = new THREE.Points(g, new THREE.PointsMaterial({ color: '#cfd8e6', size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0.6, fog: false })); scene.add(stadiumStars);
 })();
 
 /* ---- 演出：花火・観客のウェーブ・照明の明滅（すべて軽い：Points 1個とメッシュ1枚） ---- */
@@ -286,7 +289,7 @@ function updateShow(now, dt) {
   if (live) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
   // crowd wave: a bright band sweeping around the stands
   const wv = now < waveUntil;
-  waveMesh.visible = wv || waveMat.opacity > 0.01;
+  waveMesh.visible = stands.visible && (wv || waveMat.opacity > 0.01);
   waveMat.opacity += ((wv ? 0.8 : 0) - waveMat.opacity) * Math.min(1, dt * 4);
   if (waveMesh.visible) waveTex.offset.x = (waveTex.offset.x - dt * 0.35) % 1;
   // lights: flash on a celebration, dim during the lights-out happening
@@ -295,7 +298,8 @@ function updateShow(now, dt) {
   const target = dark ? 0.32 : 1;
   lightK += (target - lightK) * Math.min(1, dt * (dark ? 6 : 2.5));
   const fl = now < flashUntil ? 0.5 + 0.5 * Math.abs(Math.sin(now * 14)) : 1;
-  key.intensity = 1.55 * lightK; hemi.intensity = 0.6 * (0.45 + 0.55 * lightK); fill.intensity = 0.5 * lightK; rim.intensity = 0.45 * lightK;
+  const env = stadiumLighting();
+  key.intensity = env[0] * lightK; hemi.intensity = env[1] * (0.45 + 0.55 * lightK); fill.intensity = env[2] * lightK; rim.intensity = env[3] * lightK;
   towerSp.forEach(s => { s.material.opacity = (dark ? 0.08 : 1) * fl; });
 }
 function darkActive() {
