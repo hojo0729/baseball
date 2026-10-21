@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { playAwakeningOpening } from './story-opening.mjs';
 import { openGame } from './lib.mjs';
 
 for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
@@ -50,11 +51,8 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
 
     await p.evaluate(() => window.__dbg.showStage(7));
     await p.locator('#go2').click(); await p.locator('#goBtn').click();
-    // Finish a real plate appearance to reach the story's awakening checkpoint.
-    await p.evaluate(() => {
-      const d = window.__dbg; d.ff();
-      d.hit({ kind: 'play', q: .5, dir: 0, ev: 110, launch: 32, dist: 65, res: 'フライアウト', bases: 0 }); d.ff();
-    });
+    // Finish three actual opposing home runs to reach the story's awakening checkpoint.
+    await playAwakeningOpening(p);
     const awakening = new Set();
     for (let n = 0; n < 15 && await p.locator('#overlay').evaluate(el => el.classList.contains('dlg')); n++) {
       if (await p.locator('#movie-skip').count()) { await p.locator('#movie-skip').click(); continue; }

@@ -283,6 +283,7 @@ let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔�
 
 function newGame() {
   pausedAt = 0; timeOut = false;
+  if (story && story.openingHR) { story.mode = mode = 'pit'; }
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
   if (story && !story.inn && story.innings) G.maxHalf = story.innings;
@@ -713,6 +714,11 @@ function pitchCraft(LV) {
   return { t, d, dAdd };
 }
 function cpuBat() {
+  if (storyOpeningPitch()) {
+    ball.cpu = { swing: true, dt: 0, d: 0, vy: -.2 };
+    batAnim = { t0: ball.start + ball.dur - SWING_LEAD, plan: makeSwingPlan(ball.tgt) };
+    return;
+  }
   const T = ball.T, o = Math.max(Math.abs(T[0]), Math.abs(T[1])), inz = o <= 1.05;
   const ty = TYPES[ball.key];
   const LV = cpuLv();
@@ -751,6 +757,8 @@ function resolve(c, C) {
   return resolveCore(c, C);
 }
 function resolveCore(c, C) {
+  // Chapter 8's opening is a scripted demonstration, including balls outside the zone.
+  if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
   phase = 'result'; ball.done = true;
   const inZone = Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) <= 1;

@@ -714,6 +714,7 @@ let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔�
 
 function newGame() {
   pausedAt = 0; timeOut = false;
+  if (story && story.openingHR) { story.mode = mode = 'pit'; }
   if (story && story.inn) story.score = { home: 0, away: 0 };
   G = { inning: 1, maxHalf: story && story.inn ? story.inn * 2 : 3, outs: 0, b: 0, s: 0, runs: 0, bases: [0, 0, 0], hits: 0, hr: 0, so: 0, over: false, pa: 0, lastAnn: -1, skill: opt('skill') ? { crit: 2, vn: 2 } : { crit: 0, vn: 0 }, diceInn: -1 };
   if (story && !story.inn && story.innings) G.maxHalf = story.innings;
@@ -1144,6 +1145,11 @@ function pitchCraft(LV) {
   return { t, d, dAdd };
 }
 function cpuBat() {
+  if (storyOpeningPitch()) {
+    ball.cpu = { swing: true, dt: 0, d: 0, vy: -.2 };
+    batAnim = { t0: ball.start + ball.dur - SWING_LEAD, plan: makeSwingPlan(ball.tgt) };
+    return;
+  }
   const T = ball.T, o = Math.max(Math.abs(T[0]), Math.abs(T[1])), inz = o <= 1.05;
   const ty = TYPES[ball.key];
   const LV = cpuLv();
@@ -1182,6 +1188,8 @@ function resolve(c, C) {
   return resolveCore(c, C);
 }
 function resolveCore(c, C) {
+  // Chapter 8's opening is a scripted demonstration, including balls outside the zone.
+  if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
   phase = 'result'; ball.done = true;
   const inZone = Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) <= 1;
@@ -2365,7 +2373,7 @@ const STAGES = [
       ['AI', '君たちは人類ではない。だが保護対象だ。危険な判断は私に委ねなさい。']],
     win: [['ミケ（ネコ）', '助けてくれたことは絶対に忘れない。でも、どう生きるかはぼくらが決めたい。'],
       ['AI', '……保護と自由。二つの条件が競合している。']] },
-  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, event: 'awaken', beast: true, scene: 'ai',
+  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'pit', openingHR: 3, runs: 1, event: 'awaken', beast: true, scene: 'ai',
     pitcher: { speed: -5, mix: { str: 25, chg: 8 } },
     intro: [['AI', '決闘前の適応試験を開始。動作制限を適用する。'],
       ['コタロウ（柴犬）', 'うぅ…体が熱い……。ミケ、ぼくが怖くなったら離れていいからね。'],
@@ -2477,13 +2485,18 @@ function storyAfterResult() {
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = now_() + 2;
   cpuStealPlan = cpuBuntPlan = false; cpuRelief(); updateGoal();
 }
+function storyOpeningPitch() {
+  return !!(story && story.openingHR && !online && !match && mode === 'pit' && storySession && !storySession.eventDone);
+}
 function storyCheck() {
+  if (storyOpeningPitch()) return null;
   if (story.inn) return G.over ? (onlineScore().home > onlineScore().away ? 'clear' : 'fail') : null;
   if (story.mode === 'bat') return G.runs >= storyRunGoal() ? 'clear' : G.over ? 'fail' : null;
   return G.runs > story.max ? 'fail' : G.over ? 'clear' : null;
 }
 function storyEvent() {
   if (!story || !storySession || !story.event || storySession.eventDone || G.pa < 1) return false;
+  if (story.openingHR && G.hr < story.openingHR) return false;
   storySession.eventDone = true;
   const resume = () => { pausedAt = 0; storyVisual(null); $('#overlay').hidden = true; afterResult(); };
   const event = story.event;
@@ -2520,7 +2533,13 @@ function storyEvent() {
       storyVisual('beast');
       overlay({ title: 'ぼくが選ぶ', text: '吠えているのは、ぼくの中の野性。どう使うかは、ぼくが決める。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
-          storySession.awakenRuns = G.runs;
+          // The three conceded runs belong to the opening scene. Start a fresh batting challenge.
+          const session = storySession; session.openingRuns = G.runs;
+          clearPlay(); newGame(); storySession = session;
+          story.mode = mode = 'bat';
+          $('#mBat').classList.add('on'); $('#mPit').classList.remove('on');
+          $('#pitches').hidden = true; setTeams(); resize(); hud();
+          storySession.awakenRuns = 0;
           storySession.beastLeft = 1; activateBeast(); resume();
         }] });
     });
@@ -2839,7 +2858,7 @@ function magicActive() { return helpersOn() && mode === 'pit' && !!G && G.pa % 3
 
 function goalLong(st) {
   if (st.inn) return st.inn + '回表裏、同点は' + st.maxInn + '回まで延長。ビーストは一度発動すると試合終了まで続きます。発動後は10点差でコールド。';
-  if (st.idx === 7) return '覚醒後に1点取ろう。野性を解放すると、試合終了まで獣の姿と巨大バットで戦えます。';
+  if (st.idx === 7) return 'まず野球星人に3球投げよう。覚醒後に1点取ろう。野性を解放すると、試合終了まで獣の姿と巨大バットで戦えます。';
   if (st.mode === 'pit') return ROSTER[st.opp].name + '打線を、' + (st.innings || 3) + '回' + st.max + '失点以内に抑えよう。' + (st.event === 'rescue' ? '仲間を助けた際の1失点も含みます。' : '');
   return st.oppRuns ? ROSTER[st.opp].name + 'に' + st.oppRuns + '点リードされている。3回までに' + st.runs + '点取って逆転しよう。'
     : ROSTER[st.opp].name + 'から、3回までに' + st.runs + '点取ろう。';
@@ -2860,6 +2879,7 @@ function updateGoal() {
       el.innerHTML = s + (beastActive() ? '<br>野性解放中：200km/h・魔球∞・巨大バット' : '　ビーストモード発動可能') + '<br>' + rosterLines();
       return;
     }
+    if (storyOpeningPitch()) { el.textContent = story.short + '　野球星人に投球 ' + G.hr + '/' + story.openingHR; return; }
     s += story.short + '　' + (story.mode === 'pit' ? story.max + '失点以内（いま' + G.runs + '失点）' : '目標 ' + storyRunGoal() + '点（いま' + G.runs + '点）') + '<br>';
   }
   if (story && story.beast) { el.innerHTML = s + (beastActive() ? '野性解放中：常時巨大バット' : '能力解放のタイミングを選ぼう') + '<br>' + rosterLines(); return; }
@@ -4666,6 +4686,7 @@ cv.addEventListener('pointercancel', () => endFlick(true));
 function startGame() {
   storyVisual(null);
   audioInit(); newGame();
+  if (story && story.openingHR) { setTeams(); resize(); hud(); }
   if (story && story.inn) storyRole();
   $('#pitches').hidden = mode !== 'pit';
   const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);

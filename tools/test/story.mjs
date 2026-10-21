@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { playAwakeningOpening } from './story-opening.mjs';
 
 async function dialogue(p) {
   for (let n = 0; n < 100; n++) {
@@ -117,12 +118,18 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
         assert.ok(defense.after < defense.before, 'Defensive beast mode must reduce opposing contact quality');
         assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true);
       }
-      await playPA(p, errs, i === 7 ? HOMERUN : FLYOUT, '第' + (i + 1) + '話 最初の打席'); await event(p);
+      if (i === 7) await playAwakeningOpening(p);
+      else await playPA(p, errs, FLYOUT, '第' + (i + 1) + '話 最初の打席');
+      await event(p);
       if (i === 1 || i === 7) await illustration(i);
       if (i === 8) assert.equal(await p.evaluate(() => window.__dbg.beastActive()), true, 'Beast mode lasts across plate appearances');
       if (i === 1) assert.equal(await p.evaluate(() => window.__dbg.G.runs), 1, 'Rescue must have a real run cost');
       if (i === 7) {
-        assert.equal(await p.evaluate(() => window.__dbg.G.over), false, 'Opening HR must still allow batting after awakening');
+        assert.equal(await p.evaluate(() => window.__dbg.G.over), false, 'Three conceded HRs must still allow batting after awakening');
+        assert.equal(await p.evaluate(() => window.__dbg.session.openingRuns), 3);
+        assert.equal(await p.evaluate(() => window.__dbg.mode), 'bat');
+        assert.equal(await p.evaluate(() => window.__dbg.G.runs), 0);
+        assert.equal(await p.locator('#pitches').isHidden(), true);
         assert.equal(await p.evaluate(() => window.__dbg.beastView().giant), true);
         const attack = await p.evaluate(() => {
           const d = window.__dbg, boosted = d.contact(0.11, 0.5, 0, 130, false, false).q;
@@ -144,7 +151,7 @@ export async function runStory(p, errs, { playPA, FLYOUT, HOMERUN }) {
           await playPA(p, errs, FLYOUT, '決戦 攻守交代');
         }
         assert.equal(await p.evaluate(() => window.__dbg.G.over), true);
-      } else if (def.mode === 'bat') {
+      } else if (def.mode === 'bat' || i === 7) {
         const target = await p.evaluate(() => { const d = window.__dbg; return d.story.idx === 7 ? d.session.awakenRuns + 1 : d.story.runs; });
         for (let n = 0; n < 6 && await p.evaluate(goal => window.__dbg.G.runs < goal, target); n++) await playPA(p, errs, HOMERUN, '第' + (i + 1) + '話 得点');
         assert.ok(await p.evaluate(goal => window.__dbg.G.runs >= goal, target), 'Batting chapter must reach its goal');

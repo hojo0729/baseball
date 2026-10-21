@@ -479,6 +479,7 @@ cv.addEventListener('pointercancel', () => endFlick(true));
 function startGame() {
   storyVisual(null);
   audioInit(); newGame();
+  if (story && story.openingHR) { setTeams(); resize(); hud(); }
   if (story && story.inn) storyRole();
   $('#pitches').hidden = mode !== 'pit';
   const dd0 = applyInningDice(); if (dd0) setTimeout(() => showDiceBanner(dd0), 600);

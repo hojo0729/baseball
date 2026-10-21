@@ -83,13 +83,18 @@ function storyAfterResult() {
   phase = mode === 'bat' ? 'wait' : 'ready'; nextAt = now_() + 2;
   cpuStealPlan = cpuBuntPlan = false; cpuRelief(); updateGoal();
 }
+function storyOpeningPitch() {
+  return !!(story && story.openingHR && !online && !match && mode === 'pit' && storySession && !storySession.eventDone);
+}
 function storyCheck() {
+  if (storyOpeningPitch()) return null;
   if (story.inn) return G.over ? (onlineScore().home > onlineScore().away ? 'clear' : 'fail') : null;
   if (story.mode === 'bat') return G.runs >= storyRunGoal() ? 'clear' : G.over ? 'fail' : null;
   return G.runs > story.max ? 'fail' : G.over ? 'clear' : null;
 }
 function storyEvent() {
   if (!story || !storySession || !story.event || storySession.eventDone || G.pa < 1) return false;
+  if (story.openingHR && G.hr < story.openingHR) return false;
   storySession.eventDone = true;
   const resume = () => { pausedAt = 0; storyVisual(null); $('#overlay').hidden = true; afterResult(); };
   const event = story.event;
@@ -126,7 +131,13 @@ function storyEvent() {
       storyVisual('beast');
       overlay({ title: 'ぼくが選ぶ', text: '吠えているのは、ぼくの中の野性。どう使うかは、ぼくが決める。',
         b1: ['自分の意思で、一歩を踏み出す', () => {
-          storySession.awakenRuns = G.runs;
+          // The three conceded runs belong to the opening scene. Start a fresh batting challenge.
+          const session = storySession; session.openingRuns = G.runs;
+          clearPlay(); newGame(); storySession = session;
+          story.mode = mode = 'bat';
+          $('#mBat').classList.add('on'); $('#mPit').classList.remove('on');
+          $('#pitches').hidden = true; setTeams(); resize(); hud();
+          storySession.awakenRuns = 0;
           storySession.beastLeft = 1; activateBeast(); resume();
         }] });
     });

@@ -60,7 +60,7 @@ const STAGES = [
       ['AI', '君たちは人類ではない。だが保護対象だ。危険な判断は私に委ねなさい。']],
     win: [['ミケ（ネコ）', '助けてくれたことは絶対に忘れない。でも、どう生きるかはぼくらが決めたい。'],
       ['AI', '……保護と自由。二つの条件が競合している。']] },
-  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, event: 'awaken', beast: true, scene: 'ai',
+  { short: '第8話', title: '覚醒', kind: 'match', opp: 'alien', mode: 'pit', openingHR: 3, runs: 1, event: 'awaken', beast: true, scene: 'ai',
     pitcher: { speed: -5, mix: { str: 25, chg: 8 } },
     intro: [['AI', '決闘前の適応試験を開始。動作制限を適用する。'],
       ['コタロウ（柴犬）', 'うぅ…体が熱い……。ミケ、ぼくが怖くなったら離れていいからね。'],

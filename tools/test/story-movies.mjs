@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { playAwakeningOpening } from './story-opening.mjs';
 import { openGame } from './lib.mjs';
 
 for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
@@ -36,12 +37,10 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
     await p.waitForFunction(() => !document.querySelector('#story-movie'));
     assert.match(await p.locator('#od').textContent(), /雲じゃない/);
 
-    // Follow the real first plate appearance into awakening; no forced debug event.
+    // Follow three actual opposing home runs into awakening.
     await p.evaluate(() => window.__dbg.showStage(7));
     await p.locator('#go2').click(); await p.locator('#goBtn').click();
-    await p.evaluate(() => {
-      const d = window.__dbg; d.ff(); d.hit({ kind: 'play', q: .5, dir: 0, ev: 110, launch: 32, dist: 65, res: 'フライアウト', bases: 0 }); d.ff();
-    });
+    await playAwakeningOpening(p);
     for (let n = 0; n < 3; n++) await p.locator('#goBtn').click();
     assert.equal(await p.locator('#goBtn').textContent(), '映像を見る');
     await p.locator('#goBtn').click();
