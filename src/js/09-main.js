@@ -556,6 +556,9 @@ let lastT = now_(), perfN = 0, perfSum = 0, degraded = LITE;
 let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
+  // The movie covers the stadium. Leave the decoder the GPU/CPU budget instead
+  // of rendering an invisible 3D scene throughout the cutscene.
+  if (storyMovie) { if (phase !== 'idle' && !pausedAt) pausedAt = now; requestAnimationFrame(frame); return; }
   if (renderMascotGallery(now)) { requestAnimationFrame(frame); return; }
   if (!degraded && !document.hidden && rawDt < 0.5) {
     perfN++; perfSum += rawDt;

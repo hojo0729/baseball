@@ -79,7 +79,7 @@ const manifest = {
 // Service worker: page = network first (so updates arrive), everything else = cache first, filled as it is used.
 // The version changes whenever the page or the voice list changes, which makes browsers replace the old cache.
 // the cache name changes whenever the page, the voice clips or the music files change (cached files are served cache-first)
-const mediaSig = ['docs/audio', 'docs/bgm', 'docs/sfx', 'docs/story'].filter(d => existsSync(d)).flatMap(d => readdirSync(d).sort().map(f => d + '/' + f + ':' + statSync(d + '/' + f).size)).join();
+const mediaSig = ['docs/audio', 'docs/bgm', 'docs/sfx', 'docs/story', 'docs/video'].filter(d => existsSync(d)).flatMap(d => readdirSync(d).sort().map(f => d + '/' + f + ':' + statSync(d + '/' + f).size)).join();
 const version = createHash('sha1').update(standalone).update(voiceIds.join()).update(mediaSig).digest('hex').slice(0, 10);
 const sw = `const CACHE = 'yakyu-${version}';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', '${THREE_URL}', '${SUPABASE_URL}'];
@@ -92,7 +92,7 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(k => k.put('index.html', c)); return res; }).catch(() => caches.match('index.html')));
     return;
   }
-  e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => { if (res.ok || res.type === 'opaque') { const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); } return res; })));
+  e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => { if (res.status === 200 || res.type === 'opaque') { const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); } return res; })));
 });
 `;
 

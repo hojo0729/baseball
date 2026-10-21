@@ -83,15 +83,27 @@ function showCmtText(text) {
 const VOICE_IDS = /*VOICE_IDS*/[];   // filled in by build.mjs from the files in docs/audio
 function cmtPreload() {
   if (cmt.pre) return; cmt.pre = {};
-  VOICE_IDS.forEach(id => {
-    const a = new Audio('audio/' + id + '.mp3'); a.preload = 'auto';
-    a.addEventListener('error', () => { cmt.pre[id] = null; });
-    cmt.pre[id] = a;
-  });
+  // Keep media-player slots free for movies. Creating all 107 Audio elements at
+  // once can leave the video stuck at metadata on mobile browser pipelines.
+  VOICE_IDS.filter(id => id.startsWith('play_')).slice(0, 3).forEach(cmtAudio);
+}
+function cmtAudio(id) {
+  if (!VOICE_IDS.includes(id)) return null;
+  if (!cmt.pre) cmtPreload();
+  if (id in cmt.pre) return cmt.pre[id];
+  const keys = Object.keys(cmt.pre);
+  if (keys.length >= 8) {
+    const key = keys.find(k => !cmt.pre[k] || cmt.pre[k] !== cmt.cur), old = cmt.pre[key];
+    delete cmt.pre[key];
+    if (old) { old.pause(); if (old.removeAttribute) { old.removeAttribute('src'); old.load(); } }
+  }
+  const a = new Audio('audio/' + id + '.mp3'); a.preload = 'auto';
+  a.addEventListener('error', () => { if (cmt.pre[id] === a) cmt.pre[id] = null; });
+  cmt.pre[id] = a; return a;
 }
 function cmtPlayFile(id) {                       // true if a recording is being played
-  const a = cmt.pre && cmt.pre[id]; if (!a || a.error) return false;
-  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { cmt.pre[id] = null; }); cmt.cur = a; return true; }
+  const a = cmtAudio(id); if (!a || a.error) return false;
+  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { if (cmt.pre[id] === a) cmt.pre[id] = null; }); cmt.cur = a; return true; }
   catch (e) { return false; }
 }
 function cmtBusy() { const a = cmt.cur; return !!(a && !a.paused && !a.ended); }

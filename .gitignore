@@ -1,5 +1,6 @@
 dist/
 node_modules/
+.codex-remote-attachments/
 .DS_Store
 voice-script.csv
 __pycache__/

@@ -1,6 +1,67 @@
 /* Storybook illustrations and lightweight final scenes; no new rendering dependency. */
 const storyArt = document.createElement('div'); storyArt.id = 'story-art'; storyArt.hidden = true;
 $('#overlay').prepend(storyArt);
+const STORY_MOVIES = {
+  arrival: { src: 'video/arrival.mp4', title: '空からの来訪者', poster: 'invasion' },
+  awakening: { src: 'video/awakening.mp4', title: '覚醒', poster: 'awakening-strain' }
+};
+let storyMovie = null;
+function closeStoryMovie(advance) {
+  const movie = storyMovie; if (!movie) return;
+  storyMovie = null;
+  movie.video.onended = movie.video.onerror = movie.video.onplaying = null;
+  movie.video.pause(); movie.video.removeAttribute('src'); movie.video.load();
+  if (movie.objectURL) URL.revokeObjectURL(movie.objectURL);
+  movie.panel.remove(); $('#overlay').inert = false; bgmTick();
+  if (advance) movie.done();
+}
+function playStoryMovie(key, done) {
+  const def = STORY_MOVIES[key]; if (!def) { done(); return; }
+  closeStoryMovie(false); storySceneCue(null); cmtStop();
+  const panel = document.createElement('section'); panel.id = 'story-movie';
+  panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-label', def.title + 'の映像');
+  const title = document.createElement('h2'); title.textContent = def.title;
+  const video = document.createElement('video');
+  let objectURL = null;
+  if (def.src.startsWith('data:video/')) {
+    // Large data URLs can stop after metadata on mobile media pipelines. Decode
+    // only the requested clip into a seekable local Blob, and release it on exit.
+    try {
+      const raw = atob(def.src.slice(def.src.indexOf(',') + 1));
+      const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
+      objectURL = URL.createObjectURL(new Blob([bytes], { type: 'video/mp4' }));
+    } catch (e) { done(); return; }
+  }
+  video.src = objectURL || def.src; video.poster = STORY_ARTS[def.poster][0]; video.preload = 'auto';
+  video.controls = true; video.playsInline = true; video.setAttribute('playsinline', '');
+  video.muted = !bgmWanted(); video.volume = .8; video.setAttribute('aria-label', def.title + 'の動画');
+  const status = document.createElement('p'); status.textContent = '読み込み中…'; status.setAttribute('role', 'status');
+  const actions = document.createElement('div');
+  const retry = document.createElement('button'); retry.className = 'go2'; retry.textContent = '再生する'; retry.hidden = true;
+  const sound = document.createElement('button'); sound.className = 'go2';
+  const soundLabel = () => { sound.textContent = video.muted ? '音声 オフ' : '音声 オン'; sound.setAttribute('aria-pressed', String(!video.muted)); };
+  soundLabel();
+  video.onvolumechange = soundLabel;
+  const skip = document.createElement('button'); skip.id = 'movie-skip'; skip.className = 'go'; skip.textContent = '映像をスキップ';
+  actions.append(retry, sound, skip); panel.append(title, video, status, actions); $('#stage').appendChild(panel);
+  const movie = storyMovie = { video, panel, done, objectURL }; $('#overlay').inert = true; bgmTick();
+  const finish = () => { if (storyMovie === movie) closeStoryMovie(true); };
+  video.onended = video.onerror = finish;
+  video.onplaying = () => { if (storyMovie === movie) { status.textContent = ''; retry.hidden = true; } };
+  const play = () => {
+    retry.hidden = true; status.textContent = '読み込み中…';
+    video.play().catch(e => {
+      if (storyMovie !== movie) return;
+      if (e.name === 'NotAllowedError') { status.textContent = '再生ボタンを押してください。'; retry.hidden = false; }
+      else finish();
+    });
+  };
+  retry.addEventListener('click', play);
+  sound.addEventListener('click', () => { video.muted = !video.muted; soundLabel(); });
+  skip.addEventListener('click', finish);
+  panel.addEventListener('keydown', e => { if (e.key === 'Escape') finish(); });
+  skip.focus({ preventScroll: true }); play();
+}
 const STORY_ARTS = {
   everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
   rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
@@ -47,6 +108,7 @@ function storySceneCue(kind) {
   } catch (e) { /* Scene remains playable on devices without Web Audio. */ }
 }
 function storyVisual(kind) {
+  closeStoryMovie(false);
   const el = $('#overlay');
   const changed = el.dataset.scene !== (kind || '');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';

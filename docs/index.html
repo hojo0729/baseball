@@ -358,6 +358,17 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 }
 @media (max-height: 470px) { #overlay.logo { justify-content: flex-start; } }
 @media (prefers-reduced-motion: reduce) { #overlay.story-spotlight #story-art img { animation: none !important; } }
+
+/* Clips keep their full frame; tap-to-play works with mobile media policies. */
+#overlay.story-scene.dlg #go3 { grid-column: 1 / -1; font-size: 13px; min-height: 40px; padding: 7px 10px; }
+#story-movie { position: absolute; inset: 0; z-index: 110; display: flex; flex-direction: column; justify-content: center; gap: 18px; box-sizing: border-box; overflow-y: auto; padding: 24px 0; background: #05090e; color: #f4efe3; }
+#story-movie h2 { margin: 0 22px; font: 700 22px/1.5 var(--f-body); }
+#story-movie video { display: block; width: 100%; max-height: 60vh; aspect-ratio: 16 / 9; object-fit: contain; background: #000; }
+#story-movie > p { margin: 0 22px; min-height: 1.6em; font: 400 14px/1.6 var(--f-body); color: #b4c8cd; }
+#story-movie > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0 22px; }
+#story-movie button { min-height: 44px; padding: 10px 13px; font: 500 14px/1.5 var(--f-body); }
+#story-movie button[hidden] { display: none; }
+@media (max-height: 470px) { #story-movie { justify-content: flex-start; } }
 </style>
 </head>
 <body>
@@ -567,8 +578,9 @@ function bgmHR() {
 function bgmTick() {
   if (storySilent || !bgmOn || !ac || !bgmGain) return;
   const quiet = $('#overlay').classList.contains('story-spotlight') && !$('#overlay').hidden;
-  bgmGain.gain.setTargetAtTime(quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
-  if (fileReady()) { bgmFileTick(); fileOut.gain.setTargetAtTime(quiet ? .055 : .42, ac.currentTime, .3); return; }
+  const movie = !!$('#story-movie');
+  bgmGain.gain.setTargetAtTime(movie ? 0 : quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
+  if (fileReady()) { bgmFileTick(); fileOut.gain.setTargetAtTime(movie ? 0 : quiet ? .055 : .42, ac.currentTime, .3); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
 }
@@ -2335,7 +2347,7 @@ const STAGES = [
       ['ミケ（ネコ）', 'ぼくは明日も練習したい。それだけは、今ここで決めたよ。']] },
   { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'invasion',
     pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
-    intro: [['', '空が、消えた。', 'invasion'],
+    intro: [['', '空が、消えた。', 'invasion', 'arrival'],
       ['ウサミ（うさぎ）', '……あれ、雲じゃない。球場も、街も、影の中に。'],
       ['使節（野球星人）', 'この星の代表を出せ。勝負は、野球で決める。', 'ultimatum'],
       ['使節（野球星人）', '敗れた側は、勝者の統治に従う。'],
@@ -2500,8 +2512,8 @@ function storyEvent() {
     dialog([['', '心臓が、一度、大きく鳴った。', 'awakening-strain'],
       ['AI', '制御限界。これ以上は、君自身を保証できない。'],
       ['コタロウ（柴犬）', '来るな……ミケ。今のぼくは……。'],
-      ['', '牙が伸びる。腕が膨れ、喉の奥から、獣の咆哮がほとばしった。', 'awakening-roar'],
-      ['ミケ（ネコ）', '怖いよ。でも、一人にはしない。'],
+      ['', '抑えていた野性が、解き放たれる。', 'awakening-strain', 'awakening'],
+      ['ミケ（ネコ）', '怖いよ。でも、一人にはしない。', 'awakening-roar'],
       ['', '大きな手に、小さな手が触れた。', 'beast'],
       ['ミケ（ネコ）', 'あの日、ぼくを助けに戻った。あれは、きみが決めたんだろ。'],
       ['コタロウ（柴犬）', '……覚えてる。この手で、きみを助けた。']], () => {
@@ -2560,6 +2572,67 @@ function storyEnd(win) {
 /* Storybook illustrations and lightweight final scenes; no new rendering dependency. */
 const storyArt = document.createElement('div'); storyArt.id = 'story-art'; storyArt.hidden = true;
 $('#overlay').prepend(storyArt);
+const STORY_MOVIES = {
+  arrival: { src: 'video/arrival.mp4', title: '空からの来訪者', poster: 'invasion' },
+  awakening: { src: 'video/awakening.mp4', title: '覚醒', poster: 'awakening-strain' }
+};
+let storyMovie = null;
+function closeStoryMovie(advance) {
+  const movie = storyMovie; if (!movie) return;
+  storyMovie = null;
+  movie.video.onended = movie.video.onerror = movie.video.onplaying = null;
+  movie.video.pause(); movie.video.removeAttribute('src'); movie.video.load();
+  if (movie.objectURL) URL.revokeObjectURL(movie.objectURL);
+  movie.panel.remove(); $('#overlay').inert = false; bgmTick();
+  if (advance) movie.done();
+}
+function playStoryMovie(key, done) {
+  const def = STORY_MOVIES[key]; if (!def) { done(); return; }
+  closeStoryMovie(false); storySceneCue(null); cmtStop();
+  const panel = document.createElement('section'); panel.id = 'story-movie';
+  panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-label', def.title + 'の映像');
+  const title = document.createElement('h2'); title.textContent = def.title;
+  const video = document.createElement('video');
+  let objectURL = null;
+  if (def.src.startsWith('data:video/')) {
+    // Large data URLs can stop after metadata on mobile media pipelines. Decode
+    // only the requested clip into a seekable local Blob, and release it on exit.
+    try {
+      const raw = atob(def.src.slice(def.src.indexOf(',') + 1));
+      const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
+      objectURL = URL.createObjectURL(new Blob([bytes], { type: 'video/mp4' }));
+    } catch (e) { done(); return; }
+  }
+  video.src = objectURL || def.src; video.poster = STORY_ARTS[def.poster][0]; video.preload = 'auto';
+  video.controls = true; video.playsInline = true; video.setAttribute('playsinline', '');
+  video.muted = !bgmWanted(); video.volume = .8; video.setAttribute('aria-label', def.title + 'の動画');
+  const status = document.createElement('p'); status.textContent = '読み込み中…'; status.setAttribute('role', 'status');
+  const actions = document.createElement('div');
+  const retry = document.createElement('button'); retry.className = 'go2'; retry.textContent = '再生する'; retry.hidden = true;
+  const sound = document.createElement('button'); sound.className = 'go2';
+  const soundLabel = () => { sound.textContent = video.muted ? '音声 オフ' : '音声 オン'; sound.setAttribute('aria-pressed', String(!video.muted)); };
+  soundLabel();
+  video.onvolumechange = soundLabel;
+  const skip = document.createElement('button'); skip.id = 'movie-skip'; skip.className = 'go'; skip.textContent = '映像をスキップ';
+  actions.append(retry, sound, skip); panel.append(title, video, status, actions); $('#stage').appendChild(panel);
+  const movie = storyMovie = { video, panel, done, objectURL }; $('#overlay').inert = true; bgmTick();
+  const finish = () => { if (storyMovie === movie) closeStoryMovie(true); };
+  video.onended = video.onerror = finish;
+  video.onplaying = () => { if (storyMovie === movie) { status.textContent = ''; retry.hidden = true; } };
+  const play = () => {
+    retry.hidden = true; status.textContent = '読み込み中…';
+    video.play().catch(e => {
+      if (storyMovie !== movie) return;
+      if (e.name === 'NotAllowedError') { status.textContent = '再生ボタンを押してください。'; retry.hidden = false; }
+      else finish();
+    });
+  };
+  retry.addEventListener('click', play);
+  sound.addEventListener('click', () => { video.muted = !video.muted; soundLabel(); });
+  skip.addEventListener('click', finish);
+  panel.addEventListener('keydown', e => { if (e.key === 'Escape') finish(); });
+  skip.focus({ preventScroll: true }); play();
+}
 const STORY_ARTS = {
   everyday: ['story/everyday.webp', '夕暮れのベンチで、おにぎりを分け合う仲間たち'],
   rescue: ['story/rescue.webp', 'コタロウが転んだミケを助け、ウサミが駆け寄る'],
@@ -2606,6 +2679,7 @@ function storySceneCue(kind) {
   } catch (e) { /* Scene remains playable on devices without Web Audio. */ }
 }
 function storyVisual(kind) {
+  closeStoryMovie(false);
   const el = $('#overlay');
   const changed = el.dataset.scene !== (kind || '');
   el.classList.toggle('story-scene', !!kind); el.dataset.scene = kind || '';
@@ -2938,9 +3012,11 @@ function dialog(lines, done) {
   let i = 0;
   const step = () => {
     if (i >= lines.length) { done(); return; }
-    const [spk, text, scene] = lines[i++];
+    const [spk, text, scene, movie] = lines[i++];
     if (scene) storyVisual(scene);
-    overlay({ spk, text, dlg: true, b1: ['つぎへ　' + i + ' / ' + lines.length, step], b2: ['スキップ', done] });
+    overlay({ spk, text, dlg: true,
+      b1: [movie ? '映像を見る' : 'つぎへ　' + i + ' / ' + lines.length, movie ? () => playStoryMovie(movie, step) : step],
+      b2: ['スキップ', done], b3: movie ? ['映像なしでつづける', step] : null });
   };
   step();
 }
@@ -4003,15 +4079,27 @@ function showCmtText(text) {
 const VOICE_IDS = ["KL_1","KL_2","K_1","K_2","K_3","ball_1","ball_2","ball_3","big_1","big_2","bunt_1","bunt_2","change_1","change_2","change_3","chg_1","chg_2","crit_1","crit_2","dice1_1","dice2_1","dice3_1","dice4_1","dice5_1","dice6_1","dice_1","dice_2","double_1","double_2","dp_1","dp_2","dp_3","err_1","err_2","extra_1","extra_2","first_1","first_2","first_3","foul_1","foul_2","foul_3","fout_1","fout_2","gou_1","gou_2","gou_3","gout_1","gout_2","gout_3","hitBig_1","hitBig_2","hitBig_3","hit_1","hit_2","hit_3","hr2_1","hr3_1","hr4_1","hr_1","hr_2","hr_3","lefty_1","lefty_2","lout_1","magic_1","magic_2","miss_1","miss_2","miss_3","pick_1","pick_2","pitch_1","pitch_2","pitch_3","play_1","play_2","play_3","pout_1","pout_2","relief_1","relief_2","sac_1","sac_2","single_1","single_2","single_3","squeeze_1","squeeze_2","starP_1","starP_2","star_1","star_2","stealX_1","stealX_2","steal_1","steal_2","strike_1","strike_2","strike_3","strike_4","super_1","super_2","vanish_1","vanish_2","walk_1","walk_2"];   // filled in by build.mjs from the files in docs/audio
 function cmtPreload() {
   if (cmt.pre) return; cmt.pre = {};
-  VOICE_IDS.forEach(id => {
-    const a = new Audio('audio/' + id + '.mp3'); a.preload = 'auto';
-    a.addEventListener('error', () => { cmt.pre[id] = null; });
-    cmt.pre[id] = a;
-  });
+  // Keep media-player slots free for movies. Creating all 107 Audio elements at
+  // once can leave the video stuck at metadata on mobile browser pipelines.
+  VOICE_IDS.filter(id => id.startsWith('play_')).slice(0, 3).forEach(cmtAudio);
+}
+function cmtAudio(id) {
+  if (!VOICE_IDS.includes(id)) return null;
+  if (!cmt.pre) cmtPreload();
+  if (id in cmt.pre) return cmt.pre[id];
+  const keys = Object.keys(cmt.pre);
+  if (keys.length >= 8) {
+    const key = keys.find(k => !cmt.pre[k] || cmt.pre[k] !== cmt.cur), old = cmt.pre[key];
+    delete cmt.pre[key];
+    if (old) { old.pause(); if (old.removeAttribute) { old.removeAttribute('src'); old.load(); } }
+  }
+  const a = new Audio('audio/' + id + '.mp3'); a.preload = 'auto';
+  a.addEventListener('error', () => { if (cmt.pre[id] === a) cmt.pre[id] = null; });
+  cmt.pre[id] = a; return a;
 }
 function cmtPlayFile(id) {                       // true if a recording is being played
-  const a = cmt.pre && cmt.pre[id]; if (!a || a.error) return false;
-  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { cmt.pre[id] = null; }); cmt.cur = a; return true; }
+  const a = cmtAudio(id); if (!a || a.error) return false;
+  try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => { if (cmt.pre[id] === a) cmt.pre[id] = null; }); cmt.cur = a; return true; }
   catch (e) { return false; }
 }
 function cmtBusy() { const a = cmt.cur; return !!(a && !a.paused && !a.ended); }
@@ -4655,6 +4743,9 @@ let lastT = now_(), perfN = 0, perfSum = 0, degraded = LITE;
 let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
+  // The movie covers the stadium. Leave the decoder the GPU/CPU budget instead
+  // of rendering an invisible 3D scene throughout the cutscene.
+  if (storyMovie) { if (phase !== 'idle' && !pausedAt) pausedAt = now; requestAnimationFrame(frame); return; }
   if (renderMascotGallery(now)) { requestAnimationFrame(frame); return; }
   if (!degraded && !document.hidden && rawDt < 0.5) {
     perfN++; perfSum += rawDt;

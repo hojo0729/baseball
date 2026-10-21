@@ -147,8 +147,9 @@ function bgmHR() {
 function bgmTick() {
   if (storySilent || !bgmOn || !ac || !bgmGain) return;
   const quiet = $('#overlay').classList.contains('story-spotlight') && !$('#overlay').hidden;
-  bgmGain.gain.setTargetAtTime(quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
-  if (fileReady()) { bgmFileTick(); fileOut.gain.setTargetAtTime(quiet ? .055 : .42, ac.currentTime, .3); return; }
+  const movie = !!$('#story-movie');
+  bgmGain.gain.setTargetAtTime(movie ? 0 : quiet ? BGM_VOL * .12 : BGM_VOL, ac.currentTime, .3);
+  if (fileReady()) { bgmFileTick(); fileOut.gain.setTargetAtTime(movie ? 0 : quiet ? .055 : .42, ac.currentTime, .3); return; }
   if (bgmNext < ac.currentTime) bgmNext = ac.currentTime + 0.1;
   while (bgmNext < ac.currentTime + 0.3) { bgmBeatAt(bgmBeat, bgmNext); bgmBeat++; bgmNext += BGM_BEAT; }
 }

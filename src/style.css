@@ -327,3 +327,14 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 }
 @media (max-height: 470px) { #overlay.logo { justify-content: flex-start; } }
 @media (prefers-reduced-motion: reduce) { #overlay.story-spotlight #story-art img { animation: none !important; } }
+
+/* Clips keep their full frame; tap-to-play works with mobile media policies. */
+#overlay.story-scene.dlg #go3 { grid-column: 1 / -1; font-size: 13px; min-height: 40px; padding: 7px 10px; }
+#story-movie { position: absolute; inset: 0; z-index: 110; display: flex; flex-direction: column; justify-content: center; gap: 18px; box-sizing: border-box; overflow-y: auto; padding: 24px 0; background: #05090e; color: #f4efe3; }
+#story-movie h2 { margin: 0 22px; font: 700 22px/1.5 var(--f-body); }
+#story-movie video { display: block; width: 100%; max-height: 60vh; aspect-ratio: 16 / 9; object-fit: contain; background: #000; }
+#story-movie > p { margin: 0 22px; min-height: 1.6em; font: 400 14px/1.6 var(--f-body); color: #b4c8cd; }
+#story-movie > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0 22px; }
+#story-movie button { min-height: 44px; padding: 10px 13px; font: 500 14px/1.5 var(--f-body); }
+#story-movie button[hidden] { display: none; }
+@media (max-height: 470px) { #story-movie { justify-content: flex-start; } }

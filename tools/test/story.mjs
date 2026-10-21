@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 async function dialogue(p) {
   for (let n = 0; n < 100; n++) {
+    if (await p.locator('#movie-skip').count()) { await p.click('#movie-skip'); continue; }
     if (await p.evaluate(() => !!window.__dbg.ending)) return;
     if (!await p.evaluate(() => !document.querySelector('#overlay').hidden && document.querySelector('#overlay').classList.contains('dlg'))) return;
     await p.click('#goBtn');

@@ -185,9 +185,11 @@ function dialog(lines, done) {
   let i = 0;
   const step = () => {
     if (i >= lines.length) { done(); return; }
-    const [spk, text, scene] = lines[i++];
+    const [spk, text, scene, movie] = lines[i++];
     if (scene) storyVisual(scene);
-    overlay({ spk, text, dlg: true, b1: ['つぎへ　' + i + ' / ' + lines.length, step], b2: ['スキップ', done] });
+    overlay({ spk, text, dlg: true,
+      b1: [movie ? '映像を見る' : 'つぎへ　' + i + ' / ' + lines.length, movie ? () => playStoryMovie(movie, step) : step],
+      b2: ['スキップ', done], b3: movie ? ['映像なしでつづける', step] : null });
   };
   step();
 }

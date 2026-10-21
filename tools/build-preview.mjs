@@ -24,9 +24,9 @@ page = page.replace(/<script src="[^"]*supabase-js[^>]+><\/script>/,
 page = page.replace(/<link rel="stylesheet" href="https:\/\/fonts[^>]+>/, '');
 page = page.replace(/<link rel="manifest"[^>]+>/, '');
 page = page.replace(/<script>if \('serviceWorker'[\s\S]*?<\/script>/, '');
-const mime = { '.mp3': 'audio/mpeg', '.bin': 'application/octet-stream', '.png': 'image/png', '.webp': 'image/webp' };
+const mime = { '.mp3': 'audio/mpeg', '.bin': 'application/octet-stream', '.png': 'image/png', '.webp': 'image/webp', '.mp4': 'video/mp4' };
 const assets = {};
-for (const dir of ['audio', 'bgm', 'sfx', 'icons', 'story']) {
+for (const dir of ['audio', 'bgm', 'sfx', 'icons', 'story', 'video']) {
   for (const name of fs.readdirSync('docs/' + dir).sort()) {
     const key = dir + '/' + name, ext = path.extname(name);
     assets[key] = 'data:' + (mime[ext] || 'application/octet-stream') + ';base64,' + fs.readFileSync('docs/' + key).toString('base64');
@@ -35,7 +35,8 @@ for (const dir of ['audio', 'bgm', 'sfx', 'icons', 'story']) {
 page = page.replace(/href="(icons\/[^"]+)"/g, (all, key) => assets[key] ? 'href="' + assets[key] + '"' : all);
 // Story paths are literal JS strings; embed them so pictures also work offline.
 page = page.replace(/(['"])(story\/[^'"\s]+\.webp)\1/g, (all, quote, key) => assets[key] ? quote + assets[key] + quote : all);
-const runtimeAssets = Object.fromEntries(Object.entries(assets).filter(([key]) => !key.startsWith('story/')));
+page = page.replace(/(['"])(video\/[^'"\s]+\.mp4)\1/g, (all, quote, key) => assets[key] ? quote + assets[key] + quote : all);
+const runtimeAssets = Object.fromEntries(Object.entries(assets).filter(([key]) => !key.startsWith('story/') && !key.startsWith('video/')));
 const bootstrap = `(() => {
   const assets = ${JSON.stringify(runtimeAssets)};
   const nativeFetch = window.fetch.bind(window);

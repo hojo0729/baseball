@@ -26,6 +26,8 @@
 
 ## 動作確認
 
+- `docs/video/` — Take提供のGemini生成動画を襲来10秒・覚醒約6.7秒に分けたMP4。会話配列の第4要素で動画キーを指定。明示再生/動画なし/スキップ/失敗時の挿絵復帰を備え、単一HTMLにも埋め込む。素材と圧縮条件は `design/story-video.md`。
+
 - `tools/test/` にヘッドレスChromiumの確認スクリプトがある（手順は `tools/test/README.md`）。ロジックを変えたら `thr.js`・`hbp.js`、オンラインに関わるなら `tac7.js`（SAME/DIFF）を回す
 
 ## 約束ごと

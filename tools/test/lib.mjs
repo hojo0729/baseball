@@ -16,6 +16,7 @@ const MIME = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
   '.jpg': 'image/jpeg',
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav'
@@ -45,6 +46,16 @@ export function startServer() {
         return;
       }
       const ext = path.extname(file).toLowerCase();
+      if (ext === '.mp4') {
+        // Match static hosting's byte-range responses so media seeking/ended
+        // checks exercise the real browser decoder rather than a stalled stream.
+        const size = fs.statSync(file).size, range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
+        const start = range ? Number(range[1]) : 0, end = range && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+        if (start >= size || start > end) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); res.end(); return; }
+        res.writeHead(range ? 206 : 200, { 'Content-Type': MIME[ext], 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1,
+          ...(range ? { 'Content-Range': `bytes ${start}-${end}/${size}` } : {}) });
+        fs.createReadStream(file, { start, end }).pipe(res); return;
+      }
       res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
       fs.createReadStream(file).pipe(res);
     });

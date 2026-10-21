@@ -42,7 +42,7 @@ const STAGES = [
       ['ミケ（ネコ）', 'ぼくは明日も練習したい。それだけは、今ここで決めたよ。']] },
   { short: '第6話', title: '空からの来訪者', kind: 'match', opp: 'alien', mode: 'bat', runs: 1, scene: 'invasion',
     pitcher: { speed: 0, mix: { str: 20, sli: 8, chg: 8 } },
-    intro: [['', '空が、消えた。', 'invasion'],
+    intro: [['', '空が、消えた。', 'invasion', 'arrival'],
       ['ウサミ（うさぎ）', '……あれ、雲じゃない。球場も、街も、影の中に。'],
       ['使節（野球星人）', 'この星の代表を出せ。勝負は、野球で決める。', 'ultimatum'],
       ['使節（野球星人）', '敗れた側は、勝者の統治に従う。'],

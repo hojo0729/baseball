@@ -37,6 +37,7 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
     await art('invasion');
     const arrival = new Set();
     for (let n = 0; n < 15 && await p.locator('#overlay').evaluate(el => el.classList.contains('dlg')); n++) {
+      if (await p.locator('#movie-skip').count()) { await p.locator('#movie-skip').click(); continue; }
       const scene = await p.locator('#overlay').getAttribute('data-scene');
       if (scene === 'ultimatum' && !arrival.has(scene)) await art('ultimatum');
       arrival.add(scene);
@@ -56,6 +57,7 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
     });
     const awakening = new Set();
     for (let n = 0; n < 15 && await p.locator('#overlay').evaluate(el => el.classList.contains('dlg')); n++) {
+      if (await p.locator('#movie-skip').count()) { await p.locator('#movie-skip').click(); continue; }
       const scene = await p.locator('#overlay').getAttribute('data-scene');
       if (!awakening.has(scene)) await art(scene);
       awakening.add(scene); await p.locator('#goBtn').click();

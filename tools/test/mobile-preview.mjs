@@ -21,9 +21,14 @@ const browser = await chromium.launch({ ...(process.env.CHROME_PATH ? { executab
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 try {
   for (const [name, device] of [['Android', devices['Pixel 7']], ['iPhone-size', devices['iPhone 13']]]) {
+    if (process.env.MOBILE_PROFILE && process.env.MOBILE_PROFILE !== name) continue;
     const context = await browser.newContext({ viewport: device.viewport, deviceScaleFactor: 1,
       userAgent: device.userAgent, isMobile: true, hasTouch: true });
     await context.addInitScript(() => {
+      const NativeAudio = window.Audio;
+      window.__voiceMedia = [];
+      window.Audio = function(src) { const a = new NativeAudio(src); window.__voiceMedia.push(a); return a; };
+      window.Audio.prototype = NativeAudio.prototype;
       if (!localStorage.getItem('yakyu-bgm')) localStorage.setItem('yakyu-bgm', '1');
       if (!localStorage.getItem('animal-baseball-story-v2')) localStorage.setItem('animal-baseball-story-v2', JSON.stringify({ version: 2, completed: 9 }));
     });
@@ -35,6 +40,7 @@ try {
     await p.evaluate(() => navigator.serviceWorker.ready);
     await p.waitForFunction(() => !!navigator.serviceWorker.controller);
     await p.locator('#goBtn').tap(); assert.match(await p.locator('#od').textContent(), /第1話/); await p.locator('#go3').tap();
+    assert.ok(await p.evaluate(() => window.__voiceMedia.filter(a => a.src).length <= 8), 'Commentary must leave media-player slots available for videos');
     await p.locator('#go3').tap(); await p.waitForTimeout(150);
     await p.screenshot({ path: `/tmp/baseball-mobile-${name}.png` });
     await p.locator('#go4').tap(); await p.locator('#go4').tap();
@@ -58,8 +64,25 @@ try {
     await p.waitForFunction(() => { const im = document.querySelector('#story-art img'); return im && im.complete && im.naturalWidth > 0 && im.src.startsWith('data:image/webp'); });
     await p.locator('#go2').tap(); await p.locator('#goBtn').tap();
     assert.equal(await p.locator('#overlay').isHidden(), true);
+    // The packaged movie must also play without network, using the same touch UI.
+    const mediaLog = [];
+    await cdp.send('Media.enable');
+    for (const event of ['playerPropertiesChanged', 'playerEventsAdded', 'playerMessagesLogged', 'playerErrorsRaised']) cdp.on('Media.' + event, data => { mediaLog.push({ event, data }); if (mediaLog.length > 25) mediaLog.shift(); });
+    await p.evaluate(() => localStorage.setItem('mobile-preview-animal-baseball-story-v2', JSON.stringify({ version: 2, completed: 5 })));
+    await p.reload();
+    await p.locator('#goBtn').tap(); await p.locator('#goBtn').tap(); await p.locator('#goBtn').tap();
+    await p.waitForFunction(() => { const v = document.querySelector('#story-movie video'); return v && v.readyState >= 2 && v.currentTime > .1; }).catch(async e => {
+      console.log('Offline movie diagnostic', await p.evaluate(() => { const v = document.querySelector('#story-movie video'); return { text: document.querySelector('#od').textContent, movie: v && { time: v.currentTime, duration: v.duration, paused: v.paused, ready: v.readyState, network: v.networkState, error: v.error && v.error.message, localBlob: v.src.startsWith('blob:'), status: document.querySelector('#story-movie > p').textContent } }; }));
+      console.log('Media pipeline', JSON.stringify(mediaLog));
+      await p.screenshot({ path: '/tmp/baseball-mobile-movie-failure.png' }); throw e;
+    });
+    const movie = p.locator('#story-movie video');
+    assert.equal(await movie.evaluate(v => v.src.startsWith('blob:') && v.muted && v.playsInline), true);
+    await movie.evaluate(v => { v.playbackRate = 4; });
+    await p.waitForFunction(() => !document.querySelector('#story-movie'));
+    assert.match(await p.locator('#od').textContent(), /雲じゃない/);
     assert.deepEqual(errors, []);
-    console.log(`✓ ${name}: タップでメニュー・モデル確認、スワイプで投球、PWAキャッシュからオフライン再起動・ストーリー開始`);
+    console.log(`✓ ${name}: タップ/スワイプ、保存分離、PWAオフライン再起動・挿絵・MP4実再生と台詞復帰`);
     await context.close();
   }
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
