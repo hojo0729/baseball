@@ -173,7 +173,7 @@ function finishStoryEnding() {
 function playStoryEnding() {
   silenceStoryAudio(); storyEnding = { phase: 'real', timers: [] };
   storyVisual('real');
-  dialog([['', '見知らぬ街。スマートフォンを持つ人物は、自分の名前も、ここへ来る前のことも思い出せない。']], () => {
+  dialog([['', '球場の風景が遠のき、見知らぬ街が映る。スマートフォンを持つ人物は、自分の名前も、ここへ来る前のことも思い出せない。']], () => {
     storyArt.classList.add('released');
     overlay({ text: '子どもの手から、赤い風船が離れた。細いひもが、指の先をすり抜けていく。', dlg: true,
       b1: ['つぎへ', showEndingJump] });

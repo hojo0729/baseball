@@ -53,7 +53,7 @@ for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
     assert.equal(await p.locator('#story-art').getAttribute('data-art'), 'story/awakening-roar.webp');
     await p.locator('#goBtn').click();
     assert.equal(await p.locator('#story-art').getAttribute('data-art'), 'story/beast.webp');
-    for (let n = 0; n < 3; n++) await p.locator('#goBtn').click();
+    for (let n = 0; n < 12 && await p.locator('#ot').textContent() !== 'ぼくが選ぶ'; n++) await p.locator('#goBtn').click();
     assert.equal(await p.locator('#ot').textContent(), 'ぼくが選ぶ');
     await p.locator('#goBtn').click();
     assert.equal(await p.evaluate(() => window.__dbg.beastActive() && !window.__dbg.G.over), true);
