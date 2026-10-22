@@ -163,6 +163,7 @@ function overlay(o) {
   });
   /* label 'name\nsmall text' -> two lines. optional 3rd item: team key for a color stripe & animal icon */
   const setB = (el, b) => {
+    el.disabled = false;
     el.hidden = !b; if (!b) return;
     const [main, sub] = b[0].split('\n');
     el.textContent = '';

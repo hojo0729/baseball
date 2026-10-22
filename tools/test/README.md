@@ -23,6 +23,7 @@
     node tools/test/ingame.js                # 守備側の通常画面とホームラン（ig-*.png）
     node tools/test/ui.js                    # メニュー〜試合開始〜ホームラン〜守備のスクショ
     node tools/test/tac7.js                  # オンライン2タブの同期確認（SAME/DIFF）
+    node tools/test/online-rematch.mjs        # 同意・先後交代・初期化・前試合の通信排除・再戦後の投球同期・退出
     node tools/test/stadium.mjs              # 10章の球場・覚醒照明・寸法保持・背景再利用・通常球場復帰・3画面サイズ
 
 スクショは実行したフォルダに出る。`__dbg` のフックは `tools/test/make-test-page.mjs` の先頭にある

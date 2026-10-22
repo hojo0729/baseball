@@ -10,6 +10,7 @@ let online = false;
 const onl = { sb: null, ch: null, code: '', side: 'home', me: Math.random().toString(36).slice(2, 10), started: false,
   score: { home: 0, away: 0 }, queued: null, waitRes: null, half: 1, joinTimer: 0, goneTimer: 0,
   pn: 0, oppSign: null, seed: 0, queuedPick: null, queuedSub: [],
+  round: 0, finished: false, rematch: { mine: false, theirs: false },
   beast: { home: false, away: false }, beastWanted: { home: false, away: false } };   // pn: pitches thrown so far (same on both devices); oppSign: the batter's sign as the pitcher's device knows it
 
 let beastKeys = '', beastKeyAt = 0, beastTaps = 0, beastTapAt = 0;
@@ -128,16 +129,17 @@ function openChannel(code, onReady) {
   });
 }
 function send(type, data) {
-  if (onl.ch) onl.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ type, from: onl.me }, data || {}) });
+  if (onl.ch) onl.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ type, from: onl.me, round: onl.round }, data || {}) });
 }
 function leaveRoom() {
   clearTimeout(onl.joinTimer); clearTimeout(onl.goneTimer);
   if (onl.ch) {
     const ch = onl.ch; onl.ch = null;
-    try { ch.send({ type: 'broadcast', event: 'msg', payload: { type: 'bye', from: onl.me } }); } catch (e) {}
+    try { ch.send({ type: 'broadcast', event: 'msg', payload: { type: 'bye', from: onl.me, round: onl.round } }); } catch (e) {}
     try { onl.sb.removeChannel(ch); } catch (e) {}
   }
   online = false; onl.started = false; onl.queued = null; onl.waitRes = null; onl.queuedPick = null; onl.queuedSub = [];
+  onl.round = 0; onl.finished = false; onl.rematch = { mine: false, theirs: false };
   resetOnlineBeast();
 }
 function hostRoom() {
@@ -163,8 +165,9 @@ function others() {
 }
 function opponentLeft() {
   if (!onl.started) return;
+  const finished = onl.finished;
   leaveRoom(); idle();
-  overlay({ title: '相手が退出しました', text: '試合は中断されました。', b1: ['メニューへ', showMenu] });
+  overlay({ title: '相手が退出しました', text: finished ? '再戦の受付を終了しました。' : '試合は中断されました。', b1: ['メニューへ', showMenu] });
 }
 function onPresence() {
   const n = others().length;
@@ -185,6 +188,18 @@ function onSubMsg(m) {
 }
 function onMsg(m) {
   if (!m || m.from === onl.me) return;
+  if (m.type === 'rematch-start') {
+    if (online && onl.finished && onl.rematch.mine && onl.side === 'away' && m.round === onl.round + 1) restartOnline(m);
+    return;
+  }
+  // Older clients have no round field for the first match. Never let a late
+  // pitch, result or rematch request from a previous match affect the next one.
+  if ((m.round || 0) !== onl.round) return;
+  if (m.type === 'rematch') {
+    if (online && onl.started) { onl.rematch.theirs = true; if (onl.finished) { renderOnlineOver(); tryOnlineRematch(); } }
+    return;
+  }
+  if (onl.finished && m.type !== 'bye') return;
   if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
   else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline(); } }
   else if (m.type === 'pitch') onPitchMsg(m);
@@ -211,6 +226,7 @@ function onPickMsg(m) {
 /* ---- game flow ---- */
 function beginOnline() {
   onl.started = true; online = true; story = null; match = null;
+  onl.finished = false; onl.rematch = { mine: false, theirs: false };
   resetOnlineBeast();
   onl.timeLeft = 3; onl.oppTime = false; timeOut = false;
   onl.score = { home: 0, away: 0 }; onl.queued = null; onl.waitRes = null; onl.pn = 0; onl.oppSign = null; onl.queuedPick = null; onl.queuedSub = [];
@@ -289,17 +305,42 @@ function onlineAfterResult() {
 }
 /* the menu button during an online game: the match keeps running underneath, and leaving takes a second tap */
 function onlinePause() {
+  if (onl.finished) { renderOnlineOver(); return; }
   overlay({ title: 'オンライン対戦中', text: '試合は続いています。部屋番号 ' + onl.code + '　' + inningLabel() + '　しばいぬズ ' + onlineScore().home + ' - ' + onlineScore().away + ' パンダーズ',
     b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', () => overlay({
       title: '試合をやめますか？', text: '相手との接続が切れて、試合は終わりになります。',
       b1: ['続ける', () => { $('#overlay').hidden = true; }], b2: ['やめる', showMenu] })] });
 }
 function showOnlineOver() {
+  if (onl.finished) return;
+  onl.finished = true;
+  idle(); resetOnlineBeast();
+  const sc = onlineScore();
+  if (sc[onl.side] > sc[onl.side === 'home' ? 'away' : 'home']) celebrate(now_() + 0.2, 6);
+  renderOnlineOver();
+}
+function renderOnlineOver() {
   const sc = onlineScore(), mine = sc[onl.side], theirs = sc[onl.side === 'home' ? 'away' : 'home'];
-  leaveRoom(); idle();
-  if (mine > theirs) celebrate(now_() + 0.2, 6);
   overlay({ clear: mine > theirs, title: mine > theirs ? '勝ち！' : mine < theirs ? '負け…' : '引き分け',
-    text: 'しばいぬズ ' + sc.home + ' - ' + sc.away + ' パンダーズ', b1: ['メニューへ', showMenu] });
+    text: 'しばいぬズ ' + sc.home + ' - ' + sc.away + ' パンダーズ\n'
+      + (onl.rematch.mine ? '再戦を希望しました。相手の返事を待っています。' : onl.rematch.theirs ? '相手が再戦を希望しています。' : '双方が希望すると、同じ部屋で再戦できます。')
+      + '\n再戦は先攻・後攻と担当チームを交代します。',
+    b1: [onl.rematch.mine ? '相手の返事を待っています…' : 'もう一度対戦する', requestOnlineRematch], b2: ['メニューへ', showMenu] });
+  $('#goBtn').disabled = onl.rematch.mine;
+}
+function requestOnlineRematch() {
+  if (!online || !onl.finished || onl.rematch.mine) return;
+  onl.rematch.mine = true; send('rematch'); renderOnlineOver(); tryOnlineRematch();
+}
+function tryOnlineRematch() {
+  if (!onl.finished || !onl.rematch.mine || !onl.rematch.theirs || onl.side !== 'home') return;
+  const next = { round: onl.round + 1, seed: (Math.random() * 4294967296) >>> 0 };
+  send('rematch-start', next); restartOnline(next);
+}
+function restartOnline(m) {
+  onl.round = m.round; onl.seed = m.seed >>> 0;
+  onl.side = onl.side === 'home' ? 'away' : 'home';
+  idle(); beginOnline();
 }
 
 /* ---- sharing: send the game link, or an invite link that opens straight into a room ---- */
