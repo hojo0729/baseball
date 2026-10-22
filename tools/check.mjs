@@ -115,7 +115,8 @@ if (full && ok) {
     ['tools/test/hbp.js', 'hbp.js'],
     ['tools/test/tac7.js', 'tac7.js'],
     ['tools/test/online-beast.mjs', 'online-beast.mjs'],
-    ['tools/test/online-rematch.mjs', 'online-rematch.mjs']
+    ['tools/test/online-rematch.mjs', 'online-rematch.mjs'],
+    ['tools/test/beast-effects.mjs', 'beast-effects.mjs']
   ]) {
     if (runNode(script, name, out => out.trim().endsWith('[]') && !out.includes('DIFF '))) {
       console.log(`✓ ${name} 通過`);

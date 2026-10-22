@@ -228,6 +228,7 @@ function updateRunAnim(now) {
 function updateBall(now, dt, pj) {
   trail.forEach(m => { m.visible = false; });
   if (play) {
+    htLine.material.color.set(play.beast ? '#ff692b' : '#f4c95a');
     const u = (now - play.start) / play.T;
     playBallPos(u, tmpV);
     ballMesh.position.copy(tmpV); ballMesh.visible = true;
@@ -261,6 +262,7 @@ function updateBall(now, dt, pj) {
       trailPts.push(tmpV.clone()); if (trailPts.length > trail.length) trailPts.shift();
       trailPts.forEach((p, i) => {
         const m = trail[i], u = (i + 1) / trailPts.length; m.visible = true; m.position.copy(p);
+        m.material.color.set(beastForRole('pit') ? '#ff9c42' : '#eef0e4');
         m.material.opacity = u * 0.42; m.scale.setScalar(0.45 + 0.55 * u);
       });
     }
@@ -363,6 +365,7 @@ function update(now, dt) {
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
+  updateBeastEffects(now, pj, bj);
   batAura.material.color.set('#ffc845'); pitAura.material.color.set('#ffc845');
   for (const role of ['pit', 'bat']) if (beastForRole(role)) {
     const aura = role === 'pit' ? pitAura : batAura, pos = role === 'pit' ? pj.pelvis : bj.J.pelvis;

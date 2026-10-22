@@ -306,12 +306,12 @@ function beastForm(f, active) {
     f.beastForm = group;
   }
   if (f.beastForm) f.beastForm.visible = active;
-  f.head.scale.setScalar(HEAD_K * (active ? 1.18 : 1));
+  f.head.scale.setScalar(HEAD_K * (active ? 1.25 : 1));
   f.beastOn = active;
   f.cap.visible = f.brim.visible = !active && (f.sp === 'alien' || f.helmet);
   if (active) {
-    f.body.scale.x *= 1.5; f.body.scale.z *= 1.35;
-    [...f.ua, ...f.fa].forEach(m => { m.scale.x *= 1.4; m.scale.z *= 1.4; });
+    f.body.scale.x *= 1.65; f.body.scale.z *= 1.45;
+    [...f.ua, ...f.fa].forEach(m => { m.scale.x *= 1.55; m.scale.z *= 1.55; });
     f.paw.forEach(m => m.scale.multiplyScalar(1.35));
     f.coneEar.forEach(m => m.scale.y = .48);
   } else f.coneEar.forEach(m => m.scale.y = .36);

@@ -73,6 +73,7 @@ try {
     assert.equal(await p.evaluate(() => window.__dbg.beastView().speed), 200);
     assert.equal(await p.evaluate(() => window.__dbg.beastView().vanish), true);
     assert.equal(await p.evaluate(() => window.__dbg.beastView().batter), false);
+    assert.equal(await p.evaluate(() => window.__dbg.beastEffects().count), 1, 'Both devices show the activation once');
   }
   assert.equal(await A.evaluate(() => window.__dbg.G.skill.vn), 0, 'Infinite magic consumes no charge');
   await finish(A, B, 1); console.log('✓ real 200 km/h pitch and shared beast state');
@@ -89,6 +90,7 @@ try {
     assert.equal(await p.evaluate(() => window.__dbg.beastView().pitcher), false);
   }
   console.log('✓ inning switch and remote giant bat');
+  for (const p of [A, B]) assert.equal(await p.evaluate(() => window.__dbg.beastEffects().count), 1, 'Changing roles must not replay the cut-in');
   await debugPitch(B, A);
   assert.equal(await A.evaluate(() => window.__dbg.beastView().speed), 140);
   const quality = await A.evaluate(() => {
@@ -109,9 +111,11 @@ try {
   }
   await B.keyboard.type('BEAST');
   await finish(B, A, 5);
+  for (const p of [A, B]) assert.equal(await p.evaluate(() => window.__dbg.beastEffects().count), 2, 'The other team also gets one activation');
   await B.click('#menuBtn'); await B.click('#go2'); await B.click('#go2');
   await A.waitForFunction(() => !window.__dbg.online);
   await A.click('#goBtn');
+  for (const p of [A, B]) assert.deepEqual(await p.evaluate(() => window.__dbg.beastEffects().auras), []);
   for (const p of [A, B]) assert.deepEqual(await p.evaluate(() => window.__dbg.onlineBeast().active), { home: false, away: false });
   await join();
   for (const p of [A, B]) {

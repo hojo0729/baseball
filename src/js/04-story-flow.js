@@ -172,7 +172,7 @@ function activateBeast() {
   storySession.beastLeft--; storySession.beastUsed = true;
   storySession.beastUntilPA = Infinity;
   vanishArm = true;
-  showBanner('野性解放！', '試合終了まで獣化・200km/h・消える魔球∞・巨大バット', 'g'); updateGoal();
+  setHint('野性解放：試合終了まで獣化・200km/h・魔球∞・巨大バット'); updateGoal();
 }
 function storyEnd(win) {
   idle(); const st = story;

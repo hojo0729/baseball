@@ -135,6 +135,38 @@ button:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #codeIn:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 #beast-code { display: block; box-sizing: border-box; width: min(100%, 16ch); margin: 12px auto 0; padding: 10px; border: 1px solid var(--lamp); border-radius: 10px; background: var(--panel); color: var(--chalk); font: 500 24px var(--f-num); text-align: center; -webkit-user-select: text; user-select: text; touch-action: auto; }
 #beast-code:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+/* Short, non-blocking beast cut-in; the centre clears before the pitch arrives. */
+#beast-cut, #beast-impact { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; contain: layout paint; }
+#beast-cut[hidden], #beast-impact[hidden] { display: none; }
+#stage:has(#overlay:not([hidden])) #beast-cut, #stage:has(#overlay:not([hidden])) #beast-impact { display: none; }
+#beast-cut { background: radial-gradient(ellipse at center, transparent 35%, rgba(103, 24, 7, .65)); }
+.beast-scar { position: absolute; inset: 4% -15%; background: repeating-linear-gradient(116deg, transparent 0 18%, #ffad46 18.4% 19%, #a32b13 19.4% 20%, transparent 21% 29%); clip-path: polygon(0 22%, 100% 3%, 100% 69%, 0 92%); }
+.beast-eyes { position: absolute; top: 25%; left: 50%; width: min(72%, 460px); height: 10%; transform: translateX(-50%); display: flex; justify-content: space-between; }
+.beast-eyes i { width: 34%; height: 20%; background: #fff0a9; box-shadow: 0 0 18px #ff6b20, 0 0 36px #ff3410; transform: rotate(14deg); clip-path: polygon(0 0, 100% 58%, 78% 100%, 15% 65%); }
+.beast-eyes i + i { transform: scaleX(-1) rotate(14deg); }
+.beast-call { position: absolute; left: 0; right: 0; top: 46%; padding: 16px 10px; text-align: center; color: #fff0c6; background: linear-gradient(100deg, transparent, #210f0af2 18% 82%, transparent); border-block: 1px solid #f89046; transform: skewY(-5deg); }
+.beast-call small { display: block; font: 700 clamp(9px, 2.8vw, 13px)/1.5 var(--f-num); letter-spacing: .32em; color: #ffba67; }
+.beast-call strong { display: block; font: 900 clamp(32px, 10vw, 70px)/1.3 var(--f-body); letter-spacing: .05em; text-shadow: 3px 3px #9f2a11, 0 0 22px #f76418; white-space: nowrap; }
+.beast-call span { display: block; margin-top: 5px; font: 700 clamp(11px, 3vw, 15px)/1.5 var(--f-body); }
+#beast-cut.release { animation: beast-edge 1.35s both; }
+#beast-cut.release .beast-scar { animation: beast-split .5s both; }
+#beast-cut.release .beast-eyes { animation: beast-glare .48s both; }
+#beast-cut.release .beast-call { animation: beast-call 1.35s both; }
+#beast-impact { background: radial-gradient(ellipse at 50% 65%, transparent 25%, #ff9e3338 60%, #ed43108c); border: 3px solid #ffd582; }
+#beast-impact.strike { animation: beast-hit .38s ease-out both; }
+@keyframes beast-edge { 0% { opacity: 0; } 8%, 25% { opacity: 1; } 55% { opacity: .55; } 100% { opacity: 0; } }
+@keyframes beast-split { 0% { transform: translateX(-80%) scaleX(.4); opacity: 0; } 20% { transform: translateX(0) scaleX(1); opacity: 1; } 100% { transform: translateX(30%) scaleX(1.3); opacity: 0; } }
+@keyframes beast-glare { 0% { opacity: 0; } 18%, 55% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes beast-call { 0% { transform: translateX(-40%) skewY(-5deg); opacity: 0; } 12%, 32% { transform: translateX(0) skewY(-5deg); opacity: 1; } 48%, 78% { transform: translateY(31vh) skewY(-5deg) scale(.65); opacity: .9; } 100% { transform: translateY(31vh) skewY(-5deg) scale(.65); opacity: 0; } }
+@keyframes beast-hit { from { opacity: .85; transform: scale(.94); } to { opacity: 0; transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) {
+  #beast-cut.release, #beast-cut.release .beast-call, #beast-impact.strike { animation: none; }
+  #beast-cut { background: none; }
+  #beast-cut .beast-eyes, #beast-cut .beast-scar, #beast-impact { display: none; }
+  #beast-cut .beast-call { top: auto; bottom: 12%; padding: 8px; transform: none; }
+  #beast-cut .beast-call strong { font-size: clamp(26px, 7vw, 42px); }
+}
 #goal .tired { color: var(--clay); }
 #goal .star { color: #ffc845; }
 #cmt { position: absolute; left: 12px; right: 12px; bottom: 34px; text-align: center; font: 700 14px/1.4 var(--f-body); color: #fff; background: rgba(6, 14, 12, .72); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; pointer-events: none; opacity: 0; transition: opacity .25s; }
@@ -749,6 +781,7 @@ function opt(k) { if (story && !online && !match && (k === 'dice' || k === 'hap'
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
 function newGame() {
+  resetBeastEffects();
   pausedAt = 0; timeOut = false;
   if (story && story.openingHR) { story.mode = mode = 'pit'; }
   if (story && story.inn) story.score = { home: 0, away: 0 };
@@ -1239,6 +1272,7 @@ function resolve(c, C) {
 }
 function resolveCore(c, C) {
   c = extraBaseHit(c);
+  queueBeastImpact(c);
   // Chapter 8's opening is a scripted demonstration, including balls outside the zone.
   if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
@@ -1285,6 +1319,7 @@ function resolveCore(c, C) {
     const sg = steal, hr = sg && sg.hitRun ? sg : null;
     settleSteal(c, now);
     play = makePlay(c, ball.tgt.clone(), now);
+    play.beast = beastForRole('bat');
     const B0 = G.bases.slice(), o0 = G.outs;
     if (c.kind === 'foul') {
       if (c.bunt && G.s === 2) { const e = strike(); t = 'スリーバント失敗' + e.slice(2); tn = tone(false); }   // two-strike foul bunt is a strikeout
@@ -2358,12 +2393,12 @@ function beastForm(f, active) {
     f.beastForm = group;
   }
   if (f.beastForm) f.beastForm.visible = active;
-  f.head.scale.setScalar(HEAD_K * (active ? 1.18 : 1));
+  f.head.scale.setScalar(HEAD_K * (active ? 1.25 : 1));
   f.beastOn = active;
   f.cap.visible = f.brim.visible = !active && (f.sp === 'alien' || f.helmet);
   if (active) {
-    f.body.scale.x *= 1.5; f.body.scale.z *= 1.35;
-    [...f.ua, ...f.fa].forEach(m => { m.scale.x *= 1.4; m.scale.z *= 1.4; });
+    f.body.scale.x *= 1.65; f.body.scale.z *= 1.45;
+    [...f.ua, ...f.fa].forEach(m => { m.scale.x *= 1.55; m.scale.z *= 1.55; });
     f.paw.forEach(m => m.scale.multiplyScalar(1.35));
     f.coneEar.forEach(m => m.scale.y = .48);
   } else f.coneEar.forEach(m => m.scale.y = .36);
@@ -2554,6 +2589,93 @@ function updateStars(now, bj, pj) {
     starBatOn = bs;
     WOOD.color.set(bs ? '#f2c14e' : '#c99a5c'); WOOD.emissive.set(bs ? '#5a3c00' : '#000000');
   }
+}
+
+/* ---- 04-beast-effects.js ---- */
+/* Beast presentation is local-only: no game clocks or shared random numbers. */
+const beastMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const beastFx = { seen: new Set(), at: -10, impact: false, impactAt: -10, count: 0, impacts: 0, groups: null, audio: null };
+const beastCut = document.createElement('div');
+beastCut.id = 'beast-cut'; beastCut.hidden = true; beastCut.setAttribute('aria-hidden', 'true');
+beastCut.innerHTML = '<div class="beast-scar"></div><div class="beast-eyes"><i></i><i></i></div><div class="beast-call"><small>BEAST AWAKENING</small><strong>野性、解放。</strong><span></span></div>';
+const beastImpact = document.createElement('div');
+beastImpact.id = 'beast-impact'; beastImpact.hidden = true; beastImpact.setAttribute('aria-hidden', 'true');
+$('#stage').append(beastCut, beastImpact);
+function stopBeastSound() {
+  if (!beastFx.audio) return;
+  const {context,gain,nodes}=beastFx.audio; beastFx.audio=null;
+  try { const t=context.currentTime; gain.gain.cancelScheduledValues(t);gain.gain.setTargetAtTime(0,t,.015);nodes.forEach(n=>{try{n.stop(t+.06);}catch(e){}}); } catch(e) {}
+}
+function beastRoar() {
+  stopBeastSound();
+  if (!ac || storySilent || !bgmWanted()) return;
+  try {
+    const context=ac,t=context.currentTime,gain=context.createGain(),filter=context.createBiquadFilter();
+    filter.type='lowpass';filter.frequency.setValueAtTime(1300,t);filter.frequency.exponentialRampToValueAtTime(180,t+1.05);
+    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.065,t+.045);gain.gain.exponentialRampToValueAtTime(.0001,t+1.1);
+    filter.connect(gain);gain.connect(context.destination);
+    const nodes=[57,86,114].map((frequency,i)=>{
+      const n=context.createOscillator();n.type=i===1?'triangle':'sawtooth';
+      n.frequency.setValueAtTime(frequency*1.9,t);n.frequency.exponentialRampToValueAtTime(frequency,t+.12);n.frequency.exponentialRampToValueAtTime(frequency*.55,t+1.1);
+      n.connect(filter);n.start(t);n.stop(t+1.12);return n;
+    });
+    nodes[2].onended=()=>{gain.disconnect();filter.disconnect();nodes.forEach(n=>n.disconnect());};
+    beastFx.audio={context,gain,nodes};
+  } catch(e) { /* The visual remains available without Web Audio. */ }
+}
+function resetBeastEffects() {
+  beastFx.seen.clear();beastFx.at=beastFx.impactAt=-10;beastFx.impact=false;
+  beastCut.hidden=beastImpact.hidden=true;beastCut.className='';
+  $('#stage').classList.remove('beast-burning');
+  if(beastFx.groups)beastFx.groups.forEach(g=>{g.root.visible=false;});
+  stopBeastSound();
+}
+function makeBeastAuras() {
+  const ringGeo=new THREE.TorusGeometry(.7,.026,4,36),sparkGeo=new THREE.ConeGeometry(.035,.22,3);
+  return ['pit','bat'].map(role=>{
+    const root=new THREE.Group(),material=new THREE.MeshBasicMaterial({color:'#ff8138',transparent:true,opacity:.75,depthWrite:false});
+    const ring=new THREE.Mesh(ringGeo,material),wave=new THREE.Mesh(ringGeo,material.clone());
+    ring.rotation.x=wave.rotation.x=-Math.PI/2;root.add(ring,wave);
+    const sparks=new THREE.InstancedMesh(sparkGeo,material.clone(),12);sparks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);sparks.frustumCulled=false;root.add(sparks);
+    root.visible=false;scene.add(root);return {role,root,ring,wave,sparks};
+  });
+}
+const beastSparkPose=new THREE.Object3D();
+function queueBeastImpact(c) {
+  if(c.kind==='play'&&!c.bunt&&beastForRole('bat'))beastFx.impact=true;
+}
+function updateBeastEffects(now,pj,bj) {
+  if(!G||phase==='idle'){if(!beastCut.hidden||$('#stage').classList.contains('beast-burning'))resetBeastEffects();return;}
+  const sides=online?['home','away'].filter(s=>onl.beast[s]):beastActive()?['story']:[];
+  const fresh=sides.filter(s=>!beastFx.seen.has(s));
+  fresh.forEach(s=>beastFx.seen.add(s));
+  if(fresh.length){
+    beastFx.at=now;beastFx.count++;
+    beastCut.querySelector('span').textContent=online?fresh.map(teamName).join(' × '):'コタロウ — ぼくが選ぶ力';
+    beastCut.hidden=false;beastCut.className='';void beastCut.offsetWidth;beastCut.className='release';beastRoar();
+  }
+  if(now-beastFx.at>1.35)beastCut.hidden=true;
+  if(beastFx.impact){beastFx.impact=false;beastFx.impactAt=now;beastFx.impacts++;beastImpact.hidden=false;beastImpact.className='';void beastImpact.offsetWidth;beastImpact.className='strike';}
+  if(now-beastFx.impactAt>.38)beastImpact.hidden=true;
+  const roles=['pit','bat'].filter(beastForRole);
+  $('#stage').classList.toggle('beast-burning',roles.length>0);
+  if(roles.length&&!beastFx.groups)beastFx.groups=makeBeastAuras();
+  if(!beastFx.groups)return;
+  beastFx.groups.forEach(g=>{
+    const active=roles.includes(g.role);g.root.visible=active;if(!active)return;
+    const pos=g.role==='pit'?pj.pelvis:bj.J.pelvis;
+    g.root.position.set(pos.x,g.role==='pit'?MOUND_Y+.025:.025,pos.z);
+    const t=beastMotion.matches?0:now;
+    g.ring.scale.setScalar(1+.12*Math.sin(t*5));
+    const age=now-beastFx.at,shock=age>=0&&age<.65&&!beastMotion.matches;
+    g.wave.visible=shock;g.wave.scale.setScalar(1+age*5);g.wave.material.opacity=shock?.7*(1-age/.65):0;
+    for(let i=0;i<12;i++){
+      const u=(t*.6+i/12)%1,angle=i*2.399+t*.65,r=.46+u*.58;
+      beastSparkPose.position.set(Math.cos(angle)*r,.08+u*1.8,Math.sin(angle)*r);
+      beastSparkPose.rotation.set(0,angle,.2*Math.sin(i+t));beastSparkPose.scale.setScalar(.65+.6*(1-u));beastSparkPose.updateMatrix();g.sparks.setMatrixAt(i,beastSparkPose.matrix);
+    }
+    g.sparks.instanceMatrix.needsUpdate=true;
+  });
 }
 
 /* ---- 04-story-data.js ---- */
@@ -2851,7 +2973,7 @@ function activateBeast() {
   storySession.beastLeft--; storySession.beastUsed = true;
   storySession.beastUntilPA = Infinity;
   vanishArm = true;
-  showBanner('野性解放！', '試合終了まで獣化・200km/h・消える魔球∞・巨大バット', 'g'); updateGoal();
+  setHint('野性解放：試合終了まで獣化・200km/h・魔球∞・巨大バット'); updateGoal();
 }
 function storyEnd(win) {
   idle(); const st = story;
@@ -3342,7 +3464,7 @@ function setStoryHeading(el, text) {
     }
   } else el.textContent = text;
 }
-function idle() { pausedAt = 0; clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
+function idle() { resetBeastEffects(); pausedAt = 0; clearPlay(); brawl = null; hbpUntil = 0; phase = 'idle'; pendBanner = null; sign = null; timeOut = false; stealJump = 0; stealMsg = ''; cpuStealPlan = false; cpuBuntPlan = false; setHint(''); updateGoal(); }
 
 /* ---- menu / free play / story flow ---- */
 function showMenu() {
@@ -4836,6 +4958,7 @@ function updateRunAnim(now) {
 function updateBall(now, dt, pj) {
   trail.forEach(m => { m.visible = false; });
   if (play) {
+    htLine.material.color.set(play.beast ? '#ff692b' : '#f4c95a');
     const u = (now - play.start) / play.T;
     playBallPos(u, tmpV);
     ballMesh.position.copy(tmpV); ballMesh.visible = true;
@@ -4869,6 +4992,7 @@ function updateBall(now, dt, pj) {
       trailPts.push(tmpV.clone()); if (trailPts.length > trail.length) trailPts.shift();
       trailPts.forEach((p, i) => {
         const m = trail[i], u = (i + 1) / trailPts.length; m.visible = true; m.position.copy(p);
+        m.material.color.set(beastForRole('pit') ? '#ff9c42' : '#eef0e4');
         m.material.opacity = u * 0.42; m.scale.setScalar(0.45 + 0.55 * u);
       });
     }
@@ -4971,6 +5095,7 @@ function update(now, dt) {
   const bj = batterJ(now, k); poseFig(batterF, squashJ(bj.J, 0, true), shownLeft ? -Math.PI / 2 : Math.PI / 2, Math.PI);
   batG.position.copy(bj.G); batG.quaternion.setFromUnitVectors(_Y, bj.dir);
   updateStars(now, bj, pj);
+  updateBeastEffects(now, pj, bj);
   batAura.material.color.set('#ffc845'); pitAura.material.color.set('#ffc845');
   for (const role of ['pit', 'bat']) if (beastForRole(role)) {
     const aura = role === 'pit' ? pitAura : batAura, pos = role === 'pit' ? pj.pelvis : bj.J.pelvis;

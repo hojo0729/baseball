@@ -316,6 +316,7 @@ function opt(k) { if (story && !online && !match && (k === 'dice' || k === 'hap'
 let critArm = false, vanishArm = false;   // 会心の一振り / 消える魔球：次の一球で使うと決めた状態
 
 function newGame() {
+  resetBeastEffects();
   pausedAt = 0; timeOut = false;
   if (story && story.openingHR) { story.mode = mode = 'pit'; }
   if (story && story.inn) story.score = { home: 0, away: 0 };
@@ -806,6 +807,7 @@ function resolve(c, C) {
 }
 function resolveCore(c, C) {
   c = extraBaseHit(c);
+  queueBeastImpact(c);
   // Chapter 8's opening is a scripted demonstration, including balls outside the zone.
   if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
@@ -852,6 +854,7 @@ function resolveCore(c, C) {
     const sg = steal, hr = sg && sg.hitRun ? sg : null;
     settleSteal(c, now);
     play = makePlay(c, ball.tgt.clone(), now);
+    play.beast = beastForRole('bat');
     const B0 = G.bases.slice(), o0 = G.outs;
     if (c.kind === 'foul') {
       if (c.bunt && G.s === 2) { const e = strike(); t = 'スリーバント失敗' + e.slice(2); tn = tone(false); }   // two-strike foul bunt is a strikeout

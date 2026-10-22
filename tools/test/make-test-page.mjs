@@ -28,6 +28,8 @@ window.__dbg.musicState=()=>{const buf=musicNow&&musicNow.s.buffer;let peak=0,su
 window.__dbg.noDraw=()=>{renderer.render=()=>{};};
 window.__dbg.freezePitches=()=>{const launch=launchBall;launchBall=p=>{launch(p);if(ball)ball.start=now_()+3600;};renderer.render=()=>{};};
 window.__dbg.onlineBeast=()=>({active:onlineBeastState(),wanted:{...onl.beastWanted},local:beastActive()});
+window.__dbg.beastEffects=()=>({count:beastFx.count,impacts:beastFx.impacts,seen:[...beastFx.seen],cut:!beastCut.hidden,impact:!beastImpact.hidden,reduced:beastMotion.matches,audio:!!beastFx.audio,auras:beastFx.groups?beastFx.groups.filter(g=>g.root.visible).map(g=>g.role):[],groups:beastFx.groups?beastFx.groups.length:0});
+window.__dbg.holdBeastEffect=()=>{beastFx.at=Infinity;for(const a of beastCut.getAnimations({subtree:true})){a.pause();a.currentTime=200;}};
 window.__dbg.finishOnline=showOnlineOver;
 window.__dbg.receiveOnline=onMsg;
 window.__dbg.rematch=()=>({round:onl.round,finished:onl.finished,wanted:{...onl.rematch},side:onl.side,pn:onl.pn,timeLeft:onl.timeLeft,queues:[onl.queued,onl.waitRes,onl.queuedPick,...onl.queuedSub]});

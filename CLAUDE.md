@@ -15,6 +15,7 @@
   - `03-motion-bat.js` 打者の体の動き（CMU mocap 124_07 スイング・124_08 バント。`tools/make-bat-motion.py` で生成）。手とバットはスイング計画のまま
   - `03-mascot-heads.js` 提供HTMLから適合したマスコットの頭部造形。`03-players.js` 動物の選手モデル、ポーズ（打者・投手・野手）、バット
   - `04-story-data.js` 全10話の定義、`04-story-flow.js` 章進行・探索・救援・ビーストモード、`04-story-scenes.js` 2D場面演出・終幕・モデル確認、`04-story.js` 共通メニューと会話。第9話は3回表裏（延長5回）、相手 `alien`。ストーリー専用の混成打順は `STORY_BAT`。旧 `yakyu-progress` を保ち、新作は `animal-baseball-story-v2` に保存する
+  - `04-beast-effects.js` 全ビースト発動場面のカットイン・合成咆哮・持続オーラ・打撃衝撃。試合時計と判定乱数から独立。仕様は `design/beast-effects.md`。
   - `05-tactics.js` 作戦（盗塁・エンドラン・バント・スクイズ）、牽制
   - `06-online.js` オンライン対戦（Supabase Realtime）
   - `07-roster.js` 各チームの打順・投手陣（ミート/パワー、球速/制球/変化/スタミナ、左右・両打ち、★スター、投手の持ち球 pt、走力 run・捕手の肩 arm・守護神 closer・代打の切り札 ph）、疲労、継投。G.bases は空=0、走者がいれば その走者の走力(1-5)。サイコロ（奇数の回）・ハプニング（回の頭に30%：風・雨・ウェーブ・照明トラブル。オンラインは共有シードで同じものが起きる）・技（会心・消える魔球）は 01-core。どうぶつ固有スキルは `TRAIT`（チーム単位の常時効果。ストーリーでは無効。`trT('bat'|'fld')` で参照）。ギミックのオン・オフは `OPT`（localStorage 'yakyu-opts'）を `opt(k)` で読む。オンラインはホストの設定を start メッセージで共有。盗塁（CPUが投げるとき）は `stealPress` で投手モーションの k からスタートの良し悪しを決め、早すぎると牽制。ゴロでランナーがいるとき（CPU対戦・守備側のみ、オンラインは対象外）は `thrWanted`→`thrStart` でスローになり、`pickThrow`/`thrResolve`（05-tactics 末尾）で送球先を選ぶ（`play.pend` の間は nextAt=Infinity。時間切れは `stepThrowPick`）。デッドボール：見逃した球が打者の体の位置（`hbpCheck`）に来ると `c.hbp`（オンラインは結果メッセージに載る）。同じ投手が2個目で乱闘（`brawl`、投手は `G.eject`→`applyEject` で退場・交代。ストーリーは退場なし）。打者のタイムは `timeOut`（オンラインは1試合3回、'time' メッセージ）。左投手・左打者は右用の動きを x 反転して描く
