@@ -32,6 +32,15 @@ window.__dbg.beastEffects=()=>({count:beastFx.count,impacts:beastFx.impacts,seen
 window.__dbg.holdBeastEffect=()=>{beastFx.at=Infinity;for(const a of beastCut.getAnimations({subtree:true})){a.pause();a.currentTime=200;}};
 window.__dbg.finishOnline=showOnlineOver;
 window.__dbg.receiveOnline=onMsg;
+window.__dbg.review=()=>({enabled:onlineReview.enabled,left:{...onlineReview.left},active:onlineReview.active,stage:onlineReview.stage,stamp:onlineReview.stamp,callStamp:onlineReview.ctx&&onlineReview.ctx.stamp,pn:onl.pn,aspect:camera.aspect,normalAspect:W/H,call:onlineReview.ctx&&onlineReview.ctx.call,closed:onlineReview.ctx&&onlineReview.ctx.closed});
+window.__dbg.reviewSetup=(o)=>{Object.assign(G,o);onl.score={home:0,away:0};clearPlay();applyRole();};
+const reviewTickForTest=updateOnlineReview,renderForReviewTest=renderer.render.bind(renderer);let reviewHoldForTest='';
+updateOnlineReview=now=>reviewTickForTest(reviewHoldForTest&&onlineReview.active&&onlineReview.stage===reviewHoldForTest?onlineReview.at+1.5:now);
+window.__dbg.reviewHold=stage=>{reviewHoldForTest=stage;};
+window.__dbg.renderOn=()=>{renderer.render=renderForReviewTest;};
+const reviewDrawForTest=renderReviewField;let holdReviewDrawForTest=false;
+renderReviewField=()=>{if(!holdReviewDrawForTest)reviewDrawForTest();};
+window.__dbg.reviewDrawHold=v=>{holdReviewDrawForTest=v;};
 window.__dbg.rematch=()=>({round:onl.round,finished:onl.finished,wanted:{...onl.rematch},side:onl.side,pn:onl.pn,timeLeft:onl.timeLeft,queues:[onl.queued,onl.waitRes,onl.queuedPick,...onl.queuedSub]});
 window.__dbg.stadium=()=>({id:stadiumId,name:stadiumLook.name,type:stadiumLook.type,groups:stadiumGroups.size,visible:[...stadiumGroups.values()].filter(g=>g.visible).length,batches:stadiumGroup?stadiumGroup.children.length:0,sky:scene.background.getHexString(),grass:GRASS.color.getHexString(),grassMap:GRASS.map===grassTex,stands:stands.visible,towers:stadiumTowers.filter(o=>o.visible).length,stars:stadiumStars.visible,fence:FR,center:[FC.x,FC.y,FC.z],distance:fenceDist(0,-1),mound:[mound.position.x,mound.position.y,mound.position.z],lights:[key.intensity,hemi.intensity,fill.intensity,rim.intensity],geometries:renderer.info.memory.geometries,draws:renderer.info.render.calls});
 window.__dbg.stadiumShot=wide=>{storyVisual(null);clearPlay();phase=mode==='bat'?'wait':'ready';nextAt=Infinity;document.querySelector('#overlay').hidden=true;window.__hold=wide?{p:[0,48,62],l:[0,17,-112],f:62}:null;syncStadium();};

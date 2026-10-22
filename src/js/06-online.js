@@ -27,6 +27,7 @@ function applyOnlineBeast(state) {
   }
 }
 function prepareOnlinePitch(p) {
+  closeReviewOffer();
   // Only the pitcher commits pending activations. This snapshot travels with
   // the pitch, so neither device changes a ball that is already in flight.
   applyOnlineBeast(onl.beastWanted);
@@ -100,7 +101,7 @@ function showOnlineMenu() {
     overlay({ title: 'オンライン対戦', text: 'この画面ではオンライン対戦が使えません。ブラウザで ' + PAGES_URL + ' を開いてください。', b1: ['メニューへ', showMenu] });
     return;
   }
-  overlay({ title: 'オンライン対戦', text: '友達と1対1、3回まで。部屋を作った人がしばいぬズ（後攻）、入った人がパンダーズ（先攻）。',
+  overlay({ title: 'オンライン対戦', text: '友達と1対1、3回まで。部屋を作った人がしばいぬズ（後攻）、入った人がパンダーズ（先攻）。接戦判定にチャレンジは各2回、成功時は回数を維持します。',
     b1: ['部屋を作る', hostRoom], b2: ['部屋に入る', askCode], b3: ['もどる', showMenu] });
 }
 function askCode() {
@@ -129,9 +130,10 @@ function openChannel(code, onReady) {
   });
 }
 function send(type, data) {
-  if (onl.ch) onl.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ type, from: onl.me, round: onl.round }, data || {}) });
+  if (onl.ch) onl.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ type, from: onl.me, round: onl.round, reviewStamp:onlineReview.stamp }, data || {}) });
 }
 function leaveRoom() {
+  resetOnlineReview(true);
   clearTimeout(onl.joinTimer); clearTimeout(onl.goneTimer);
   if (onl.ch) {
     const ch = onl.ch; onl.ch = null;
@@ -187,7 +189,7 @@ function onSubMsg(m) {
   else if (m.type === 'ph') { pinchHit(m.t, m.slot); refreshShown(); }
 }
 function onMsg(m) {
-  if (!m || m.from === onl.me) return;
+  if (!m || typeof m.type!=='string' || m.from === onl.me) return;
   if (m.type === 'rematch-start') {
     if (online && onl.finished && onl.rematch.mine && onl.side === 'away' && m.round === onl.round + 1) restartOnline(m);
     return;
@@ -200,8 +202,11 @@ function onMsg(m) {
     return;
   }
   if (onl.finished && m.type !== 'bye') return;
+  if(m.type==='review-ready'&&m.version===1){if(!onlineReview.enabled){onlineReview.enabled=true;if(onl.side==='home')send('review-ready',{version:1});}return;}
+  if(m.type.startsWith('review-')){handleReviewMessage(m);return;}
+  if(onlineReview.enabled&&m.type!=='bye'&&m.reviewStamp!==undefined&&m.reviewStamp!==onlineReview.stamp)return;
   if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
-  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline(); } }
+  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline();if(m.review===1)send('review-ready',{version:1}); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'beast') {
@@ -215,7 +220,7 @@ function onMsg(m) {
 }
 
 /* the host picks the shared seed (used for the inning dice) and starts */
-function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; onl.opts = Object.assign({}, OPT); send('start', { seed: onl.seed, opts: onl.opts }); beginOnline(); }
+function hostStart() { onl.seed = (Math.random() * 4294967296) >>> 0; onl.opts = Object.assign({}, OPT); send('start', { seed: onl.seed, opts: onl.opts, review:1 }); beginOnline(); }
 /* a pickoff thrown by the pitcher: the batter's device runs the same play */
 function onPickMsg(m) {
   if (!online) return;
@@ -225,6 +230,7 @@ function onPickMsg(m) {
 
 /* ---- game flow ---- */
 function beginOnline() {
+  resetOnlineReview();
   onl.started = true; online = true; story = null; match = null;
   onl.finished = false; onl.rematch = { mine: false, theirs: false };
   resetOnlineBeast();
@@ -258,15 +264,15 @@ function takeQueuedPitch() {
 }
 /* batter: a pitch arrived from the other device */
 function onPitchMsg(m) {
-  if (!online) return;
+  if (!online || onlineReview.active) return;
   if (mode !== 'bat' || phase !== 'wait') { onl.queued = m; return; }   // still showing the last play, or switching sides
-  pending = m.p; phase = 'deliver'; deliverStart = now_();
+  closeReviewOffer();pending = m.p; phase = 'deliver'; deliverStart = now_();
   applyOnlineBeast(m.beast);
   setHint('');
 }
 /* pitcher: the batter's device judged the pitch */
 function onResultMsg(m) {
-  if (!online) return;
+  if (!online || onlineReview.active) return;
   if (mode !== 'pit' || phase !== 'fly' || !ball) { onl.waitRes = m; return; }
   applyRemoteResult(m);
 }
@@ -275,7 +281,7 @@ function applyRemoteResult(m) {
   const C = m.C ? V(m.C[0], m.C[1], m.C[2]) : ball.tgt.clone();
   if (m.swung) batAnim = { t0: now_() - SWING_LEAD, plan: makeSwingPlan(C) };
   if (m.c.bunt) curBunt = true;
-  withSeed(m.seed, () => resolveCore(m.c, C));
+  runOnlineResult(m.c, C, m.seed);
 }
 /* pitcher side while the ball is in the air: wait for the batter's verdict */
 function stepFlyOnline(now) {
@@ -305,6 +311,7 @@ function onlineAfterResult() {
 }
 /* the menu button during an online game: the match keeps running underneath, and leaving takes a second tap */
 function onlinePause() {
+  if(onlineReview.active)return;
   if (onl.finished) { renderOnlineOver(); return; }
   overlay({ title: 'オンライン対戦中', text: '試合は続いています。部屋番号 ' + onl.code + '　' + inningLabel() + '　しばいぬズ ' + onlineScore().home + ' - ' + onlineScore().away + ' パンダーズ',
     b1: ['試合にもどる', () => { $('#overlay').hidden = true; }], b2: ['試合をやめる', () => overlay({

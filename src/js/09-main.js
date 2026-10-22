@@ -208,7 +208,7 @@ function updateRunAnim(now) {
     const [sx, sz] = RUNPOS[i], [tx, tz] = NEXT_BASE[i];
     const d = Math.hypot(tx - sx, tz - sz), t0 = play.start + (play.tag ? play.T : 0.1);
     const speed = (play.homePlay && i === 2) ? 6.2 : 7.5;
-    const k = clamp((now - t0) * speed / d, 0, 1);
+    const k = clamp((now - t0) / (play.runDuration || d / speed), 0, 1);
     const x = lerp(sx, tx, k), z = lerp(sz, tz, k), yaw = Math.atan2(tx - sx, tz - sz);
     f.g.visible = true;
     if (i === 2 && play.homePlay && k >= 0.72) {
@@ -562,6 +562,8 @@ let pausedAt = 0;
 function frame() {
   const now = now_(), rawDt = now - lastT, dt = Math.min(0.05, rawDt); lastT = now;
   syncStadium();
+  updateOnlineReview(now);
+  if(onlineReview.active){renderReviewField();requestAnimationFrame(frame);return;}
   // The movie covers the stadium. Leave the decoder the GPU/CPU budget instead
   // of rendering an invisible 3D scene throughout the cutscene.
   if (storyMovie) { if (phase !== 'idle' && !pausedAt) pausedAt = now; requestAnimationFrame(frame); return; }

@@ -801,7 +801,7 @@ function resolve(c, C) {
   if (online && mode === 'bat') {
     const seed = (Math.random() * 4294967296) >>> 0;
     send('result', { c, C: C ? [C.x, C.y, C.z] : null, seed, swung: !!(swing && !swing.bunt), beast: onlineBeastState() });
-    return withSeed(seed, () => resolveCore(c, C));
+    return runOnlineResult(c, C || ball.tgt.clone(), seed);
   }
   return resolveCore(c, C);
 }
@@ -855,6 +855,9 @@ function resolveCore(c, C) {
     settleSteal(c, now);
     play = makePlay(c, ball.tgt.clone(), now);
     play.beast = beastForRole('bat');
+    if(onlineReview.replaying&&onlineReview.ctx.call.kind==='first'){
+      const safe=onlineReview.ctx.call.truth;c={...c,bases:safe?1:0,res:safe?'ゴロヒット':'ゴロアウト'};
+    }
     const B0 = G.bases.slice(), o0 = G.outs;
     if (c.kind === 'foul') {
       if (c.bunt && G.s === 2) { const e = strike(); t = 'スリーバント失敗' + e.slice(2); tn = tone(false); }   // two-strike foul bunt is a strikeout
@@ -873,7 +876,7 @@ function resolveCore(c, C) {
         if (hr && c.bases === 1 && B0[0] && G.bases[1] && !G.bases[2]) { G.bases[2] = G.bases[1]; G.bases[1] = 0; t += '（エンドランで1塁から3塁へ）'; }
       }
       else {
-        if (c.res !== 'ポップフライ' && Math.random() < (play.grounder ? 0.07 : 0.05) * (hapOn('rain') ? 2.2 : 1)) {
+        if (!(onlineReview.replaying&&onlineReview.ctx.call.kind==='first') && c.res !== 'ポップフライ' && Math.random() < (play.grounder ? 0.07 : 0.05) * (hapOn('rain') ? 2.2 : 1)) {
           t = advance(1, 'エラー！'); G.hits--; play.err = true; play.caught = false; play.endY = BALL_R; play.fr = 1;
           play.roll = play.hd.clone().multiplyScalar(play.grounder ? 7 : 3); play.run = B0;
         }
@@ -887,9 +890,14 @@ function resolveCore(c, C) {
           const rs = B0[2] || 3, arm = ROSTER[teamsNow().fld].arm || 3;
           // 外野からの返球と3塁走者の競争：距離・走力・強肩で判定
           const safeProb = clamp(0.72 + (play.dist - 65) * 0.012 + (rs - 3) * 0.1 - (arm - 3) * 0.12, 0.15, 0.95);
-          const safe = Math.random() < safeProb;
-          play.run = [0, 0, 1]; play.tag = true; play.homePlay = true; play.homeSafe = safe;
+          const roll = Math.random();let safe = roll < safeProb;
+          play.run = [0, 0, 1]; play.tag = true; play.homePlay = true;
           addThrows(play, [4]);
+          if(online&&onlineReview.enabled){
+            const tag=play.throwEnd,run=tag+(roll-safeProb)*.7;
+            safe=judgeOnlineRace('home',run,tag,safe,4);play.runDuration=run;
+          }
+          play.homeSafe = safe;
           if (safe) {
             t = sacFly();
             cheer = mode === 'bat' ? 1.0 : 0.2;
@@ -924,6 +932,7 @@ function resolveCore(c, C) {
     if (play.pend) nextAt = Infinity;                          // 送球先が決まるまで次へ進まない
   }
   if (!(play && play.pend)) queueBanner(now + delay, t, sub, tn, cheer);
+  finishFirstBaseReview(c);
   setHint('');
 }
 function stepFly(now) {

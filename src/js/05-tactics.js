@@ -99,10 +99,14 @@ function settleSteal(c, now) {
     + (rs - 3) * 0.08 - (arm - 3) * 0.06 + (ly > 0.6 ? 0.04 : ly < -0.6 ? -0.03 : 0)
     - (s.run.length > 1 ? 0.05 : 0) - (s.hitRun ? 0.08 : 0) + (trT('bat') === 'neko' ? 0.1 : 0) + (s.jump || 0);
   p = clamp(p, 0.15, 0.95);
-  const safe = Math.random() < p, tgt = s.lead + 2;              // first -> 2B, second -> 3B
+  const roll = Math.random(), tgt = s.lead + 2;let safe = roll < p; // first -> 2B, second -> 3B
   const from = V(0, 1.2, 0.8), to = BASE_PT[tgt], t0 = now + 0.15, dur = from.distanceTo(to) / 33;
   s.throw = { from, to, t0, dur };
   s.arrive = t0 + dur; s.runEnd = s.arrive + (safe ? -0.25 : 0.35);
+  if(online&&onlineReview.enabled){
+    const tag=.15+dur,run=tag+(roll-p)*.8;
+    safe=judgeOnlineRace('steal',run,tag,safe,tgt);s.runEnd=now+run;
+  }
   sfx.slide(s.arrive - now - 0.45);
   stealAnim = s;
   const nb = G.bases.slice(), B0 = G.bases.slice();
