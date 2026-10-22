@@ -601,12 +601,16 @@ function contact(dt, d, vy, speed, boost, crit, evAdd) {
   dt /= bm; d /= bm;
   const qt = 1 - Math.pow(Math.min(1, Math.abs(dt) / 0.15), 1.5);
   const qd = 1 - Math.min(1, d / 0.8);
-  const q = Math.sqrt(Math.max(0, qt) * Math.max(0, qd));
+  // Reaching beyond either edge weakens contact even with perfect aim/timing.
+  // Shared by the player (including online) and CPU; pitches in the zone are unchanged.
+  const T = ball && ball.T;
+  const reach = T ? Math.hypot(Math.max(0, Math.abs(T[0]) - 1), Math.max(0, Math.abs(T[1]) - 1)) : 0;
+  const q = Math.sqrt(Math.max(0, qt) * Math.max(0, qd)) * Math.exp(-0.9 * reach);
   if (q < 0.18) return { kind: 'miss', q };
   let dir = clamp(dt / 0.12 * 38 + gauss() * 6, -75, 75);
   if (BT.side === 'L') dir = -dir;                         // a left-handed hitter pulls to right field
   const launch = 12 - vy * 40 + gauss() * 3;   // 現実どおり：ボールの下を叩くと上がる（フライ）、上を叩くとゴロ
-  const ev = 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (crit ? 30 : 0) + (evAdd || 0) + (BT.p - 3) * 9;
+  const ev = Math.max(30, 70 + 100 * q + (speed - 110) * 0.25 + (boost ? 18 : 0) + (crit ? 30 : 0) + (evAdd || 0) + (BT.p - 3) * 9 - reach * 15);
   if (q < 0.32 || Math.abs(dir) > 45) {
     if (Math.abs(dir) <= 45) dir = (dir < 0 ? -1 : 1) * rnd(50, 80);
     return { kind: 'foul', q, dir, ev, launch, dist: rnd(25, 70) };
@@ -941,7 +945,7 @@ function stepFly(now) {
   else {
     const k = ball.cpu;
     if (now >= arr + 0.02 + (k.swing ? Math.max(0, k.dt) : 0)) {
-      if (k.swing) resolve(curBunt ? buntContact(k.d * 0.8, k.vy * 0.3) : contact(k.dt, k.d, k.vy, ball.speed, false, false, cpuLv().pow - Math.max(0, Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) - 1) * 45), ball.tgt);
+      if (k.swing) resolve(curBunt ? buntContact(k.d * 0.8, k.vy * 0.3) : contact(k.dt, k.d, k.vy, ball.speed, false, false, cpuLv().pow), ball.tgt);
       else resolve({ kind: 'take', hbp: hbpCheck() });
     }
   }

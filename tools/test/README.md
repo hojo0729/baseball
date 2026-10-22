@@ -17,6 +17,7 @@
     node tools/test/smoke.mjs                # 起動スモーク＆全モード（メニュー・ストーリー全10話・CPU・練習・オンライン・整合・リセット漏れ）テスト
     node tools/test/thr.js                   # 送球先の選択（満塁・1塁・3塁など）
     node tools/test/triples.mjs              # 深い左右中間の三塁打、走力・外野の肩、走者得点、単打/HRとの分離（--fullにも含む）
+    node tools/test/ball-contact.mjs          # ボール球の距離別ヒット低下・上下左右・CPU・ゾーン内維持（--fullにも含む）
     node tools/test/hbp.js                   # デッドボール→乱闘→投手交代（スクショ bw-*.png）
     node tools/test/faces2.js                # 顔の表情の確認画像（f2-*.png）
     node tools/test/ingame.js                # 守備側の通常画面とホームラン（ig-*.png）

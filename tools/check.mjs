@@ -109,6 +109,7 @@ if (runNode('tools/test/smoke.mjs', 'smoke.mjs')) {
 // 7. --full 指定時は thr.js / triples.mjs / hbp.js / tac7.js / online-beast.mjs も実行
 if (full && ok) {
   for (const [script, name] of [
+    ['tools/test/ball-contact.mjs', 'ball-contact.mjs'],
     ['tools/test/thr.js', 'thr.js'],
     ['tools/test/triples.mjs', 'triples.mjs'],
     ['tools/test/hbp.js', 'hbp.js'],

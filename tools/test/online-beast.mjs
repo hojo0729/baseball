@@ -25,7 +25,8 @@ try {
   async function finish(pitcher, batter, pa) {
     const immediate = await batter.evaluate(() => {
       const d = window.__dbg; if (d.phase === 'deliver') d.ff();
-      d.hit({ kind: 'play', q: .5, dir: 0, ev: 110, launch: 32, dist: 65, res: 'フライアウト', bases: 0 });
+      // This test needs a guaranteed out: ordinary fly balls can become random errors.
+      d.hit({ kind: 'play', q: .5, dir: 0, ev: 90, launch: 65, dist: 20, res: 'ポップフライ', bases: 0 });
       return { giant: d.beastView().giant, inning: d.G.inning };
     });
     if (pa === 3) { assert.equal(immediate.inning, 2); assert.equal(immediate.giant, false, 'Keep the old batting team through the third-out animation'); }
