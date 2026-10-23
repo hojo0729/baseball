@@ -24,7 +24,7 @@
     node tools/test/ui.js                    # メニュー〜試合開始〜ホームラン〜守備のスクショ
     node tools/test/tac7.js                  # オンライン2タブの同期確認（SAME/DIFF）
     node tools/test/online-rematch.mjs        # 同意・先後交代・初期化・前試合の通信排除・再戦後の投球同期・退出
-    node tools/test/online-review.mjs         # 一塁/盗塁/本塁の精密再判定・3Dリプレイ3サイズ・3アウト/得点訂正・失敗回数・遅延投球取消・再戦初期化
+    node tools/test/online-review.mjs         # 一塁/盗塁/本塁の精密再判定・3Dリプレイ3サイズ・3アウト/得点訂正・任意の投球チャレンジ/三振/四球/共通回数・遅延投球取消・再戦初期化
     node tools/test/beast-effects.mjs         # 獣化カットイン3サイズ・軽減設定・第8話の実覚醒・打撃衝撃・終了時解除
     node tools/test/stadium.mjs              # 10章の球場・覚醒照明・寸法保持・背景再利用・通常球場復帰・3画面サイズ
 

@@ -837,6 +837,7 @@ function resolveCore(c, C) {
     if (st && st.ended) { t = st.label; tn = tone(false); sub = info; }
     else {
       if (c.kind === 'take') {
+        recordOnlinePitch(inZone);
         if (inZone) { t = '見逃しストライク'; const e = strike(); if (e) { t = '見逃し三振' + e.slice(2); tn = tone(false); } }
         else { t = 'ボール'; const e = ballCount(); if (e) { t = e; tn = tone(true); } }
       } else { t = '空振り'; const e = strike(); if (e) { t = '空振り三振' + e.slice(2); tn = tone(false); } }

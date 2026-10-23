@@ -32,11 +32,13 @@ window.__dbg.beastEffects=()=>({count:beastFx.count,impacts:beastFx.impacts,seen
 window.__dbg.holdBeastEffect=()=>{beastFx.at=Infinity;for(const a of beastCut.getAnimations({subtree:true})){a.pause();a.currentTime=200;}};
 window.__dbg.finishOnline=showOnlineOver;
 window.__dbg.receiveOnline=onMsg;
-window.__dbg.review=()=>({enabled:onlineReview.enabled,left:{...onlineReview.left},active:onlineReview.active,stage:onlineReview.stage,stamp:onlineReview.stamp,callStamp:onlineReview.ctx&&onlineReview.ctx.stamp,pn:onl.pn,aspect:camera.aspect,normalAspect:W/H,call:onlineReview.ctx&&onlineReview.ctx.call,closed:onlineReview.ctx&&onlineReview.ctx.closed});
+window.__dbg.review=()=>({enabled:onlineReview.enabled,pitchEnabled:onlineReview.pitchEnabled,left:{...onlineReview.left},active:onlineReview.active,stage:onlineReview.stage,stamp:onlineReview.stamp,callStamp:onlineReview.ctx&&onlineReview.ctx.stamp,pn:onl.pn,aspect:camera.aspect,normalAspect:W/H,call:onlineReview.ctx&&onlineReview.ctx.call,pitchCall:onlineReview.ctx&&onlineReview.ctx.pitchCall,closed:onlineReview.ctx&&onlineReview.ctx.closed});
 window.__dbg.reviewSetup=(o)=>{Object.assign(G,o);onl.score={home:0,away:0};clearPlay();applyRole();};
 const reviewTickForTest=updateOnlineReview,renderForReviewTest=renderer.render.bind(renderer);let reviewHoldForTest='';
 updateOnlineReview=now=>reviewTickForTest(reviewHoldForTest&&onlineReview.active&&onlineReview.stage===reviewHoldForTest?onlineReview.at+1.5:now);
 window.__dbg.reviewHold=stage=>{reviewHoldForTest=stage;};
+window.__dbg.reviewOfferHold=()=>{if(onlineReview.ctx){onlineReview.ctx.until=now_()+3600;nextAt=onlineReview.ctx.until;}};
+window.__dbg.reviewOfferExpire=()=>{if(onlineReview.ctx){onlineReview.ctx.until=now_()-1;nextAt=Infinity;}};
 window.__dbg.renderOn=()=>{renderer.render=renderForReviewTest;};
 const reviewDrawForTest=renderReviewField;let holdReviewDrawForTest=false;
 renderReviewField=()=>{if(!holdReviewDrawForTest)reviewDrawForTest();};
