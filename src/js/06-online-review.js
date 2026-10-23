@@ -1,8 +1,9 @@
-/* Store the race once. A challenge replays these times, never rolls new luck. */
-const onlineReview={enabled:false,pitchEnabled:false,left:{home:2,away:2},ctx:null,records:new Map(),stamp:0,active:false,replaying:false,stage:'',at:0,asked:false};
+/* Store race evidence and the shared borderline-pitch decision once per play. */
+const onlineReview={enabled:false,pitchEnabled:false,pitchRules:false,skipEnabled:false,left:{home:2,away:2},ctx:null,records:new Map(),stamp:0,active:false,replaying:false,stage:'',at:0,asked:false};
 const reviewButton=document.createElement('button');reviewButton.id='review-request';reviewButton.hidden=true;$('#stage').append(reviewButton);
 const pitchReviewButton=document.createElement('button');pitchReviewButton.id='pitch-review-request';pitchReviewButton.hidden=true;$('#stage').append(pitchReviewButton);
 const reviewActions=document.createElement('div');reviewActions.id='review-actions';$('#stage').append(reviewActions);reviewActions.append(reviewButton,pitchReviewButton);
+const reviewSkipButton=document.createElement('button');reviewSkipButton.id='review-skip';reviewSkipButton.textContent='チャレンジせず次へ';reviewSkipButton.hidden=true;reviewActions.append(reviewSkipButton);
 const reviewPanel=document.createElement('section');reviewPanel.id='review-panel';reviewPanel.hidden=true;reviewPanel.setAttribute('role','dialog');reviewPanel.setAttribute('aria-modal','true');reviewPanel.setAttribute('aria-label','リプレイ検証');
 reviewPanel.innerHTML='<small>REPLAY REVIEW</small><h2>リプレイ検証中</h2><p class="review-original"></p><svg viewBox="0 0 640 200" aria-label="走者と送球の到達時刻を再現"><path d="M40 120H600" stroke="#718d83" stroke-width="3"/><path d="M320 40V150" stroke="#ffe4a0" stroke-dasharray="5 7"/><rect x="302" y="102" width="36" height="36" fill="#fff5cf" transform="rotate(45 320 120)"/><circle class="review-runner" cx="40" cy="95" r="15" fill="#6fe3d4"/><circle class="review-ball" cx="600" cy="145" r="10" fill="#ffb15c"/><text x="40" y="45" fill="#6fe3d4" font-size="21">走者</text><text x="460" y="45" fill="#ffb15c" font-size="21">送球・タッチ</text><text class="review-clock" x="320" y="190" text-anchor="middle" fill="#fff5cf" font-size="23"></text></svg><p class="review-detail"></p><p class="review-status">記録した到達時刻を照合しています</p><button class="go2">対戦をやめる</button>';
 $('#stage').append(reviewPanel);reviewPanel.querySelector('button').onclick=()=>showMenu();
@@ -57,11 +58,11 @@ function renderReviewField(){
 }
 function resetOnlineReview(disconnect=false){
   restoreReviewField();
-  if(disconnect){onlineReview.enabled=false;onlineReview.pitchEnabled=false;}
+  if(disconnect){onlineReview.enabled=false;onlineReview.pitchEnabled=false;onlineReview.pitchRules=false;onlineReview.skipEnabled=false;}
   onlineReview.left={home:2,away:2};onlineReview.ctx=null;onlineReview.records.clear();onlineReview.stamp=0;onlineReview.active=false;onlineReview.asked=false;onlineReview.stage='';
-  reviewButton.hidden=pitchReviewButton.hidden=reviewPanel.hidden=true;
+  reviewButton.hidden=pitchReviewButton.hidden=reviewSkipButton.hidden=reviewPanel.hidden=true;
 }
-function closeReviewOffer(){if(onlineReview.active)return;if(onlineReview.ctx)onlineReview.ctx.offerClosed=true;onlineReview.asked=false;reviewButton.hidden=pitchReviewButton.hidden=true;}
+function closeReviewOffer(){if(onlineReview.active)return;if(onlineReview.ctx)onlineReview.ctx.offerClosed=true;onlineReview.asked=false;reviewButton.hidden=pitchReviewButton.hidden=reviewSkipButton.hidden=true;}
 function runOnlineResult(c,C,seed){
   closeReviewOffer();
   const ctx={pn:onl.pn,stamp:onlineReview.stamp,round:onl.round,seed,c:structuredClone(c),C:C.clone(),G:structuredClone(G),score:{...onl.score},steal:steal?structuredClone(steal):null,curBunt,ball,half:onl.half,mode,call:null,closed:false,offerClosed:false};
@@ -70,6 +71,7 @@ function runOnlineResult(c,C,seed){
   withSeed(seed,()=>resolveCore(c,C));
   ctx.racePlay=play;
   ctx.after=structuredClone(G);ctx.afterScore={...onl.score};
+  ctx.naturalNextAt=nextAt;ctx.declined={home:false,away:false};
   if([ctx.call,ctx.pitchCall].some(call=>call&&onlineReview.left[call.eligible]>0)){ctx.openAt=pendBanner?pendBanner.at:now_();ctx.until=Math.max(nextAt,ctx.openAt+5);nextAt=ctx.until;}
   else ctx.call=null;
 }
@@ -87,7 +89,13 @@ function recordOnlineRace(kind,run,tag,initial,base){
 function recordOnlinePitch(initial){
   const ctx=onlineReview.ctx;if(!online||!onlineReview.pitchEnabled||!ctx||onlineReview.replaying)return;
   const [tx,ty]=ball.T,bat=ctx.half%2?'away':'home';
-  ctx.pitchCall={kind:'pitch',tx,ty,initial,truth:Math.max(Math.abs(tx),Math.abs(ty))<=1,eligible:initial?bat:(bat==='home'?'away':'home')};
+  const decision=onlineReview.pitchRules?pitchReviewDecision(ctx.seed,tx,ty,initial):{close:false,truth:initial};
+  ctx.pitchCall={kind:'pitch',tx,ty,initial,...decision,eligible:initial?bat:(bat==='home'?'away':'home')};
+}
+function pitchReviewDecision(seed,tx,ty,initial){
+  const close=Math.abs(Math.max(Math.abs(tx),Math.abs(ty))-1)<=.1+1e-9;
+  const flip=close&&withSeed((seed^0x5eeda11)>>>0,()=>Math.random()<.5);
+  return {close,truth:flip?!initial:initial};
 }
 function judgeOnlineRace(kind,run,tag,fallback,base){
   if(!online||!onlineReview.enabled)return fallback;
@@ -105,7 +113,23 @@ function finishFirstBaseReview(c){
 }
 function curBatterFromReview(ctx){const current=G;try{G=ctx.G;return curBatter();}finally{G=current;}}
 function requestedReviewCall(x,kind){return x&&(kind==='pitch'?x.pitchCall:x.call);}
-function canRequestReview(kind){const x=onlineReview.ctx,call=requestedReviewCall(x,kind);return !!(online&&x&&call&&!x.closed&&!x.offerClosed&&!onlineReview.active&&!onlineReview.asked&&phase==='result'&&onl.pn===x.pn&&now_()>=x.openAt&&now_()<x.until&&call.eligible===onl.side&&onlineReview.left[onl.side]>0);}
+function canRequestReview(kind){const x=onlineReview.ctx,call=requestedReviewCall(x,kind);return !!(online&&x&&call&&!x.closed&&!x.offerClosed&&!x.declined[onl.side]&&!onlineReview.active&&!onlineReview.asked&&phase==='result'&&onl.pn===x.pn&&now_()>=x.openAt&&now_()<x.until&&call.eligible===onl.side&&onlineReview.left[onl.side]>0);}
+function maySkipReview(x,side){return x&&[x.call,x.pitchCall].some(call=>call&&call.eligible===side&&onlineReview.left[side]>0)&&!x.declined[side];}
+reviewSkipButton.onclick=()=>{
+  if(!onlineReview.skipEnabled||(!canRequestReview()&&!canRequestReview('pitch')))return;
+  const x=onlineReview.ctx,m={pn:x.pn,callStamp:x.stamp,side:onl.side};onlineReview.asked=true;
+  if(onl.side==='home')acceptReviewSkip(m);else send('review-skip-request',m);
+};
+function acceptReviewSkip(m){
+  const x=onlineReview.ctx;
+  if(onl.side!=='home'||!onlineReview.skipEnabled||!x||x.closed||x.offerClosed||onlineReview.active||phase!=='result'||now_()>x.until||m.pn!==x.pn||m.callStamp!==x.stamp||!['home','away'].includes(m.side)||!maySkipReview(x,m.side)){send('review-denied',{pn:m.pn,callStamp:m.callStamp});onlineReview.asked=false;return;}
+  send('review-skip',{pn:m.pn,callStamp:m.callStamp,side:m.side});applyReviewSkip(m);
+}
+function applyReviewSkip(m){
+  const x=onlineReview.ctx;if(!onlineReview.skipEnabled||!x||x.pn!==m.pn||onl.pn!==x.pn||x.stamp!==m.callStamp||x.closed||x.offerClosed||phase!=='result'||onlineReview.active||!maySkipReview(x,m.side))return;
+  x.declined[m.side]=true;onlineReview.asked=false;
+  if(!['home','away'].some(side=>maySkipReview(x,side))){x.offerClosed=true;x.until=now_();nextAt=Math.max(now_(),x.naturalNextAt);}
+}
 function requestOnlineReview(kind){
   if(!canRequestReview(kind))return;
   const x=onlineReview.ctx;onlineReview.asked=true;
@@ -115,17 +139,17 @@ function requestOnlineReview(kind){
 reviewButton.onclick=()=>requestOnlineReview();pitchReviewButton.onclick=()=>requestOnlineReview('pitch');
 function acceptOnlineReview(m){
   const x=onlineReview.ctx,call=requestedReviewCall(x,m.kind);
-  if(onl.side!=='home'||!x||!call||x.closed||x.offerClosed||onlineReview.active||phase!=='result'||now_()>x.until||m.pn!==x.pn||m.callStamp!==x.stamp||onl.pn!==x.pn||m.side!==call.eligible||onlineReview.left[m.side]<=0){send('review-denied',{pn:m.pn,callStamp:m.callStamp});onlineReview.asked=false;return;}
+  if(onl.side!=='home'||!x||!call||x.closed||x.offerClosed||x.declined[m.side]||onlineReview.active||phase!=='result'||now_()>x.until||m.pn!==x.pn||m.callStamp!==x.stamp||onl.pn!==x.pn||m.side!==call.eligible||onlineReview.left[m.side]<=0){send('review-denied',{pn:m.pn,callStamp:m.callStamp});onlineReview.asked=false;return;}
   send('review-open',{pn:x.pn,callStamp:x.stamp,side:m.side,kind:m.kind});openOnlineReview(m);
 }
 function openOnlineReview(m){
-  const x=onlineReview.records.get(m.callStamp+':'+m.pn),call=requestedReviewCall(x,m.kind);if(!x||!call||x.closed||m.callStamp!==onlineReview.stamp||onlineReview.active||m.side!==call.eligible)return;
+  const x=onlineReview.records.get(m.callStamp+':'+m.pn),call=requestedReviewCall(x,m.kind);if(!x||!call||x.closed||x.declined[m.side]||m.callStamp!==onlineReview.stamp||onlineReview.active||m.side!==call.eligible)return;
   x.call=call;
   onlineReview.ctx=x;onlineReview.stamp=x.stamp+1;onl.pn=x.pn;
   pending=null;onl.queued=null;onl.waitRes=null;onl.queuedPick=null;onl.queuedSub=[];
   G=structuredClone(x.after);onl.score={...x.afterScore};mode=x.mode;onl.half=x.half;ball=x.ball;
   onlineReview.active=true;onlineReview.asked=false;onlineReview.stage='replay';onlineReview.at=now_();x.challenger=m.side;
-  phase='review';nextAt=Infinity;reviewButton.hidden=pitchReviewButton.hidden=true;reviewPanel.hidden=false;$('#overlay').hidden=true;
+  phase='review';nextAt=Infinity;reviewButton.hidden=pitchReviewButton.hidden=reviewSkipButton.hidden=true;reviewPanel.hidden=false;$('#overlay').hidden=true;
   reviewPanel.querySelector('svg').style.display=call.kind==='pitch'?'none':'';
   reviewCanvas.setAttribute('aria-label',call.kind==='pitch'?'ストライクゾーンと保存した投球位置':'ベース際の走者と送球をスロー再現');
   reviewPanel.tabIndex=-1;reviewPanel.focus({preventScroll:true});
@@ -147,7 +171,7 @@ function applyReviewVerdict(){
   x.closed=true;phase='review';nextAt=Infinity;pendBanner=null;hideBanner();hud();
   onlineReview.stage='verdict';onlineReview.at=now_();
   reviewPanel.querySelector('h2').textContent=changed?'判定変更！':'判定通り';
-  reviewPanel.querySelector('.review-detail').textContent=x.call.kind==='pitch'?(x.call.truth?'ストライク':'ボール')+' — 保存したホーム通過位置で確認':(x.call.truth?'セーフ':'アウト')+' — '+(Math.abs(x.call.tag-x.call.run)*1000).toFixed(0)+'ms差\n走者 '+x.call.run.toFixed(3)+'秒 ／ 送球・タッチ '+x.call.tag.toFixed(3)+'秒';
+  reviewPanel.querySelector('.review-detail').textContent=x.call.kind==='pitch'?(x.call.truth?'ストライク':'ボール')+(x.call.close?' — 際どいコースの再判定':' — 保存したホーム通過位置で確認'):(x.call.truth?'セーフ':'アウト')+' — '+(Math.abs(x.call.tag-x.call.run)*1000).toFixed(0)+'ms差\n走者 '+x.call.run.toFixed(3)+'秒 ／ 送球・タッチ '+x.call.tag.toFixed(3)+'秒';
   reviewPanel.querySelector('.review-status').textContent=changed?'チャレンジ成功。回数は減りません。':'チャレンジ失敗。残り'+onlineReview.left[x.challenger]+'回。';
 }
 function resumeOnlineReview(){
@@ -158,6 +182,8 @@ function resumeOnlineReview(){
 function handleReviewMessage(m){
   if(!online||!onlineReview.enabled)return;
   if(m.type==='review-request'&&onl.side==='home'&&m.side==='away')acceptOnlineReview(m);
+  else if(m.type==='review-skip-request'&&onl.side==='home'&&m.side==='away')acceptReviewSkip(m);
+  else if(m.type==='review-skip'&&onl.side==='away')applyReviewSkip(m);
   else if(m.type==='review-open'&&onl.side==='away')openOnlineReview(m);
   else if(m.type==='review-verdict'&&onl.side==='away'&&onlineReview.ctx&&m.pn===onlineReview.ctx.pn&&m.callStamp===onlineReview.ctx.stamp)applyReviewVerdict();
   else if(m.type==='review-resume'&&onl.side==='away'&&onlineReview.ctx&&m.pn===onlineReview.ctx.pn&&m.callStamp===onlineReview.ctx.stamp)resumeOnlineReview();
@@ -168,6 +194,7 @@ function updateOnlineReview(now){
   const x=onlineReview.ctx;
   reviewButton.hidden=!canRequestReview();
   pitchReviewButton.hidden=!canRequestReview('pitch');
+  reviewSkipButton.hidden=!onlineReview.skipEnabled||(reviewButton.hidden&&pitchReviewButton.hidden);
   if(!pitchReviewButton.hidden)pitchReviewButton.textContent='投球チャレンジ 残り'+onlineReview.left[onl.side]+'回　'+Math.max(1,Math.ceil(x.until-now))+'秒';
   if(!reviewButton.hidden)reviewButton.textContent='チャレンジ 残り'+onlineReview.left[onl.side]+'回　'+Math.max(1,Math.ceil(x.until-now))+'秒';
   if(!onlineReview.active||!x)return;

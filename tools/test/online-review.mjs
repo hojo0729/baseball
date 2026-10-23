@@ -8,7 +8,7 @@ try{
   ctx.setDefaultTimeout(30000);
   await ctx.addInitScript(()=>{localStorage.setItem('yakyu-bgm','0');localStorage.setItem('yakyu-opts',JSON.stringify({dice:false,hap:false}));});
   const A=await ctx.newPage(),B=await ctx.newPage();
-  for(const p of [A,B]){attachErrors(p,errors);await p.goto(url);await p.waitForFunction(()=>window.__dbg);await p.evaluate(()=>{__dbg.optOff();__dbg.freezePitches();});}
+  for(const p of [A,B]){attachErrors(p,errors);await p.goto(url);await p.waitForFunction(()=>window.__dbg);await p.evaluate(()=>{__dbg.optOff();__dbg.freezePitches();__dbg.freezeReviewOffers();});}
   await A.click('#go3');await A.click('#goBtn');const code=(await A.textContent('#ot')).replace(/\D/g,'');
   await B.click('#go3');await B.click('#go2');await B.fill('#codeIn',code);await B.click('#goBtn');
   for(const p of [A,B])await p.waitForFunction(()=>__dbg.online&&__dbg.review().enabled);
@@ -16,13 +16,15 @@ try{
   let checkedReplay=false;
   async function setup(o={}){for(const p of [A,B])await p.evaluate(o=>__dbg.reviewSetup({inning:1,outs:0,b:0,s:0,runs:0,bases:[3,0,0],over:false,...o}),o);}
   async function pitch(c,seed,sg=null,tx=.2,ty=.1){
-    if(sg){await B.click(`[data-k="${sg}"]`);await A.waitForFunction(()=>__dbg.sig().oppSign==='steal');}
-    await A.evaluate(({tx,ty})=>{__dbg.throwP('str',140,tx,ty);__dbg.ff();},{tx,ty});
-    await B.waitForFunction(()=>['deliver','fly'].includes(__dbg.phase));
-    await B.evaluate(({c,seed})=>{if(__dbg.phase==='deliver')__dbg.ff();__dbg.hit(c,()=>seed/4294967296);},{c,seed});
+    const pit=await A.evaluate(()=>__dbg.mode==='pit')?A:B,bat=pit===A?B:A;
+    if(sg){await bat.click(`[data-k="${sg}"]`);await pit.waitForFunction(()=>__dbg.sig().oppSign==='steal');}
+    await pit.evaluate(({tx,ty})=>{__dbg.throwP('str',140,tx,ty);__dbg.ff();},{tx,ty});
+    await bat.waitForFunction(()=>['deliver','fly'].includes(__dbg.phase));
+    await bat.evaluate(({c,seed})=>{if(__dbg.phase==='deliver')__dbg.ff();__dbg.hit(c,()=>seed/4294967296);},{c,seed});
     for(const p of [A,B])await p.waitForFunction(()=>__dbg.phase==='result');
     assert.deepEqual((await state(A)).g,(await state(B)).g);
     assert.deepEqual((await state(A)).r.call,(await state(B)).r.call);
+    assert.deepEqual((await state(A)).r.pitchCall,(await state(B)).r.pitchCall);
   }
   async function review(who,changed,advancePeer=null,kind=null){
     console.log('Review:',kind||'race',changed?'overturn':'uphold');
@@ -38,7 +40,7 @@ try{
       await who.waitForFunction(()=>document.querySelector('.review-field').width>0);
       await who.screenshot({path:'tools/test/pitch-review.png'});
     }
-    if(!checkedReplay){
+    if(!checkedReplay&&kind!=='pitch'){
       await who.evaluate(()=>__dbg.renderOn());
       await who.waitForFunction(()=>{const c=document.querySelector('.review-field'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let lo=255,hi=0;for(let i=0;i<d.length;i+=40){lo=Math.min(lo,d[i]);hi=Math.max(hi,d[i]);}return hi-lo>30;});
       for(const [width,height] of [[320,568],[390,844],[1280,800]]){
@@ -47,7 +49,7 @@ try{
         await who.evaluate(()=>__dbg.reviewDrawHold(true));await who.screenshot({path:`tools/test/online-review-${width}.png`});
         assert.equal(await who.locator('#review-panel h2').evaluate(el=>el.getBoundingClientRect().top>=0),true);
       }
-      await who.evaluate(()=>__dbg.noDraw());checkedReplay=true;
+      await who.evaluate(()=>{__dbg.reviewDrawHold(false);__dbg.noDraw();});checkedReplay=true;
     }
     for(const p of [A,B])await p.evaluate(()=>__dbg.reviewHold('verdict'));
     for(const p of [A,B])await p.waitForFunction(()=>__dbg.review().stage==='verdict');
@@ -63,6 +65,8 @@ try{
   }
   // The umpire calls a rounded tie safe; precise stored timing proves the out.
   const overturned=seedFor(r=>r>.50&&r<.55),upheld=seedFor(r=>r>.43&&r<.46);
+  const pitchOnly=process.argv.includes('--pitch-only');
+  if(!pitchOnly){
   await setup({outs:2,runs:2});await pitch({kind:'take'},overturned,'steal');
   assert.equal((await state(A)).r.call.initial,true);assert.equal((await state(A)).r.call.truth,false);
   assert.equal((await state(A)).g.inning,1);
@@ -118,12 +122,27 @@ try{
   for(const p of [A,B])await p.waitForFunction(()=>__dbg.rematch().round===1);
   assert.deepEqual((await state(A)).r.left,{home:2,away:2});
   await A.evaluate(()=>__dbg.receiveOnline({type:'review-open',round:0,pn:1,side:'home',from:'old'}));assert.equal((await state(A)).r.active,false);
+  }
   // Any taken pitch can be reviewed, including clear calls, strike three and ball four.
   console.log('Checking voluntary pitch challenges');
-  for(const p of [A,B])await p.evaluate(()=>{__dbg.G.over=true;__dbg.finishOnline();});
+  if(!pitchOnly){for(const p of [A,B])await p.evaluate(()=>{__dbg.G.over=true;__dbg.finishOnline();});
   await Promise.all([A.click('#goBtn'),B.click('#goBtn')]);
-  for(const p of [A,B])await p.waitForFunction(()=>__dbg.rematch().round===2);
+  for(const p of [A,B])await p.waitForFunction(()=>__dbg.rematch().round===2);}
   assert.equal((await state(A)).r.pitchEnabled,true);
+  assert.equal((await state(A)).r.pitchRules,true);assert.equal((await state(A)).r.skipEnabled,true);
+  const sample=await A.evaluate(()=>__dbg.pitchReviewSample());
+  for(const s of sample){const close=Math.abs(Math.max(Math.abs(s.tx),Math.abs(s.ty))-1)<=.100000001;assert.ok(close?s.flips>4800&&s.flips<5200:s.flips===0,JSON.stringify(s));}
+  console.log('Borderline samples',JSON.stringify(sample));
+  // Skipping one side cannot remove the other side's right to request review.
+  await setup();await pitch({kind:'take'},upheld,'steal');
+  for(const p of [A,B])await p.evaluate(()=>__dbg.reviewOfferHold());
+  await A.waitForFunction(()=>!document.querySelector('#review-skip').hidden);await A.screenshot({path:'tools/test/review-skip-390.png'});await A.click('#review-skip');
+  for(const p of [A,B])await p.waitForFunction(()=>__dbg.review().declined.home);
+  assert.equal((await state(A)).r.offerClosed,false);assert.equal(await B.locator('#pitch-review-request').isVisible(),true);
+  await B.click('#review-skip');
+  for(const p of [A,B])await p.waitForFunction(()=>__dbg.review().offerClosed).catch(async e=>{console.log('Skip failed',JSON.stringify({a:await state(A),b:await state(B)}));throw e;});
+  assert.deepEqual((await state(A)).r.left,{home:2,away:2});
+  for(const p of [A,B])await p.waitForFunction(()=>['ready','wait'].includes(__dbg.phase));
   await setup({bases:[0,0,0],outs:2,s:2});await pitch({kind:'take'},9);
   assert.equal((await state(A)).r.pitchCall.initial,true);
   assert.equal(await A.locator('#pitch-review-request').isHidden(),true);
@@ -133,6 +152,21 @@ try{
   assert.equal((await state(A)).r.pitchCall.initial,false);
   await review(A,false,null,'pitch');
   assert.ok((await state(A)).g.bases[0]);assert.equal((await state(A)).r.left.home,1);
+  const borderFlip=Array.from({length:100},(_,i)=>i+1).find(s=>roll(s^0x5eeda11)<.5);
+  // Strike three changes to a ball: roll back the third out and restore the inning's runs.
+  await setup({bases:[0,0,0],outs:2,s:2,runs:2});await pitch({kind:'take'},borderFlip,null,.98,0);
+  assert.equal((await state(A)).g.inning,2);await review(B,true,null,'pitch');
+  assert.equal((await state(A)).g.inning,1);assert.equal((await state(A)).g.outs,2);assert.equal((await state(A)).g.runs,2);assert.equal((await state(A)).g.b,1);assert.equal((await state(A)).g.s,2);assert.equal((await state(A)).score.away,2);assert.equal(await A.evaluate(()=>__dbg.bankedScore().away),0);assert.equal((await state(A)).r.left.away,1);
+  // Ball four changes to a strike: revoke a bases-loaded walk and its apparent winning run.
+  await setup({inning:6,bases:[3,3,3],outs:1,b:3,s:1});await pitch({kind:'take'},borderFlip,null,1.02,0);
+  assert.equal((await state(A)).g.runs,1);await review(B,true,null,'pitch');
+  assert.equal((await state(A)).g.runs,0);assert.equal((await state(A)).g.b,3);assert.equal((await state(A)).g.s,2);assert.deepEqual((await state(A)).g.bases,[3,3,3]);assert.equal((await state(A)).g.over,false);assert.equal((await state(A)).r.left.away,1);
+  // The single eligible team can skip without using a challenge or waiting out the offer.
+  await setup({bases:[0,0,0]});await pitch({kind:'take'},9,null,2.1,0);
+  for(const p of [A,B])await p.evaluate(()=>__dbg.reviewOfferHold());
+  await A.waitForFunction(()=>!document.querySelector('#review-skip').hidden);await A.click('#review-skip');
+  for(const p of [A,B])await p.waitForFunction(()=>['ready','wait'].includes(__dbg.phase));
+  assert.deepEqual((await state(A)).r.left,{home:1,away:1});assert.equal((await state(A)).r.offerClosed,true);
   await setup({bases:[0,0,0]});await pitch({kind:'take'},9,null,1,0);
   assert.equal((await state(A)).r.pitchCall.truth,true,'Zone edge is a strike');
   await review(B,false,null,'pitch');assert.equal((await state(A)).r.left.away,0);
@@ -146,8 +180,13 @@ try{
   await A.waitForFunction(()=>!document.querySelector('#pitch-review-request').hidden);
   for(const p of [A,B])await p.evaluate(()=>__dbg.reviewOfferExpire());
   await A.waitForFunction(()=>document.querySelector('#pitch-review-request').hidden);
-  for(const p of [A,B])await p.evaluate(()=>__dbg.receiveOnline({type:'review-ready',version:1,round:2,from:'legacy'}));
+  for(const p of [A,B])await p.evaluate(round=>__dbg.receiveOnline({type:'review-ready',version:1,pitch:1,round,from:'pitch-v1'}),pitchOnly?0:2);
+  await setup({bases:[0,0,0]});await pitch({kind:'take'},borderFlip,null,.98,0);
+  assert.equal((await state(A)).r.pitchCall.truth,true,'Pitch v1 retains exact calls without the new rule');
+  assert.equal((await state(A)).r.pitchRules,false);assert.equal((await state(A)).r.skipEnabled,false);
+  for(const p of [A,B])await p.evaluate(round=>__dbg.receiveOnline({type:'review-ready',version:1,round,from:'legacy'}),pitchOnly?0:2);
   await setup({bases:[0,0,0]});await pitch({kind:'take'},9,null,2.1,.1);
   assert.equal((await state(A)).r.pitchCall,undefined,'Legacy review support must not enable pitch challenges');
+  assert.equal((await state(A)).r.skipEnabled,false);assert.equal(await A.locator('#review-skip').isHidden(),true);
   assert.deepEqual(errors,[]);console.log('✓ Online review: negotiated support, shared evidence, overturn, third-out rollback, preserved score, failed limits, walk-off reversal, duplicate/stale messages and rematch reset');console.log('[]');
 }finally{await b.close();}

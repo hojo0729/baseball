@@ -202,11 +202,11 @@ function onMsg(m) {
     return;
   }
   if (onl.finished && m.type !== 'bye') return;
-  if(m.type==='review-ready'&&m.version===1){onlineReview.pitchEnabled=m.pitch===1;if(!onlineReview.enabled){onlineReview.enabled=true;if(onl.side==='home')send('review-ready',{version:1,pitch:1});}return;}
+  if(m.type==='review-ready'&&m.version===1){onlineReview.pitchEnabled=m.pitch===1;onlineReview.pitchRules=m.rules===2;onlineReview.skipEnabled=m.skip===1;if(!onlineReview.enabled){onlineReview.enabled=true;if(onl.side==='home')send('review-ready',{version:1,pitch:1,rules:2,skip:1});}return;}
   if(m.type.startsWith('review-')){handleReviewMessage(m);return;}
   if(onlineReview.enabled&&m.type!=='bye'&&m.reviewStamp!==undefined&&m.reviewStamp!==onlineReview.stamp)return;
   if (m.type === 'hello') { if (onl.side === 'home' && !onl.started) hostStart(); }
-  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline();if(m.review===1)send('review-ready',{version:1,pitch:1}); } }
+  else if (m.type === 'start') { if (onl.side === 'away' && !onl.started) { clearTimeout(onl.joinTimer); onl.seed = m.seed >>> 0; onl.opts = m.opts || null; beginOnline();if(m.review===1)send('review-ready',{version:1,pitch:1,rules:2,skip:1}); } }
   else if (m.type === 'pitch') onPitchMsg(m);
   else if (m.type === 'result') onResultMsg(m);
   else if (m.type === 'beast') {

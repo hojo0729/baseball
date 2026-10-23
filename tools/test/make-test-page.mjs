@@ -32,13 +32,23 @@ window.__dbg.beastEffects=()=>({count:beastFx.count,impacts:beastFx.impacts,seen
 window.__dbg.holdBeastEffect=()=>{beastFx.at=Infinity;for(const a of beastCut.getAnimations({subtree:true})){a.pause();a.currentTime=200;}};
 window.__dbg.finishOnline=showOnlineOver;
 window.__dbg.receiveOnline=onMsg;
-window.__dbg.review=()=>({enabled:onlineReview.enabled,pitchEnabled:onlineReview.pitchEnabled,left:{...onlineReview.left},active:onlineReview.active,stage:onlineReview.stage,stamp:onlineReview.stamp,callStamp:onlineReview.ctx&&onlineReview.ctx.stamp,pn:onl.pn,aspect:camera.aspect,normalAspect:W/H,call:onlineReview.ctx&&onlineReview.ctx.call,pitchCall:onlineReview.ctx&&onlineReview.ctx.pitchCall,closed:onlineReview.ctx&&onlineReview.ctx.closed});
+window.__dbg.review=()=>({enabled:onlineReview.enabled,pitchEnabled:onlineReview.pitchEnabled,pitchRules:onlineReview.pitchRules,skipEnabled:onlineReview.skipEnabled,left:{...onlineReview.left},active:onlineReview.active,stage:onlineReview.stage,stamp:onlineReview.stamp,callStamp:onlineReview.ctx&&onlineReview.ctx.stamp,pn:onl.pn,aspect:camera.aspect,normalAspect:W/H,call:onlineReview.ctx&&onlineReview.ctx.call,pitchCall:onlineReview.ctx&&onlineReview.ctx.pitchCall,closed:onlineReview.ctx&&onlineReview.ctx.closed,offerClosed:onlineReview.ctx&&onlineReview.ctx.offerClosed,declined:onlineReview.ctx&&onlineReview.ctx.declined});
+window.__dbg.pitchReviewSample=()=>{const result=[];for(const [tx,ty] of [[.98,0],[1.02,0],[-.98,0],[-1.02,0],[0,.98],[0,1.02],[0,-.98],[0,-1.02],[1,1],[0,0],[1.11,0]]){let flips=0;const initial=Math.max(Math.abs(tx),Math.abs(ty))<=1;for(let seed=0;seed<10000;seed++)if(pitchReviewDecision(seed,tx,ty,initial).truth!==initial)flips++;result.push({tx,ty,flips});}return result;};
 window.__dbg.reviewSetup=(o)=>{Object.assign(G,o);onl.score={home:0,away:0};clearPlay();applyRole();};
 const reviewTickForTest=updateOnlineReview,renderForReviewTest=renderer.render.bind(renderer);let reviewHoldForTest='';
 updateOnlineReview=now=>reviewTickForTest(reviewHoldForTest&&onlineReview.active&&onlineReview.stage===reviewHoldForTest?onlineReview.at+1.5:now);
 window.__dbg.reviewHold=stage=>{reviewHoldForTest=stage;};
 window.__dbg.reviewOfferHold=()=>{if(onlineReview.ctx){onlineReview.ctx.until=now_()+3600;nextAt=onlineReview.ctx.until;}};
+window.__dbg.freezeReviewOffers=()=>{const result=runOnlineResult;runOnlineResult=(...args)=>{result(...args);if(onlineReview.ctx&&onlineReview.ctx.until)onlineReview.ctx.until=now_()+3600;nextAt=Infinity;};};
+window.__dbg.bankedScore=()=>({...onl.score});
 window.__dbg.reviewOfferExpire=()=>{if(onlineReview.ctx){onlineReview.ctx.until=now_()-1;nextAt=Infinity;}};
+window.__dbg.pitcherView=(team,k=0,beast=false)=>{
+  update=()=>{};camShot=null;play=null;setTeam(pitcherF,team);resize();updateCamera(now_(),0);
+  const J=squashJ(pitcherJ(k),MOUND_Y);poseFig(pitcherF,J,0,0);beastForm(pitcherF,beast);scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+  const points=[];pitcherF.head.traverseVisible(m=>{if(!m.isMesh)return;if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();const b=m.geometry.boundingBox;for(const x of [b.min.x,b.max.x])for(const y of [b.min.y,b.max.y])for(const z of [b.min.z,b.max.z])points.push(V(x,y,z).applyMatrix4(m.matrixWorld).project(camera));});
+  const rect=pts=>({left:Math.min(...pts.map(p=>(p.x+1)*W/2)),right:Math.max(...pts.map(p=>(p.x+1)*W/2)),top:Math.min(...pts.map(p=>(1-p.y)*H/2)),bottom:Math.max(...pts.map(p=>(1-p.y)*H/2))});
+  return {head:rect(points),zone:rect([-1,1].flatMap(x=>[-1,1].map(y=>zoneToWorld(x,y).project(camera)))),scale:pitcherF.head.scale.x};
+};
 window.__dbg.renderOn=()=>{renderer.render=renderForReviewTest;};
 const reviewDrawForTest=renderReviewField;let holdReviewDrawForTest=false;
 renderReviewField=()=>{if(!holdReviewDrawForTest)reviewDrawForTest();};

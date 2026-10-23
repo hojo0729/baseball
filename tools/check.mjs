@@ -117,7 +117,8 @@ if (full && ok) {
     ['tools/test/online-beast.mjs', 'online-beast.mjs'],
     ['tools/test/online-rematch.mjs', 'online-rematch.mjs'],
     ['tools/test/online-review.mjs', 'online-review.mjs'],
-    ['tools/test/beast-effects.mjs', 'beast-effects.mjs']
+    ['tools/test/beast-effects.mjs', 'beast-effects.mjs'],
+    ['tools/test/pitcher-clearance.mjs', 'pitcher-clearance.mjs']
   ]) {
     if (runNode(script, name, out => out.trim().endsWith('[]') && !out.includes('DIFF '))) {
       console.log(`✓ ${name} 通過`);

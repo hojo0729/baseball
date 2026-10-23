@@ -248,6 +248,7 @@ function faceFor(f, ex, now) {
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
 const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 0.88;   // 自然で引き締まった二頭身ちびキャラ
+const PITCHER_HEAD_K = .78;
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
@@ -306,7 +307,7 @@ function beastForm(f, active) {
     f.beastForm = group;
   }
   if (f.beastForm) f.beastForm.visible = active;
-  f.head.scale.setScalar(HEAD_K * (active ? 1.25 : 1));
+  f.head.scale.setScalar(HEAD_K * (f === pitcherF ? PITCHER_HEAD_K : 1) * (active ? 1.25 : 1));
   f.beastOn = active;
   f.cap.visible = f.brim.visible = !active && (f.sp === 'alien' || f.helmet);
   if (active) {
@@ -325,6 +326,7 @@ function poseFig(f, J, yaw, headYaw) {
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
   f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(1.15 * bk, 0.038, 1.10 * bk);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
+  if(f === pitcherF)f.head.position.y-=HEAD_K*.4*(1-PITCHER_HEAD_K);
   seg(f.ua[0], J.sL, J.eL, bk); seg(f.fa[0], J.eL, J.hL);
   seg(f.ua[1], J.sR, J.eR, bk); seg(f.fa[1], J.eR, J.hR);
   if (f.ej) { dot(f.ej[0], J.eL, 0.086); dot(f.ej[1], J.eR, 0.086); }

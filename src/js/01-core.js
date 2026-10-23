@@ -812,7 +812,7 @@ function resolveCore(c, C) {
   if (storyOpeningPitch()) c = { kind: 'play', q: 1, dir: 0, ev: 180, launch: 32, dist: 150, res: 'ホームラン', bases: 4 };
   const now = now_();
   phase = 'result'; ball.done = true;
-  const inZone = Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) <= 1;
+  const inZone = onlineReview.replaying&&onlineReview.ctx.call.kind==='pitch'?onlineReview.ctx.call.truth:Math.max(Math.abs(ball.T[0]), Math.abs(ball.T[1])) <= 1;
   const tone = g => (mode === 'bat' ? (g ? 'g' : 'b') : (g ? 'b' : 'g'));
   const info = TYPES[ball.key].name + ' ' + Math.round(ball.speed) + 'km/h';
   let t = '', sub = info, tn = 'n', delay = 0, cheer = 0;
