@@ -248,7 +248,6 @@ function faceFor(f, ex, now) {
 
 /* chibi proportions: squash the human joint heights toward the ground; the batter keeps hands on the bat */
 const SQ = 0.70, LEG_SQ = 0.46, HIP_H = 0.9, HEAD_K = 0.88;   // 自然で引き締まった二頭身ちびキャラ
-const PITCHER_HEAD_K = .78;
 const sqY = (y, base) => { const r = y - base; return base + (r < HIP_H ? r * LEG_SQ : HIP_H * LEG_SQ + (r - HIP_H) * SQ); };
 function squashJ(J, base, keepHands) {
   const o = {};
@@ -290,6 +289,14 @@ const _a = V(), _b = V();
 const BEAST_SPIKE = new THREE.ConeGeometry(1, 1, 5);
 const BEAST_FUR = mat('#302536'), BEAST_FANG = mat('#fff1ce');
 const BEAST_EYE = mat('#ff583d', { emissive: '#ff3210', emissiveIntensity: 1.5 });
+// The foreground batter needs a smaller head and a clear lane beside the zone.
+function batterHeadFactor(f,active){return f!==batterF?1:f.sp==='floppy'?(active ? .32 : .40):(active ? .45 : .60);}
+function fitBatterHead(f,J){
+  if(f!==batterF)return;
+  const away=(f.beastOn ? .25 : .15)+(f.sp==='floppy' ? .05 : 0);
+  f.head.position.copy(J.head);f.head.position.x=(J.head.x<0?-1:1)*Math.min(Math.abs(J.head.x)+away,f.beastOn ? .80 : .72);
+  f.head.position.y-=.4*(HEAD_K-f.head.scale.x);
+}
 function beastForm(f, active) {
   if (active && !f.beastForm) {
     const group = new THREE.Group(); f.head.add(group);
@@ -307,7 +314,7 @@ function beastForm(f, active) {
     f.beastForm = group;
   }
   if (f.beastForm) f.beastForm.visible = active;
-  f.head.scale.setScalar(HEAD_K * (f === pitcherF ? PITCHER_HEAD_K : 1) * (active ? 1.25 : 1));
+  f.head.scale.setScalar(HEAD_K * (active ? 1.25 : 1) * batterHeadFactor(f,active));
   f.beastOn = active;
   f.cap.visible = f.brim.visible = !active && (f.sp === 'alien' || f.helmet);
   if (active) {
@@ -326,7 +333,6 @@ function poseFig(f, J, yaw, headYaw) {
   _a.copy(J.pelvis).addScaledVector(_d, L * 0.02);
   f.belt.position.copy(_a); f.belt.quaternion.copy(f.body.quaternion); f.belt.scale.set(1.15 * bk, 0.038, 1.10 * bk);
   f.head.position.copy(J.head); f.head.rotation.set(0, headYaw, 0);
-  if(f === pitcherF)f.head.position.y-=HEAD_K*.4*(1-PITCHER_HEAD_K);
   seg(f.ua[0], J.sL, J.eL, bk); seg(f.fa[0], J.eL, J.hL);
   seg(f.ua[1], J.sR, J.eR, bk); seg(f.fa[1], J.eR, J.hR);
   if (f.ej) { dot(f.ej[0], J.eL, 0.086); dot(f.ej[1], J.eR, 0.086); }
@@ -346,6 +352,7 @@ function poseFig(f, J, yaw, headYaw) {
   f.ball.position.copy(_a); if ((f.sp === 'usagi' || f.sp === 'floppy')) f.ball.position.y += 0.02; f.ball.scale.setScalar((f.sp === 'usagi' || f.sp === 'floppy') ? 0.082 : 0.06);
   if (f.mitt) { f.mitt.position.copy(J.hL); f.mitt.scale.set(0.1, 0.115, 0.065); f.mitt.rotation.set(0, headYaw, 0); }
   beastForm(f, (f === pitcherF && beastForRole('pit')) || (f === batterF && beastForRole('bat')));
+  fitBatterHead(f,J);
 }
 
 /* ---- right-handed batter ---- */

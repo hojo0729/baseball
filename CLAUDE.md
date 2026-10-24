@@ -13,7 +13,7 @@
   - `02-story-stadium.js` 各話の3D背景・配色・照明。通常球場への復帰、背景のキャッシュと共有描画（仕様は `design/story-stadiums.md`）
   - `03-motion.js` 投球フォームのモーションキャプチャ（CMU mocap 124_01。`tools/bvh-joints.py` → `tools/make-motion.py` で生成。手で編集しない）
   - `03-motion-bat.js` 打者の体の動き（CMU mocap 124_07 スイング・124_08 バント。`tools/make-bat-motion.py` で生成）。手とバットはスイング計画のまま
-  - `03-mascot-heads.js` 提供HTMLから適合したマスコットの頭部造形。`03-players.js` 動物の選手モデル、ポーズ（打者・投手・野手）、バット
+  - `03-mascot-heads.js` 提供HTMLから適合したマスコットの頭部造形。`03-players.js` 動物の選手モデル、ポーズ（打者・投手・野手）、バット。手前の打者の頭部だけ縮小/配置調整して左右のストライクゾーンを確保（batterHeadFactor / fitBatterHead）。投手は元の頭部比率を使う。
   - `04-story-data.js` 全10話の定義、`04-story-flow.js` 章進行・探索・救援・ビーストモード、`04-story-scenes.js` 2D場面演出・終幕・モデル確認、`04-story.js` 共通メニューと会話。第9話は3回表裏（延長5回）、相手 `alien`。ストーリー専用の混成打順は `STORY_BAT`。旧 `yakyu-progress` を保ち、新作は `animal-baseball-story-v2` に保存する
   - `04-beast-effects.js` 全ビースト発動場面のカットイン・合成咆哮・持続オーラ・打撃衝撃。試合時計と判定乱数から独立。仕様は `design/beast-effects.md`。
   - `05-tactics.js` 作戦（盗塁・エンドラン・バント・スクイズ）、牽制
